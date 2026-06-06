@@ -40,8 +40,8 @@ export default function Navbar() {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface border-r border-outline-variant z-50 py-6">
         <div className="px-6 mb-8">
-          <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary">NBI Mock Test</h1>
-          <p className="text-xs text-on-surface-variant mt-0.5 font-medium tracking-wide uppercase">Practice Today, Dominate the Exam Tomorrow</p>
+          <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary">BankMastery</h1>
+          <p className="text-xs text-on-surface-variant mt-0.5 font-medium tracking-wide uppercase">Learn. Practice. Master.</p>
         </div>
         <nav className="flex-1 space-y-1 px-3">
           {links.map((link) => (
@@ -85,7 +85,7 @@ export default function Navbar() {
 
       {/* Mobile Top Bar */}
       <header className="md:hidden flex items-center justify-between px-4 h-14 bg-surface border-b border-outline-variant sticky top-0 z-40">
-        <h1 className="font-['Hanken_Grotesk'] text-lg font-bold text-primary">NBI Mock Test</h1>
+        <h1 className="font-['Hanken_Grotesk'] text-lg font-bold text-primary">BankMastery</h1>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate('/profile')} className="relative cursor-pointer">
             <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
