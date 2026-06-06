@@ -129,10 +129,10 @@ export default function CSVUploader() {
         <FiUpload size={36} className="mx-auto text-on-surface-variant mb-3" />
         <p className="text-sm text-on-surface-variant mb-1">Drag and drop a CSV file, or click to browse</p>
         <p className="text-xs text-on-surface-variant/60 mb-4">Columns: SN, chapter, question, option-a, option-b, option-c, option-d, correct-answer, explanation, difficulty, module, mode</p>
-        <input ref={inputRef} type="file" accept=".csv" onChange={handleFile} className="hidden" id="csvInput" />
-        <label htmlFor="csvInput" className="inline-block bg-primary text-on-primary px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer">
+        <input ref={inputRef} type="file" accept=".csv" onChange={handleFile} className="hidden" />
+        <span className="inline-block bg-primary text-on-primary px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer">
           Select CSV File
-        </label>
+        </span>
       </div>
 
       {error && (
