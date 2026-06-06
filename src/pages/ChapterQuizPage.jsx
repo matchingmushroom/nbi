@@ -15,7 +15,7 @@ export default function ChapterQuizPage() {
     const fetch = async () => {
       const snap = await getDocs(collection(db, 'questions'))
       const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-      const filtered = all.filter((q) => q.chapter === chapter)
+      const filtered = all.filter((q) => q.chapter === chapter && q.mode !== 'Physical')
       if (filtered.length < 6) { navigate('/quiz/select'); return }
       const picked = pickByDifficulty(filtered, { beginner: 2, intermediate: 4, expert: 4 })
       setQuestions(picked)
