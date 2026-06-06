@@ -34,10 +34,12 @@ export function AuthProvider({ children }) {
 
   const register = async (email, password, displayName) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password)
+    const snap = await getDocs(collection(db, 'users'))
+    const isFirst = snap.empty
     await setDoc(doc(db, 'users', cred.user.uid), {
       email,
       displayName,
-      role: 'student',
+      role: isFirst ? 'admin' : 'student',
       createdAt: new Date().toISOString(),
     })
     return cred

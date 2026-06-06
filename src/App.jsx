@@ -16,8 +16,9 @@ import AdminQuestionsPage from './pages/AdminQuestionsPage'
 import AdminUploadPage from './pages/AdminUploadPage'
 
 function App() {
+  const basename = window.location.hostname === 'matchingmushroom.github.io' ? '/nbi' : '/'
   return (
-    <BrowserRouter basename="/nbi">
+        <BrowserRouter basename={basename}>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
