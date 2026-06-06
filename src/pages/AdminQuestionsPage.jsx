@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { collection, getDocs, doc, deleteDoc, setDoc } from 'firebase/firestore'
+import { collection, getDocs, doc, deleteDoc, setDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../lib/firebase'
-import { FiEdit2, FiTrash2, FiX } from 'react-icons/fi'
+import { FiEdit2, FiTrash2, FiX, FiCheckSquare } from 'react-icons/fi'
 
 export default function AdminQuestionsPage() {
   const [questions, setQuestions] = useState([])
@@ -11,6 +11,9 @@ export default function AdminQuestionsPage() {
   const [chapters, setChapters] = useState([])
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({})
+  const [batchMode, setBatchMode] = useState(false)
+  const [selectedChapters, setSelectedChapters] = useState([])
+  const [deleting, setDeleting] = useState(false)
 
   const fetch = async () => {
     const snap = await getDocs(collection(db, 'questions'))
@@ -51,6 +54,33 @@ export default function AdminQuestionsPage() {
     fetch()
   }
 
+  const toggleChapter = (ch) => {
+    setSelectedChapters((prev) =>
+      prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]
+    )
+  }
+
+  const handleBatchDelete = async () => {
+    if (selectedChapters.length === 0) return
+    const toDelete = questions.filter((q) => selectedChapters.includes(q.chapter))
+    if (!confirm(`Delete all ${toDelete.length} questions from ${selectedChapters.length} chapter(s)? This cannot be undone.`)) return
+    setDeleting(true)
+    try {
+      const batch = writeBatch(db)
+      toDelete.forEach((q) => {
+        batch.delete(doc(db, 'questions', q.id))
+      })
+      await batch.commit()
+      setSelectedChapters([])
+      setBatchMode(false)
+      fetch()
+    } catch (err) {
+      alert('Error deleting questions: ' + err.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const filtered = questions.filter((q) => {
     if (chapterFilter !== 'all' && q.chapter !== chapterFilter) return false
     if (search && !q.question?.toLowerCase().includes(search.toLowerCase())) return false
@@ -61,10 +91,62 @@ export default function AdminQuestionsPage() {
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Manage Questions</h1>
-        <p className="text-on-surface-variant text-sm mt-1">{questions.length} total questions</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Manage Questions</h1>
+          <p className="text-on-surface-variant text-sm mt-1">{questions.length} total questions</p>
+        </div>
+        <button
+          onClick={() => { setBatchMode(!batchMode); setSelectedChapters([]) }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer ${
+            batchMode ? 'bg-error text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container-high'
+          }`}
+        >
+          <FiCheckSquare size={16} />
+          {batchMode ? 'Exit Batch' : 'Batch Delete'}
+        </button>
       </div>
+
+      {batchMode && (
+        <div className="bg-surface border border-error/30 rounded-xl p-4 mb-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-on-surface">Select chapters to delete all questions</h3>
+            {selectedChapters.length > 0 && (
+              <span className="text-xs text-on-surface-variant">
+                {questions.filter((q) => selectedChapters.includes(q.chapter)).length} questions selected
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {chapters.map((ch) => {
+              const count = questions.filter((q) => q.chapter === ch).length
+              const selected = selectedChapters.includes(ch)
+              return (
+                <button
+                  key={ch}
+                  onClick={() => toggleChapter(ch)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                    selected
+                      ? 'bg-error/10 border-error text-error'
+                      : 'bg-surface-container-low border-outline-variant text-on-surface-variant hover:border-error/50'
+                  }`}
+                >
+                  {ch} ({count})
+                </button>
+              )
+            })}
+          </div>
+          {selectedChapters.length > 0 && (
+            <button
+              onClick={handleBatchDelete}
+              disabled={deleting}
+              className="w-full bg-error text-white py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all active:scale-[0.98] cursor-pointer"
+            >
+              {deleting ? 'Deleting...' : `Delete ${questions.filter((q) => selectedChapters.includes(q.chapter)).length} Questions`}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3 mb-4">
         <div className="relative flex-1 min-w-[200px]">
