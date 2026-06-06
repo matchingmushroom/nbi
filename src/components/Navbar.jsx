@@ -58,12 +58,17 @@ export default function Navbar() {
         </nav>
         <div className="px-4 mt-auto space-y-2">
           <div className="flex items-center gap-3 px-3 py-2 text-sm text-on-surface-variant border-t border-outline-variant pt-4">
-            <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
-              {(profile?.displayName || profile?.email || '?')[0].toUpperCase()}
+            <div className="relative">
+              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
+                {(profile?.displayName || profile?.email || '?')[0].toUpperCase()}
+              </div>
+              {profile?.level > 1 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-warning text-white text-[8px] font-bold px-1 py-0.5 rounded-full leading-none">Lv{profile.level}</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-on-surface truncate">{profile?.displayName || 'User'}</p>
-              <p className="text-xs truncate">{profile?.role}</p>
+              <p className="text-xs truncate">{profile?.role} · {profile?.xp || 0} XP</p>
             </div>
           </div>
           <button
@@ -79,8 +84,13 @@ export default function Navbar() {
       <header className="md:hidden flex items-center justify-between px-4 h-14 bg-surface border-b border-outline-variant sticky top-0 z-40">
         <h1 className="font-['Hanken_Grotesk'] text-lg font-bold text-primary">NBI Mock Test</h1>
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
-            {(profile?.displayName || profile?.email || '?')[0].toUpperCase()}
+          <div className="relative">
+            <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+              {(profile?.displayName || profile?.email || '?')[0].toUpperCase()}
+            </div>
+            {profile?.level > 1 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-warning text-white text-[7px] font-bold px-0.5 py-0.5 rounded-full leading-none">Lv{profile.level}</span>
+            )}
           </div>
           <button onClick={handleLogout} className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
             <span className="material-symbols-outlined text-[20px]">logout</span>

@@ -81,6 +81,15 @@ export default function ResultDetailPage() {
               <p className="text-xs text-on-surface-variant">Accuracy</p>
             </div>
             <div className="w-px h-8 bg-outline-variant" />
+            {result.xpEarned > 0 && (
+              <>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-warning">+{result.xpEarned}</p>
+                  <p className="text-xs text-on-surface-variant">XP</p>
+                </div>
+                <div className="w-px h-8 bg-outline-variant" />
+              </>
+            )}
             <div className="text-center">
               <p className="text-sm font-bold text-on-surface">
                 {result.timeTaken ? `${Math.floor(result.timeTaken / 60)}m ${result.timeTaken % 60}s` : 'N/A'}

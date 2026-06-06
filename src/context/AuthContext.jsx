@@ -41,6 +41,11 @@ export function AuthProvider({ children }) {
       displayName,
       role: isFirst ? 'admin' : 'student',
       createdAt: new Date().toISOString(),
+      xp: 0,
+      level: 1,
+      streak: 0,
+      lastActiveDate: '',
+      badges: [],
     })
     return cred
   }
@@ -54,6 +59,11 @@ export function AuthProvider({ children }) {
       displayName,
       role: role || 'student',
       createdAt: new Date().toISOString(),
+      xp: 0,
+      level: 1,
+      streak: 0,
+      lastActiveDate: '',
+      badges: [],
     })
     return cred
   }
@@ -71,6 +81,12 @@ export function AuthProvider({ children }) {
     return snap.docs.map((d) => ({ uid: d.id, ...d.data() }))
   }
 
+  const refreshProfile = async () => {
+    if (!user) return
+    const snap = await getDoc(doc(db, 'users', user.uid))
+    setProfile(snap.exists() ? { uid: user.uid, ...snap.data() } : null)
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -84,6 +100,7 @@ export function AuthProvider({ children }) {
         deleteUserDoc,
         updateUserDoc,
         getAllUsers,
+        refreshProfile,
       }}
     >
       {children}

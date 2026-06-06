@@ -4,6 +4,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/utils'
+import { BADGES, getLevelProgress } from '../lib/gamification'
 import { FiUsers, FiFileText, FiBookOpen } from 'react-icons/fi'
 
 export default function DashboardPage() {
@@ -156,6 +157,27 @@ export default function DashboardPage() {
         <p className="text-on-surface-variant text-sm mt-0.5">You've completed {stats.total} test{stats.total !== 1 ? 's' : ''}. Keep going!</p>
       </section>
 
+      {/* XP & Level Card */}
+      <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-on-surface">Level {profile?.level || 1}</span>
+            <span className="text-xs text-on-surface-variant">{profile?.xp || 0} XP</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {(profile?.streak || 0) > 0 && (
+              <div className="flex items-center gap-1 text-orange-500">
+                <span className="material-symbols-outlined text-[16px]" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
+                <span className="text-xs font-bold">{profile.streak}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="w-full h-2 bg-surface-container-low rounded-full overflow-hidden">
+          <div className="h-full bg-secondary rounded-full transition-all" style={{ width: `${getLevelProgress(profile?.xp || 0)}%` }} />
+        </div>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-surface border border-outline-variant rounded-xl p-4">
@@ -185,6 +207,21 @@ export default function DashboardPage() {
           <p className="text-sm text-on-surface-variant mt-1">View past attempts and track progress</p>
         </button>
       </div>
+
+      {/* Badges */}
+      {profile?.badges?.length > 0 && (
+        <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-4">
+          <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Badges ({profile.badges.length})</h3>
+          <div className="flex flex-wrap gap-2">
+            {BADGES.filter(b => profile.badges.includes(b.id)).map((b) => (
+              <div key={b.id} className="flex items-center gap-1.5 bg-primary-fixed/10 px-2.5 py-1.5 rounded-lg" title={b.desc}>
+                <span className="material-symbols-outlined text-primary text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>{b.icon}</span>
+                <span className="text-[10px] font-semibold text-on-surface">{b.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Activity */}
       <div className="bg-surface border border-outline-variant rounded-xl p-5">

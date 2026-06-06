@@ -3,17 +3,19 @@ import { useNavigate } from 'react-router-dom'
 import { collection, addDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
+import { calcQuizXP, updateGamification } from '../lib/gamification'
 import QuestionCard from './QuestionCard'
 import Timer from './Timer'
 
 export default function QuizRunner({ questions, config, onFinish }) {
   const navigate = useNavigate()
-  const { user, profile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
   const [current, setCurrent] = useState(0)
   const [answers, setAnswers] = useState([])
   const [finished, setFinished] = useState(false)
   const [score, setScore] = useState(0)
   const [timeUp, setTimeUp] = useState(false)
+  const [gamify, setGamify] = useState(null)
   const startTime = useRef(Date.now())
   const scoreRef = useRef(0)
   const resultIdRef = useRef(null)
@@ -35,15 +37,22 @@ export default function QuizRunner({ questions, config, onFinish }) {
       answers: finalAnswers,
       completedAt: new Date().toISOString(),
       timeTaken,
+      xpEarned: calcQuizXP(config.quizType, finalScore, finalAnswers, questions),
     }
     try {
       const docRef = await addDoc(collection(db, 'results'), result)
       resultIdRef.current = docRef.id
+      const uid = profile?.uid || user?.uid
+      if (uid) {
+        const g = await updateGamification(uid, { ...result, id: docRef.id }, questions)
+        if (g) setGamify(g)
+        await refreshProfile()
+      }
     } catch (e) {
       console.error('Failed to save result:', e)
     }
     onFinish?.()
-  }, [user, profile, config, questions.length, onFinish])
+  }, [profile, user, config, questions, onFinish, refreshProfile])
 
   const handleTimeUp = useCallback(() => {
     setTimeUp(true)
@@ -94,8 +103,54 @@ export default function QuizRunner({ questions, config, onFinish }) {
           </h2>
           <p className="text-xs text-on-surface-variant mb-4">{config.title}{timeUp ? ' (Time Expired)' : ''}</p>
           <div className="text-4xl font-extrabold text-primary mb-1">{score}<span className="text-lg text-on-surface-variant">/{totalQ}</span></div>
-          <p className="text-xs text-on-surface-variant mb-5">{Math.round(pct * 100)}% Accuracy</p>
-          <div className="flex gap-2">
+          <p className="text-xs text-on-surface-variant">{Math.round(pct * 100)}% Accuracy</p>
+
+          {/* Gamification */}
+          {gamify && (
+            <div className="mt-4 pt-4 border-t border-outline-variant space-y-3">
+              <div className="flex items-center justify-center gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-warning text-[18px]">stars</span>
+                  <span className="font-bold text-on-surface">+{gamify.xpEarned} XP</span>
+                </div>
+                {gamify.streak > 0 && (
+                  <div className="flex items-center gap-1">
+                    <span className="material-symbols-outlined text-orange-500 text-[18px]" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
+                    <span className="font-bold text-on-surface">{gamify.streak} day streak</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-xs text-on-surface-variant font-medium">Lv.{gamify.level}</span>
+                <div className="w-24 h-2 bg-surface-container-low rounded-full overflow-hidden">
+                  <div className="h-full bg-secondary rounded-full transition-all" style={{ width: `${gamify.progress}%` }} />
+                </div>
+              </div>
+              {gamify.leveledUp && (
+                <div className="bg-warning/10 border border-warning/30 rounded-lg p-2 animate-pulse">
+                  <p className="text-xs font-bold text-warning flex items-center justify-center gap-1">
+                    <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
+                    LEVEL UP! You're now Level {gamify.level}
+                  </p>
+                </div>
+              )}
+              {gamify.newBadges?.length > 0 && (
+                <div className="space-y-1.5">
+                  {gamify.newBadges.map((b) => (
+                    <div key={b.id} className="bg-primary-fixed/20 border border-primary/20 rounded-lg p-2 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: "'FILL' 1"}}>{b.icon}</span>
+                      <div className="text-left">
+                        <p className="text-xs font-bold text-primary">{b.name}</p>
+                        <p className="text-[10px] text-on-surface-variant">{b.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-2 mt-4">
             <button onClick={() => navigate('/quiz/select')} className="flex-1 bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] cursor-pointer">Back</button>
             {resultIdRef.current && (
               <button onClick={() => navigate(`/results/${resultIdRef.current}`)} className="flex-1 bg-surface-container-low text-on-surface py-2.5 rounded-xl font-semibold text-sm hover:bg-surface-container-high active:scale-[0.98] cursor-pointer">Review Answers</button>

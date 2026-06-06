@@ -124,6 +124,7 @@ export default function ResultsPage() {
             <div className="text-right shrink-0 ml-3">
               <p className="text-sm font-bold text-primary">{r.score}<span className="text-xs text-on-surface-variant font-normal">/{r.totalQuestions}</span></p>
               <p className="text-xs text-on-surface-variant">{r.percentage}%</p>
+              {r.xpEarned > 0 && <p className="text-[10px] text-warning font-semibold">+{r.xpEarned} XP</p>}
             </div>
           </button>
         ))}
