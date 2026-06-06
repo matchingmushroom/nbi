@@ -51,7 +51,11 @@ export default function ResultDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface">{result.chapter}</h1>
-            <p className="text-xs text-on-surface-variant mt-1">{formatDate(result.completedAt)}</p>
+            <p className="text-xs text-on-surface-variant mt-1">
+              {result.module && <span className="mr-2">{result.module}</span>}
+              {result.mode && <span className="mr-2 text-primary">{result.mode}</span>}
+              {formatDate(result.completedAt)}
+            </p>
           </div>
           <div className="flex gap-4 items-center">
             <div className="text-center">

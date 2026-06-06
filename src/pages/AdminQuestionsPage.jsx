@@ -29,6 +29,8 @@ export default function AdminQuestionsPage() {
   const openEdit = (q) => {
     setEditing(q)
     setForm({
+      module: q.module || '',
+      mode: q.mode || '',
       chapter: q.chapter || '',
       question: q.question || '',
       optionA: q.optionA || '',
@@ -168,7 +170,11 @@ export default function AdminQuestionsPage() {
               <span className="text-xs text-on-surface-variant w-6 shrink-0">{i + 1}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-on-surface truncate">{q.question}</p>
-                <p className="text-xs text-on-surface-variant truncate">{q.chapter}</p>
+                <p className="text-xs text-on-surface-variant truncate">
+                  {q.module && <span className="mr-2">{q.module}</span>}
+                  {q.mode && <span className="mr-2 text-primary">{q.mode}</span>}
+                  {q.chapter}
+                </p>
               </div>
               <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
                 q.correctAnswer === 'A' ? 'bg-blue-100 text-blue-700' :
@@ -197,6 +203,16 @@ export default function AdminQuestionsPage() {
               <button onClick={() => setEditing(null)} className="cursor-pointer"><FiX size={20} /></button>
             </div>
             <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Module</label>
+                  <input value={form.module} onChange={(e) => setForm({ ...form, module: e.target.value })} className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Mode</label>
+                  <input value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })} className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+                </div>
+              </div>
               <div>
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Chapter</label>
                 <input value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value })} className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />

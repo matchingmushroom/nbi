@@ -30,8 +30,18 @@ export default function QuestionCard({ question, onNext, total, index }) {
   return (
     <div className="flex flex-col h-full">
       {/* Question Meta */}
-      <div className="flex items-center gap-2 mb-2 shrink-0">
-        <span className="text-[10px] font-semibold text-primary uppercase tracking-widest bg-primary-fixed px-1.5 py-0.5 rounded">
+      <div className="flex items-center gap-1.5 mb-2 shrink-0 flex-wrap">
+        {question.module && (
+          <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest bg-surface-container-low px-1.5 py-0.5 rounded">
+            {question.module}
+          </span>
+        )}
+        {question.mode && (
+          <span className="text-[10px] font-semibold text-primary uppercase tracking-widest bg-primary-fixed px-1.5 py-0.5 rounded">
+            {question.mode}
+          </span>
+        )}
+        <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest bg-surface-container-low px-1.5 py-0.5 rounded">
           {question.chapter?.split(':')[0]?.trim() || 'Chapter'}
         </span>
         <span className="text-xs text-on-surface-variant font-medium">Q{index + 1}/{total}</span>

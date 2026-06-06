@@ -4,7 +4,7 @@ import { collection, writeBatch, doc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { FiUpload, FiCheckCircle, FiAlertCircle } from 'react-icons/fi'
 
-const EXPECTED_COLS = ['SN', 'chapter', 'question', 'option-a', 'option-b', 'option-c', 'option-d', 'correct-answer', 'explanation', 'difficulty']
+const EXPECTED_COLS = ['SN', 'module', 'mode', 'chapter', 'question', 'option-a', 'option-b', 'option-c', 'option-d', 'correct-answer', 'explanation', 'difficulty']
 
 export default function CSVUploader() {
   const [rows, setRows] = useState([])
@@ -31,6 +31,8 @@ export default function CSVUploader() {
         }
         const valid = res.data.map((r, i) => ({
           sn: parseInt(r.SN) || i + 1,
+          module: r.module?.trim(),
+          mode: r.mode?.trim(),
           chapter: r.chapter?.trim(),
           question: r.question?.trim(),
           optionA: r['option-a']?.trim(),
@@ -82,6 +84,8 @@ export default function CSVUploader() {
             <thead className="bg-surface-container-low sticky top-0">
               <tr>
                 <th className="p-2 text-left">#</th>
+                <th className="p-2 text-left">Module</th>
+                <th className="p-2 text-left">Mode</th>
                 <th className="p-2 text-left">Chapter</th>
                 <th className="p-2 text-left">Question</th>
                 <th className="p-2 text-left">Correct</th>
@@ -92,6 +96,8 @@ export default function CSVUploader() {
               {rows.slice(0, 10).map((r, i) => (
                 <tr key={i} className="border-t border-outline-variant">
                   <td className="p-2">{r.sn}</td>
+                  <td className="p-2 max-w-[60px] truncate">{r.module}</td>
+                  <td className="p-2 max-w-[60px] truncate">{r.mode}</td>
                   <td className="p-2 max-w-[80px] truncate">{r.chapter}</td>
                   <td className="p-2 max-w-[200px] truncate">{r.question}</td>
                   <td className="p-2">{r.correctAnswer}</td>
@@ -122,7 +128,7 @@ export default function CSVUploader() {
         onClick={() => inputRef.current?.click()}>
         <FiUpload size={36} className="mx-auto text-on-surface-variant mb-3" />
         <p className="text-sm text-on-surface-variant mb-1">Drag and drop a CSV file, or click to browse</p>
-        <p className="text-xs text-on-surface-variant/60 mb-4">Columns: SN, chapter, question, option-a, option-b, option-c, option-d, correct-answer, explanation, difficulty</p>
+        <p className="text-xs text-on-surface-variant/60 mb-4">Columns: SN, module, mode, chapter, question, option-a, option-b, option-c, option-d, correct-answer, explanation, difficulty</p>
         <input ref={inputRef} type="file" accept=".csv" onChange={handleFile} className="hidden" id="csvInput" />
         <label htmlFor="csvInput" className="inline-block bg-primary text-on-primary px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer">
           Select CSV File

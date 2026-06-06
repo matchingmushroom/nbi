@@ -67,6 +67,8 @@ export default function FinalQuizPage() {
         userId: profile?.uid || 'unknown',
         userEmail: profile?.email || '',
         displayName: profile?.displayName || '',
+        module: '',
+        mode: '',
         chapter: 'Final Test',
         difficulty: 'Mixed',
         score: finalScore,

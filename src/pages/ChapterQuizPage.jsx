@@ -42,6 +42,8 @@ export default function ChapterQuizPage() {
         userId: profile?.uid || 'unknown',
         userEmail: profile?.email || '',
         displayName: profile?.displayName || '',
+        module: questions[0]?.module || '',
+        mode: questions[0]?.mode || '',
         chapter,
         difficulty: 'Mixed',
         score: finalScore,

@@ -8,7 +8,7 @@ export default function AdminUploadPage() {
         <p className="text-on-surface-variant text-sm mt-1">Bulk add questions to the database</p>
       </div>
       <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-6 text-xs font-mono text-on-surface-variant overflow-x-auto shadow-sm">
-        SN, chapter, question, option-a, option-b, option-c, option-d, correct-answer, explanation, difficulty
+        SN, module, mode, chapter, question, option-a, option-b, option-c, option-d, correct-answer, explanation, difficulty
       </div>
       <CSVUploader />
     </div>
