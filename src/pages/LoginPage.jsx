@@ -32,8 +32,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#F9FAFB] p-4">
       <div className="bg-surface rounded-2xl shadow-sm border border-outline-variant p-8 w-full max-w-sm">
         <div className="text-center mb-6">
-          <h1 className="font-['Hanken_Grotesk'] text-3xl font-bold text-primary">NBI Prep</h1>
-          <p className="text-sm text-on-surface-variant mt-1">Licensure Excellence</p>
+          <h1 className="font-['Hanken_Grotesk'] text-3xl font-bold text-primary">NBI Mock Test</h1>
+          <p className="text-sm text-on-surface-variant mt-1">Practice Today, Dominate the Exam Tomorrow</p>
         </div>
         <h2 className="text-lg font-semibold text-on-surface mb-4">{isRegister ? 'Create Account' : 'Sign In'}</h2>
         {error && (
