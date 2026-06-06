@@ -243,24 +243,29 @@ export async function updateGamification(userId, quizResult, quizQuestions) {
   allResults.push(quizResult)
 
   const newBadges = checkBadges({ ...userData, xp: newXp, streak, lastActiveDate: today }, allResults)
+  const badgeXpBonus = newBadges.length * 50
   const allBadges = [...(userData.badges || []), ...newBadges.map(b => b.id)]
+  const finalXp = newXp + badgeXpBonus
+  const finalLevel = getLevel(finalXp)
+  const finalLeveledUp = finalLevel > newLevel || leveledUp
 
   await setDoc(userRef, {
-    xp: newXp,
-    level: newLevel,
+    xp: finalXp,
+    level: finalLevel,
     streak,
     lastActiveDate: today,
     badges: allBadges,
   }, { merge: true })
 
   return {
-    xpEarned,
-    totalXp: newXp,
-    level: newLevel,
-    leveledUp,
+    xpEarned: xpEarned + badgeXpBonus,
+    totalXp: finalXp,
+    level: finalLevel,
+    leveledUp: finalLeveledUp,
     streak,
     newBadges,
-    progress: getLevelProgress(newXp),
-    xpToNext: getXPForNextLevel(newXp),
+    badgeXpBonus,
+    progress: getLevelProgress(finalXp),
+    xpToNext: getXPForNextLevel(finalXp),
   }
 }

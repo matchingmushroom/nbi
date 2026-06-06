@@ -165,6 +165,7 @@ export default function QuizRunner({ questions, config, onFinish }) {
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-warning text-[18px]">stars</span>
                   <span className="font-bold text-on-surface">+{gamify.xpEarned} XP</span>
+                  {gamify.badgeXpBonus > 0 && <span className="text-[10px] text-on-surface-variant">(incl. {gamify.badgeXpBonus} badge bonus)</span>}
                 </div>
                 {gamify.streak > 0 && (
                   <div className="flex items-center gap-1">
