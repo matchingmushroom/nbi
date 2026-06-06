@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
@@ -8,24 +8,35 @@ import { formatDate } from '../lib/utils'
 export default function ResultsPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
+    if (!profile?.uid) return
+    let cancelled = false
+    setLoading(true)
     const fetch = async () => {
-      const q = query(
-        collection(db, 'results'),
-        where('userId', '==', profile?.uid),
-        orderBy('completedAt', 'desc')
-      )
-      const snap = await getDocs(q)
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-      setResults(data)
-      setLoading(false)
+      try {
+        const q = query(
+          collection(db, 'results'),
+          where('userId', '==', profile.uid),
+          orderBy('completedAt', 'desc')
+        )
+        const snap = await getDocs(q)
+        if (cancelled) return
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        setResults(data)
+      } catch (e) {
+        console.error('Results fetch error:', e)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
     fetch()
-  }, [profile])
+    return () => { cancelled = true }
+  }, [profile, location.pathname])
 
   const getQuizType = (r) => r.quizType || r.testType || 'chapter'
 

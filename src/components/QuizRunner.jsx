@@ -16,6 +16,7 @@ export default function QuizRunner({ questions, config, onFinish }) {
   const [timeUp, setTimeUp] = useState(false)
   const startTime = useRef(Date.now())
   const scoreRef = useRef(0)
+  const resultIdRef = useRef(null)
 
   const saveResult = useCallback(async (finalAnswers, finalScore) => {
     const timeTaken = Math.round((Date.now() - startTime.current) / 1000)
@@ -36,7 +37,8 @@ export default function QuizRunner({ questions, config, onFinish }) {
       timeTaken,
     }
     try {
-      await addDoc(collection(db, 'results'), result)
+      const docRef = await addDoc(collection(db, 'results'), result)
+      resultIdRef.current = docRef.id
     } catch (e) {
       console.error('Failed to save result:', e)
     }
@@ -95,7 +97,9 @@ export default function QuizRunner({ questions, config, onFinish }) {
           <p className="text-xs text-on-surface-variant mb-5">{Math.round(pct * 100)}% Accuracy</p>
           <div className="flex gap-2">
             <button onClick={() => navigate('/quiz/select')} className="flex-1 bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] cursor-pointer">Back</button>
-            <button onClick={() => navigate('/results')} className="flex-1 bg-surface-container-low text-on-surface py-2.5 rounded-xl font-semibold text-sm hover:bg-surface-container-high active:scale-[0.98] cursor-pointer">Review</button>
+            {resultIdRef.current && (
+              <button onClick={() => navigate(`/results/${resultIdRef.current}`)} className="flex-1 bg-surface-container-low text-on-surface py-2.5 rounded-xl font-semibold text-sm hover:bg-surface-container-high active:scale-[0.98] cursor-pointer">Review Answers</button>
+            )}
           </div>
         </div>
       </div>

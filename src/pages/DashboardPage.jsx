@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
@@ -9,39 +9,48 @@ import { FiUsers, FiFileText, FiBookOpen } from 'react-icons/fi'
 export default function DashboardPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const isAdmin = profile?.role === 'admin'
   const [recentResults, setRecentResults] = useState([])
   const [stats, setStats] = useState({ total: 0, avgScore: 0, bestScore: 0 })
 
   useEffect(() => {
     if (isAdmin || !profile?.uid) return
+    let cancelled = false
     const fetch = async () => {
-      const q = query(
-        collection(db, 'results'),
-        where('userId', '==', profile.uid),
-        orderBy('completedAt', 'desc'),
-        limit(5)
-      )
-      const snap = await getDocs(q)
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-      setRecentResults(data)
+      try {
+        const q = query(
+          collection(db, 'results'),
+          where('userId', '==', profile.uid),
+          orderBy('completedAt', 'desc'),
+          limit(5)
+        )
+        const snap = await getDocs(q)
+        if (cancelled) return
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        setRecentResults(data)
 
-      const allSnap = await getDocs(query(
-        collection(db, 'results'),
-        where('userId', '==', profile.uid)
-      ))
-      const all = allSnap.docs.map((d) => d.data())
-      if (all.length) {
-        const scores = all.map((r) => r.percentage || 0)
-        setStats({
-          total: all.length,
-          avgScore: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-          bestScore: Math.max(...scores),
-        })
+        const allSnap = await getDocs(query(
+          collection(db, 'results'),
+          where('userId', '==', profile.uid)
+        ))
+        if (cancelled) return
+        const all = allSnap.docs.map((d) => d.data())
+        if (all.length) {
+          const scores = all.map((r) => r.percentage || 0)
+          setStats({
+            total: all.length,
+            avgScore: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+            bestScore: Math.max(...scores),
+          })
+        }
+      } catch (e) {
+        console.error('Dashboard fetch error:', e)
       }
     }
     fetch()
-  }, [isAdmin, profile])
+    return () => { cancelled = true }
+  }, [isAdmin, profile, location.pathname])
 
   if (isAdmin) {
     return (
