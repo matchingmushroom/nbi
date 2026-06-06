@@ -7,6 +7,13 @@ export function shuffle(array) {
   return arr
 }
 
+export function pickByDifficulty(questions, { beginner, intermediate, expert }) {
+  const b = shuffle(questions.filter(q => q.difficulty === 'Beginner')).slice(0, beginner)
+  const i = shuffle(questions.filter(q => q.difficulty === 'Intermediate')).slice(0, intermediate)
+  const e = shuffle(questions.filter(q => q.difficulty === 'Expert')).slice(0, expert)
+  return shuffle([...b, ...i, ...e]).filter(Boolean)
+}
+
 export function getLetters() {
   return ['A', 'B', 'C', 'D']
 }

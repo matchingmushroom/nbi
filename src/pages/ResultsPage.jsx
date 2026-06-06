@@ -27,7 +27,21 @@ export default function ResultsPage() {
     fetch()
   }, [profile])
 
-  const filtered = filter === 'all' ? results : results.filter((r) => r.testType === filter)
+  const getQuizType = (r) => r.quizType || r.testType || 'chapter'
+
+  const filtered = filter === 'all' ? results : results.filter((r) => getQuizType(r) === filter)
+
+  const getTitle = (r) => {
+    const qt = getQuizType(r)
+    if (qt === 'chapter') return r.chapter || 'Chapter Test'
+    if (qt === 'module') return r.module || 'Module Test'
+    if (qt === 'mode') {
+      if (r.mode === 'Book') return 'Self-Paced (Book)'
+      if (r.mode === 'Physical') return 'Instructor-Led (Physical)'
+      return r.mode || 'Mode Test'
+    }
+    return 'Final Mock Test'
+  }
 
   if (loading) return (
     <div className="h-full flex items-center justify-center">
@@ -42,10 +56,12 @@ export default function ResultsPage() {
         <p className="text-on-surface-variant text-sm mt-1">{results.length} total attempt{results.length !== 1 ? 's' : ''}</p>
       </div>
 
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 flex-wrap">
         {[
           { key: 'all', label: 'All Tests' },
           { key: 'chapter', label: 'Chapter' },
+          { key: 'module', label: 'Module' },
+          { key: 'mode', label: 'Mode' },
           { key: 'final', label: 'Final' },
         ].map((t) => (
           <button
@@ -90,7 +106,7 @@ export default function ResultsPage() {
                 </span>
               </div>
               <div className="text-left min-w-0">
-                <h3 className="text-sm font-semibold text-on-surface truncate">{r.chapter}</h3>
+                <h3 className="text-sm font-semibold text-on-surface truncate">{getTitle(r)}</h3>
                 <p className="text-xs text-on-surface-variant">{formatDate(r.completedAt)}</p>
               </div>
             </div>

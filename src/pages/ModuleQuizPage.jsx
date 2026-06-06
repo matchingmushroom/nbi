@@ -5,9 +5,9 @@ import { db } from '../lib/firebase'
 import { pickByDifficulty } from '../lib/utils'
 import QuizRunner from '../components/QuizRunner'
 
-export default function ChapterQuizPage() {
-  const { chapterName } = useParams()
-  const chapter = decodeURIComponent(chapterName)
+export default function ModuleQuizPage() {
+  const { moduleName } = useParams()
+  const mod = decodeURIComponent(moduleName)
   const navigate = useNavigate()
   const [questions, setQuestions] = useState(null)
 
@@ -15,25 +15,25 @@ export default function ChapterQuizPage() {
     const fetch = async () => {
       const snap = await getDocs(collection(db, 'questions'))
       const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-      const filtered = all.filter((q) => q.chapter === chapter)
-      if (filtered.length < 6) { navigate('/quiz/select'); return }
-      const picked = pickByDifficulty(filtered, { beginner: 2, intermediate: 4, expert: 4 })
+      const filtered = all.filter((q) => q.module === mod)
+      if (filtered.length < 12) { navigate('/quiz/select'); return }
+      const picked = pickByDifficulty(filtered, { beginner: 4, intermediate: 8, expert: 8 })
       setQuestions(picked)
     }
     fetch()
-  }, [chapter, navigate])
+  }, [mod, navigate])
 
-  if (!questions) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading chapter test...</p></div>
+  if (!questions) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading module test...</p></div>
 
   return (
     <QuizRunner
       questions={questions}
       config={{
-        title: chapter,
-        subtitle: 'Chapter Test · 10 min',
-        quizType: 'chapter',
-        chapter,
-        timerMinutes: 10,
+        title: mod,
+        subtitle: 'Module Test · 30 min',
+        quizType: 'module',
+        module: mod,
+        timerMinutes: 30,
       }}
     />
   )

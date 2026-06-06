@@ -10,7 +10,7 @@ export default function LeaderboardPage() {
     const fetch = async () => {
       const snap = await getDocs(collection(db, 'results'))
       const allResults = snap.docs.map((d) => d.data())
-      const finalTests = allResults.filter((r) => r.testType === 'final' || r.chapter === 'Final Test')
+      const finalTests = allResults.filter((r) => r.quizType === 'final' || r.testType === 'final' || r.chapter === 'Final Test')
 
       const userBest = {}
       finalTests.forEach((r) => {

@@ -33,6 +33,18 @@ export default function ResultDetailPage() {
   if (loading) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading...</p></div>
   if (!result) return null
 
+  const getTitle = (r) => {
+    const qt = r.quizType || r.testType || 'chapter'
+    if (qt === 'chapter') return r.chapter || 'Chapter Test'
+    if (qt === 'module') return r.module || 'Module Test'
+    if (qt === 'mode') {
+      if (r.mode === 'Book') return 'Self-Paced (Book)'
+      if (r.mode === 'Physical') return 'Instructor-Led (Physical)'
+      return r.mode || 'Mode Test'
+    }
+    return 'Final Mock Test'
+  }
+
   const getOptionText = (q, letter) => {
     if (!q) return ''
     const map = { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD }
@@ -50,10 +62,11 @@ export default function ResultDetailPage() {
       <div className="bg-surface border border-outline-variant rounded-xl p-5 md:p-6 mb-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface">{result.chapter}</h1>
+            <h1 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface">{getTitle(result)}</h1>
             <p className="text-xs text-on-surface-variant mt-1">
               {result.module && <span className="mr-2">{result.module}</span>}
               {result.mode && <span className="mr-2 text-primary">{result.mode}</span>}
+              {result.chapter && <span className="mr-2 text-on-surface-variant">{result.chapter}</span>}
               {formatDate(result.completedAt)}
             </p>
           </div>

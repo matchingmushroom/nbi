@@ -7,6 +7,8 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import QuizSelectPage from './pages/QuizSelectPage'
 import ChapterQuizPage from './pages/ChapterQuizPage'
+import ModuleQuizPage from './pages/ModuleQuizPage'
+import ModeQuizPage from './pages/ModeQuizPage'
 import FinalQuizPage from './pages/FinalQuizPage'
 import ResultsPage from './pages/ResultsPage'
 import ResultDetailPage from './pages/ResultDetailPage'
@@ -32,6 +34,8 @@ function App() {
                       <Route path="/dashboard" element={<DashboardPage />} />
                       <Route path="/quiz/select" element={<QuizSelectPage />} />
                       <Route path="/quiz/chapter/:chapterName" element={<ChapterQuizPage />} />
+                      <Route path="/quiz/module/:moduleName" element={<ModuleQuizPage />} />
+                      <Route path="/quiz/mode/:modeName" element={<ModeQuizPage />} />
                       <Route path="/quiz/final" element={<FinalQuizPage />} />
                       <Route path="/results" element={<ResultsPage />} />
                       <Route path="/results/:id" element={<ResultDetailPage />} />

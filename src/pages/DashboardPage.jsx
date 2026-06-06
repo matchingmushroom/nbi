@@ -100,7 +100,7 @@ export default function DashboardPage() {
         <button onClick={() => navigate('/quiz/select')} className="bg-primary text-on-primary p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm">
           <span className="material-symbols-outlined text-[32px] mb-3">play_arrow</span>
           <h3 className="font-['Hanken_Grotesk'] text-lg font-bold">Take a Quiz</h3>
-          <p className="text-sm text-white/80 mt-1">Chapter tests (10 Qs) or Final Test (100 Qs)</p>
+          <p className="text-sm text-white/80 mt-1">Chapter, Module, Mode, or Final Mock Test</p>
         </button>
         <button onClick={() => navigate('/results')} className="bg-surface border border-outline-variant p-6 rounded-xl text-left hover:shadow-sm transition-all active:scale-[0.98] cursor-pointer">
           <span className="material-symbols-outlined text-[32px] text-primary mb-3">insights</span>
@@ -131,7 +131,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-on-surface truncate">{r.chapter}</p>
+                  <p className="text-sm font-medium text-on-surface truncate">{r.chapter || r.module || r.mode || 'Quiz'}</p>
                   <p className="text-xs text-on-surface-variant">{r.score}/{r.totalQuestions} · {r.percentage}% · {formatDate(r.completedAt)}</p>
                 </div>
                 <span className={`text-xs font-bold ${(r.percentage || 0) >= 60 ? 'text-success' : 'text-error'}`}>
