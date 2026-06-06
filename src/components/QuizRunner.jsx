@@ -7,6 +7,7 @@ import { calcQuizXP, updateGamification } from '../lib/gamification'
 import QuestionCard from './QuestionCard'
 import Timer from './Timer'
 import ConfettiEffect from './ConfettiEffect'
+import { useSound } from '../hooks/useSound'
 
 export default function QuizRunner({ questions, config, onFinish }) {
   const navigate = useNavigate()
@@ -20,6 +21,7 @@ export default function QuizRunner({ questions, config, onFinish }) {
   const [combo, setCombo] = useState(0)
   const [displayScore, setDisplayScore] = useState(0)
   const [showConfetti, setShowConfetti] = useState(false)
+  const { enabled: soundEnabled, toggle: toggleSound, playCorrect, playWrong, playLevelUp } = useSound()
   const startTime = useRef(Date.now())
   const scoreRef = useRef(0)
   const resultIdRef = useRef(null)
@@ -76,8 +78,10 @@ export default function QuizRunner({ questions, config, onFinish }) {
 
     if (result.isCorrect) {
       comboRef.current += 1
+      playCorrect()
     } else {
       comboRef.current = 0
+      playWrong()
     }
     setCombo(comboRef.current)
 
@@ -108,7 +112,17 @@ export default function QuizRunner({ questions, config, onFinish }) {
 
   useEffect(() => {
     if (!gamify) return
-    if (gamify.leveledUp) setShowConfetti(true)
+    if (gamify.leveledUp) { setShowConfetti(true); playLevelUp() }
+    try {
+      sessionStorage.setItem('nbi_quiz_done', JSON.stringify({
+        xpEarned: gamify.xpEarned,
+        leveledUp: gamify.leveledUp,
+        newLevel: gamify.level,
+        newBadges: gamify.newBadges || [],
+        score,
+        total: questions.length,
+      }))
+    } catch {}
   }, [gamify])
 
   if (!questions.length) {
@@ -209,13 +223,16 @@ export default function QuizRunner({ questions, config, onFinish }) {
           <h2 className="font-['Hanken_Grotesk'] text-sm md:text-base font-bold text-on-surface leading-tight">{config.title}</h2>
           <p className="text-[10px] text-on-surface-variant">{questions.length} Qs · {config.subtitle}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {combo >= 2 && (
-            <div className="hidden sm:flex items-center gap-1 bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full text-[11px] font-bold animate-combo-bounce">
-              <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
-              x{combo}
+            <div className="flex items-center gap-0.5 bg-orange-100 text-orange-600 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold animate-combo-bounce">
+              <span className="material-symbols-outlined text-[12px] sm:text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
+              <span className="hidden xs:inline">x</span>{combo}
             </div>
           )}
+          <button onClick={toggleSound} className="p-1 rounded-full hover:bg-surface-container-low transition-colors cursor-pointer text-on-surface-variant" title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}>
+            <span className="material-symbols-outlined text-[18px]">{soundEnabled ? 'volume_up' : 'volume_off'}</span>
+          </button>
           <Timer minutes={config.timerMinutes} onTimeUp={handleTimeUp} />
         </div>
       </div>

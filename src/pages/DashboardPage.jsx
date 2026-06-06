@@ -16,6 +16,18 @@ export default function DashboardPage() {
   const [recentResults, setRecentResults] = useState([])
   const [stats, setStats] = useState({ total: 0, avgScore: 0, bestScore: 0 })
   const [completedMissions, setCompletedMissions] = useState([])
+  const [quizToast, setQuizToast] = useState(null)
+
+  useEffect(() => {
+    try {
+      const data = sessionStorage.getItem('nbi_quiz_done')
+      if (data) {
+        setQuizToast(JSON.parse(data))
+        sessionStorage.removeItem('nbi_quiz_done')
+        setTimeout(() => setQuizToast(null), 6000)
+      }
+    } catch {}
+  }, [location.pathname])
 
   useEffect(() => {
     if (!profile?.uid) return
@@ -156,6 +168,42 @@ export default function DashboardPage() {
 
   return (
       <div className="h-full overflow-y-auto p-4 md:p-8 max-w-5xl mx-auto">
+      {/* Quiz Completion Toast */}
+      {quizToast && (
+        <div className="mb-4 bg-primary-fixed border border-primary/20 rounded-xl p-3 shadow-sm animate-slide-down">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-primary text-[20px]">stars</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-primary">+{quizToast.xpEarned} XP Earned!</p>
+              <p className="text-[11px] text-on-surface-variant">Score: {quizToast.score}/{quizToast.total} · {quizToast.leveledUp ? `Leveled up to ${quizToast.newLevel}!` : `${quizToast.newBadges?.length || 0} new badge${quizToast.newBadges?.length !== 1 ? 's' : ''} earned`}</p>
+            </div>
+            <button onClick={() => setQuizToast(null)} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
+          {quizToast.leveledUp && (
+            <div className="mt-2 bg-warning/10 border border-warning/20 rounded-lg p-1.5 text-center">
+              <p className="text-xs font-bold text-warning flex items-center justify-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">arrow_upward</span>
+                LEVEL UP! You're now Level {quizToast.newLevel}
+              </p>
+            </div>
+          )}
+          {quizToast.newBadges?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {quizToast.newBadges.map(b => (
+                <div key={b.id} className="flex items-center gap-1 bg-primary-fixed-dim/30 px-2 py-0.5 rounded text-[10px] font-medium">
+                  <span className="material-symbols-outlined text-primary text-[12px]" style={{fontVariationSettings: "'FILL' 1"}}>{b.icon}</span>
+                  {b.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Greeting */}
       <section className="mb-6">
         <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Welcome back, {profile?.displayName?.split(' ')[0] || 'Student'}</h1>

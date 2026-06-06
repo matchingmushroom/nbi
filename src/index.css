@@ -73,3 +73,21 @@
 .animate-combo-bounce {
   animation: combo-bounce-in 0.3s ease-out;
 }
+
+@keyframes timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-timer-pulse {
+  animation: timer-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes slide-down {
+  0% { transform: translateY(-20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.4s ease-out;
+}

@@ -29,9 +29,11 @@ export default function Timer({ minutes, onTimeUp }) {
   const mins = Math.floor(timeLeft / 60)
   const secs = timeLeft % 60
   const display = `${mins}:${secs < 10 ? '0' : ''}${secs}`
+  const critical = timeLeft > 0 && timeLeft <= 60
 
   return (
     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+      critical ? 'bg-red-100 text-red-700 animate-timer-pulse' :
       warning ? 'bg-red-50 text-red-700' : 'bg-[#f0f3ff] text-primary'
     }`}>
       <span className="material-symbols-outlined text-[18px]">timer</span>
