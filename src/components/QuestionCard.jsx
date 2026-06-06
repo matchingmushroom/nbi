@@ -31,15 +31,35 @@ export default function QuestionCard({ question, onNext, total, index }) {
 
   return (
     <div>
-      <div className="mb-2 text-sm text-gray-500 font-medium">
-        Question {index + 1} of {total}
+      {/* Question Meta */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+        <div>
+          <span className="text-xs font-semibold text-primary uppercase tracking-widest bg-primary-fixed px-2 py-0.5 rounded">
+            {question.chapter?.split(':')[0]?.trim() || 'Chapter'}
+          </span>
+          <h2 className="font-['Hanken_Grotesk'] text-lg font-semibold text-on-surface mt-1">
+            Question {index + 1} of {total}
+          </h2>
+        </div>
+        <span className="text-xs text-on-surface-variant bg-surface-container-low px-2 py-1 rounded-full">
+          {question.difficulty}
+        </span>
       </div>
-      <div className="text-xs text-gray-400 mb-4">
-        Chapter: {question.chapter} &middot; Difficulty: {question.difficulty}
+
+      {/* Question Text */}
+      <div className="relative mb-8">
+        <div className="absolute top-0 right-0 w-24 h-24 opacity-[0.03] pointer-events-none">
+          <svg viewBox="0 0 100 100" className="w-full h-full text-primary fill-current">
+            <circle cx="50" cy="50" fill="none" r="40" stroke="currentColor" strokeWidth="2" />
+            <path d="M10 50 L90 50 M50 10 L50 90" stroke="currentColor" strokeWidth="1" />
+          </svg>
+        </div>
+        <p className="text-sm md:text-base text-on-surface leading-relaxed font-medium">
+          {question.question}
+        </p>
       </div>
-      <h3 className="text-lg font-semibold mb-6 text-gray-900 leading-relaxed">
-        {question.question}
-      </h3>
+
+      {/* Options */}
       <div className="space-y-3">
         {options.map((opt) => (
           <OptionButton
@@ -54,19 +74,27 @@ export default function QuestionCard({ question, onNext, total, index }) {
           />
         ))}
       </div>
+
+      {/* Feedback */}
       {revealed && (
         <div className="mt-6">
-          <div className={`p-4 rounded-lg border-2 ${isCorrect ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400'}`}>
-            <p className="font-bold text-sm mb-1">
+          <div className={`p-4 md:p-5 rounded-xl border-2 ${
+            isCorrect ? 'bg-green-50 border-success' : 'bg-red-50 border-error'
+          }`}>
+            <p className="font-bold text-sm mb-1 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">
+                {isCorrect ? 'check_circle' : 'cancel'}
+              </span>
               {isCorrect ? 'Correct!' : 'Wrong!'}
             </p>
-            <p className="text-sm text-gray-700">{question.explanation}</p>
+            <p className="text-sm text-on-surface-variant leading-relaxed">{question.explanation}</p>
           </div>
           <button
             onClick={handleNext}
-            className="mt-4 w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition cursor-pointer"
+            className="mt-4 w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer"
           >
-            {index < total - 1 ? 'Next Question' : 'See Results'}
+            {index < total - 1 ? 'Save & Next' : 'See Results'}
+            <span className="material-symbols-outlined text-[18px] ml-1 align-middle">chevron_right</span>
           </button>
         </div>
       )}

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import Papa from 'papaparse'
-import { collection, addDoc, writeBatch, doc } from 'firebase/firestore'
+import { collection, writeBatch, doc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { FiUpload, FiCheckCircle, FiAlertCircle } from 'react-icons/fi'
 
@@ -70,71 +70,74 @@ export default function CSVUploader() {
     }
   }
 
+  if (rows.length > 0) {
+    return (
+      <div>
+        <div className="bg-green-50 border border-success/30 rounded-xl p-4 mb-4 flex items-center gap-2 text-sm text-green-700">
+          <FiCheckCircle />
+          <span>{rows.length} questions parsed. Ready to upload.</span>
+        </div>
+        <div className="max-h-48 overflow-auto border border-outline-variant rounded-xl mb-4">
+          <table className="w-full text-xs">
+            <thead className="bg-surface-container-low sticky top-0">
+              <tr>
+                <th className="p-2 text-left">#</th>
+                <th className="p-2 text-left">Chapter</th>
+                <th className="p-2 text-left">Question</th>
+                <th className="p-2 text-left">Correct</th>
+                <th className="p-2 text-left">Difficulty</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice(0, 10).map((r, i) => (
+                <tr key={i} className="border-t border-outline-variant">
+                  <td className="p-2">{r.sn}</td>
+                  <td className="p-2 max-w-[80px] truncate">{r.chapter}</td>
+                  <td className="p-2 max-w-[200px] truncate">{r.question}</td>
+                  <td className="p-2">{r.correctAnswer}</td>
+                  <td className="p-2">{r.difficulty}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {rows.length > 10 && <p className="text-xs text-on-surface-variant p-2">...and {rows.length - 10} more</p>}
+        </div>
+        <div className="flex gap-3">
+          <button onClick={() => { setRows([]); if (inputRef.current) inputRef.current.value = '' }}
+            className="px-4 py-2 bg-surface-container-low text-on-surface rounded-xl text-sm font-medium hover:bg-surface-container-high transition-all cursor-pointer">
+            Cancel
+          </button>
+          <button onClick={handleUpload} disabled={uploading}
+            className="px-6 py-2 bg-primary text-on-primary rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all active:scale-[0.98] cursor-pointer">
+            {uploading ? 'Uploading...' : `Upload ${rows.length} Questions`}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
-      {!rows.length && (
-        <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-indigo-400 transition">
-          <FiUpload size={40} className="mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-600 mb-2">Drag and drop a CSV file, or click to browse</p>
-          <p className="text-xs text-gray-400 mb-4">Columns: SN, chapter, question, option-a, option-b, option-c, option-d, correct-answer, explanation, difficulty</p>
-          <input ref={inputRef} type="file" accept=".csv" onChange={handleFile} className="hidden" id="csvInput" />
-          <label htmlFor="csvInput" className="inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-indigo-700 transition">
-            Select CSV File
-          </label>
-        </div>
-      )}
-
-      {rows.length > 0 && (
-        <div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 flex items-center gap-2 text-green-700">
-            <FiCheckCircle />
-            <span>{rows.length} questions parsed. Ready to upload.</span>
-          </div>
-          <div className="max-h-64 overflow-auto border rounded-lg mb-4">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100 sticky top-0">
-                <tr>
-                  <th className="p-2 text-left">#</th>
-                  <th className="p-2 text-left">Chapter</th>
-                  <th className="p-2 text-left">Question</th>
-                  <th className="p-2 text-left">Correct</th>
-                  <th className="p-2 text-left">Difficulty</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.slice(0, 20).map((r, i) => (
-                  <tr key={i} className="border-t hover:bg-gray-50">
-                    <td className="p-2">{r.sn}</td>
-                    <td className="p-2 text-xs">{r.chapter}</td>
-                    <td className="p-2 text-xs max-w-xs truncate">{r.question}</td>
-                    <td className="p-2">{r.correctAnswer}</td>
-                    <td className="p-2">{r.difficulty}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {rows.length > 20 && <p className="text-xs text-gray-400 p-2">...and {rows.length - 20} more</p>}
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => { setRows([]); if (inputRef.current) inputRef.current.value = '' }} className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition cursor-pointer">
-              Cancel
-            </button>
-            <button onClick={handleUpload} disabled={uploading} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition cursor-pointer">
-              {uploading ? 'Uploading...' : `Upload ${rows.length} Questions`}
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="border-2 border-dashed border-outline-variant rounded-xl p-10 text-center hover:border-primary/50 transition-colors cursor-pointer"
+        onClick={() => inputRef.current?.click()}>
+        <FiUpload size={36} className="mx-auto text-on-surface-variant mb-3" />
+        <p className="text-sm text-on-surface-variant mb-1">Drag and drop a CSV file, or click to browse</p>
+        <p className="text-xs text-on-surface-variant/60 mb-4">Columns: SN, chapter, question, option-a, option-b, option-c, option-d, correct-answer, explanation, difficulty</p>
+        <input ref={inputRef} type="file" accept=".csv" onChange={handleFile} className="hidden" id="csvInput" />
+        <label htmlFor="csvInput" className="inline-block bg-primary text-on-primary px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer">
+          Select CSV File
+        </label>
+      </div>
 
       {error && (
-        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2 text-red-700">
+        <div className="mt-4 bg-red-50 border border-error/30 rounded-xl p-4 flex items-center gap-2 text-sm text-red-700">
           <FiAlertCircle />
           <span>{error}</span>
         </div>
       )}
 
       {result?.success && (
-        <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-2 text-green-700">
+        <div className="mt-4 bg-green-50 border border-success/30 rounded-xl p-4 flex items-center gap-2 text-sm text-green-700">
           <FiCheckCircle />
           <span>Successfully uploaded {result.count} questions to Firestore!</span>
         </div>

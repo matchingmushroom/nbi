@@ -1,32 +1,70 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
-import { FiBookOpen, FiUsers, FiFileText, FiBarChart2 } from 'react-icons/fi'
+import { formatDate } from '../lib/utils'
+import { FiUsers, FiFileText, FiBookOpen } from 'react-icons/fi'
 
 export default function DashboardPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const isAdmin = profile?.role === 'admin'
+  const [recentResults, setRecentResults] = useState([])
+  const [stats, setStats] = useState({ total: 0, avgScore: 0, bestScore: 0 })
+
+  useEffect(() => {
+    if (isAdmin || !profile?.uid) return
+    const fetch = async () => {
+      const q = query(
+        collection(db, 'results'),
+        where('userId', '==', profile.uid),
+        orderBy('completedAt', 'desc'),
+        limit(5)
+      )
+      const snap = await getDocs(q)
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      setRecentResults(data)
+
+      const allSnap = await getDocs(query(
+        collection(db, 'results'),
+        where('userId', '==', profile.uid)
+      ))
+      const all = allSnap.docs.map((d) => d.data())
+      if (all.length) {
+        const scores = all.map((r) => r.percentage || 0)
+        setStats({
+          total: all.length,
+          avgScore: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+          bestScore: Math.max(...scores),
+        })
+      }
+    }
+    fetch()
+  }, [isAdmin, profile])
 
   if (isAdmin) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-2">Admin Dashboard</h1>
-        <p className="text-gray-500 mb-6">Welcome, {profile?.displayName || profile?.email}</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button onClick={() => navigate('/admin/users')} className="bg-white p-6 rounded-xl shadow hover:shadow-md transition text-left cursor-pointer">
-            <FiUsers size={28} className="text-indigo-600 mb-3" />
-            <h3 className="font-semibold text-lg">Manage Users</h3>
-            <p className="text-sm text-gray-500">Create, edit, or delete users</p>
+      <div className="md:ml-64 p-4 md:p-8 pb-20 md:pb-8 max-w-5xl mx-auto">
+        <div className="mb-6">
+          <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Admin Dashboard</h1>
+          <p className="text-on-surface-variant text-sm mt-1">Welcome, {profile?.displayName || profile?.email}</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <button onClick={() => navigate('/admin/users')} className="bg-surface border border-outline-variant p-6 rounded-xl hover:shadow-sm transition-all text-left cursor-pointer active:scale-[0.98]">
+            <FiUsers size={24} className="text-primary mb-3" />
+            <h3 className="font-semibold text-on-surface">Manage Users</h3>
+            <p className="text-xs text-on-surface-variant mt-1">Create, edit, or delete users</p>
           </button>
-          <button onClick={() => navigate('/admin/questions')} className="bg-white p-6 rounded-xl shadow hover:shadow-md transition text-left cursor-pointer">
-            <FiFileText size={28} className="text-indigo-600 mb-3" />
-            <h3 className="font-semibold text-lg">Manage Questions</h3>
-            <p className="text-sm text-gray-500">View, edit, or delete questions</p>
+          <button onClick={() => navigate('/admin/questions')} className="bg-surface border border-outline-variant p-6 rounded-xl hover:shadow-sm transition-all text-left cursor-pointer active:scale-[0.98]">
+            <FiFileText size={24} className="text-primary mb-3" />
+            <h3 className="font-semibold text-on-surface">Manage Questions</h3>
+            <p className="text-xs text-on-surface-variant mt-1">View, edit, or delete questions</p>
           </button>
-          <button onClick={() => navigate('/admin/upload')} className="bg-white p-6 rounded-xl shadow hover:shadow-md transition text-left cursor-pointer">
-            <FiBookOpen size={28} className="text-indigo-600 mb-3" />
-            <h3 className="font-semibold text-lg">Upload CSV</h3>
-            <p className="text-sm text-gray-500">Bulk add questions from CSV</p>
+          <button onClick={() => navigate('/admin/upload')} className="bg-surface border border-outline-variant p-6 rounded-xl hover:shadow-sm transition-all text-left cursor-pointer active:scale-[0.98]">
+            <FiBookOpen size={24} className="text-primary mb-3" />
+            <h3 className="font-semibold text-on-surface">Upload CSV</h3>
+            <p className="text-xs text-on-surface-variant mt-1">Bulk add questions from CSV</p>
           </button>
         </div>
       </div>
@@ -34,27 +72,75 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-2">Welcome, {profile?.displayName || 'Student'}!</h1>
-      <p className="text-gray-500 mb-6">Ready to test your knowledge?</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button onClick={() => navigate('/quiz/select')} className="bg-white p-8 rounded-xl shadow hover:shadow-md transition text-left cursor-pointer">
-          <FiBookOpen size={36} className="text-indigo-600 mb-4" />
-          <h3 className="font-semibold text-xl mb-1">Take a Quiz</h3>
-          <p className="text-sm text-gray-500">Chapter tests (10 questions) or Final Test (100 questions)</p>
+    <div className="md:ml-64 p-4 md:p-8 pb-20 md:pb-8 max-w-5xl mx-auto">
+      {/* Greeting */}
+      <section className="mb-6">
+        <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Welcome back, {profile?.displayName?.split(' ')[0] || 'Student'}</h1>
+        <p className="text-on-surface-variant text-sm mt-0.5">You've completed {stats.total} test{stats.total !== 1 ? 's' : ''}. Keep going!</p>
+      </section>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+          <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Tests</span>
+          <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{stats.total}</p>
+        </div>
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+          <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Avg</span>
+          <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{stats.avgScore}%</p>
+        </div>
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+          <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Best</span>
+          <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{stats.bestScore}%</p>
+        </div>
+      </div>
+
+      {/* CTA Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <button onClick={() => navigate('/quiz/select')} className="bg-primary text-on-primary p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm">
+          <span className="material-symbols-outlined text-[32px] mb-3">play_arrow</span>
+          <h3 className="font-['Hanken_Grotesk'] text-lg font-bold">Take a Quiz</h3>
+          <p className="text-sm text-white/80 mt-1">Chapter tests (10 Qs) or Final Test (100 Qs)</p>
         </button>
-        <button onClick={() => navigate('/results')} className="bg-white p-8 rounded-xl shadow hover:shadow-md transition text-left cursor-pointer">
-          <FiBarChart2 size={36} className="text-indigo-600 mb-4" />
-          <h3 className="font-semibold text-xl mb-1">My Results</h3>
-          <p className="text-sm text-gray-500">View your past test attempts and track progress</p>
+        <button onClick={() => navigate('/results')} className="bg-surface border border-outline-variant p-6 rounded-xl text-left hover:shadow-sm transition-all active:scale-[0.98] cursor-pointer">
+          <span className="material-symbols-outlined text-[32px] text-primary mb-3">insights</span>
+          <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface">My Results</h3>
+          <p className="text-sm text-on-surface-variant mt-1">View past attempts and track progress</p>
         </button>
       </div>
-      <div className="mt-4">
-        <button onClick={() => navigate('/leaderboard')} className="bg-white p-8 rounded-xl shadow hover:shadow-md transition text-left w-full cursor-pointer">
-          <FiUsers size={36} className="text-indigo-600 mb-4" />
-          <h3 className="font-semibold text-xl mb-1">Leaderboard</h3>
-          <p className="text-sm text-gray-500">See top scores in Final Tests</p>
-        </button>
+
+      {/* Recent Activity */}
+      <div className="bg-surface border border-outline-variant rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-on-surface">Recent Activity</h3>
+          <button onClick={() => navigate('/results')} className="text-xs text-primary font-semibold hover:underline cursor-pointer">View All</button>
+        </div>
+        {recentResults.length === 0 ? (
+          <p className="text-sm text-on-surface-variant text-center py-6">No tests taken yet. Start a quiz to see activity!</p>
+        ) : (
+          <div className="space-y-3">
+            {recentResults.map((r) => (
+              <div key={r.id} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  (r.percentage || 0) >= 80 ? 'bg-green-100 text-success' :
+                  (r.percentage || 0) >= 60 ? 'bg-yellow-100 text-warning' :
+                  'bg-red-100 text-error'
+                }`}>
+                  <span className="material-symbols-outlined text-[16px]">
+                    {(r.percentage || 0) >= 60 ? 'check_circle' : 'close'}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-on-surface truncate">{r.chapter}</p>
+                  <p className="text-xs text-on-surface-variant">{r.score}/{r.totalQuestions} · {r.percentage}% · {formatDate(r.completedAt)}</p>
+                </div>
+                <span className={`text-xs font-bold ${(r.percentage || 0) >= 60 ? 'text-success' : 'text-error'}`}>
+                  {(r.percentage || 0) >= 60 ? 'Pass' : 'Fail'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

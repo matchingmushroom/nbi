@@ -1,27 +1,38 @@
 export default function OptionButton({ label, text, selected, correct, revealed, disabled, onClick }) {
-  let bg = 'bg-white border-gray-300 hover:border-indigo-400 hover:bg-indigo-50'
+  let containerStyle = 'border-outline-variant bg-surface hover:bg-surface-bright'
+  let circleStyle = 'border-outline-variant text-on-surface-variant'
+  let textStyle = ''
+
   if (revealed) {
-    if (correct) bg = 'bg-green-100 border-green-500 text-green-800'
-    else if (selected) bg = 'bg-red-100 border-red-500 text-red-800'
-    else bg = 'bg-gray-50 border-gray-200 text-gray-400'
+    if (correct) {
+      containerStyle = 'border-success bg-green-50'
+      circleStyle = 'bg-success text-white border-success'
+      textStyle = 'text-success font-medium'
+    } else if (selected) {
+      containerStyle = 'border-error bg-red-50'
+      circleStyle = 'bg-error text-white border-error'
+      textStyle = 'text-error font-medium'
+    } else {
+      containerStyle = 'border-outline-variant bg-gray-50'
+      textStyle = 'text-gray-400'
+    }
   } else if (selected) {
-    bg = 'bg-indigo-100 border-indigo-500'
+    containerStyle = 'border-primary bg-[#f0f3ff]'
+    circleStyle = 'bg-primary text-white border-primary'
   }
 
   return (
     <button
       disabled={disabled}
       onClick={onClick}
-      className={`w-full text-left p-4 rounded-lg border-2 transition font-medium flex items-center gap-3 ${bg}`}
+      className={`w-full flex items-center p-4 md:p-5 rounded-xl border-2 transition-all duration-200 ${containerStyle} ${
+        !revealed && !disabled ? 'hover:border-primary hover:bg-[#f0f3ff] active:scale-[0.99]' : ''
+      } cursor-pointer`}
     >
-      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-        revealed && correct ? 'bg-green-500 text-white' :
-        revealed && selected ? 'bg-red-500 text-white' :
-        'bg-indigo-100 text-indigo-700'
-      }`}>
-        {label}
-      </span>
-      <span>{text}</span>
+      <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center mr-4 shrink-0 transition-colors ${circleStyle}`}>
+        <span className="text-sm font-bold">{label}</span>
+      </div>
+      <span className={`text-sm md:text-base text-left leading-relaxed ${textStyle}`}>{text}</span>
     </button>
   )
 }

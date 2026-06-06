@@ -1,1 +1,56 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary: #00288e;
+  --color-primary-container: #1e40af;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #a8b8ff;
+  --color-primary-fixed: #dde1ff;
+  --color-primary-fixed-dim: #b8c4ff;
+  --color-secondary: #0058be;
+  --color-secondary-container: #2170e4;
+  --color-on-secondary: #ffffff;
+  --color-background: #F9FAFB;
+  --color-surface: #FFFFFF;
+  --color-surface-bright: #f9f9ff;
+  --color-surface-dim: #d3daea;
+  --color-surface-container: #e7eefe;
+  --color-surface-container-low: #f0f3ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-high: #e2e8f8;
+  --color-surface-container-highest: #dce2f3;
+  --color-on-surface: #151c27;
+  --color-on-surface-variant: #444653;
+  --color-outline: #757684;
+  --color-outline-variant: #c4c5d5;
+  --color-success: #059669;
+  --color-warning: #D97706;
+  --color-error: #DC2626;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-inverse-surface: #2a313d;
+  --color-inverse-primary: #b8c4ff;
+  --color-inverse-on-surface: #ebf1ff;
+  --color-tertiary: #611e00;
+  --color-tertiary-container: #872d00;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #ffa583;
+  --color-ink: #111827;
+  --font-family-body: 'Inter', sans-serif;
+  --font-family-heading: 'Hanken Grotesk', sans-serif;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-outline-variant) transparent;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.progress-ring__circle {
+  transition: stroke-dashoffset 0.35s;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}

@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, getDocs, addDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { shuffle } from '../lib/utils'
 import QuestionCard from '../components/QuestionCard'
-import ProgressBar from '../components/ProgressBar'
-import ResultSummary from '../components/ResultSummary'
+import Timer from '../components/Timer'
 
 const TARGET_BEGINNER = 20
 const TARGET_INTERMEDIATE = 30
@@ -22,16 +21,15 @@ export default function FinalQuizPage() {
   const [answers, setAnswers] = useState([])
   const [finished, setFinished] = useState(false)
   const [score, setScore] = useState(0)
+  const [timeUp, setTimeUp] = useState(false)
   const startTime = useRef(Date.now())
+  const scoreRef = useRef(0)
 
   useEffect(() => {
     const fetch = async () => {
       const snap = await getDocs(collection(db, 'questions'))
       const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-      if (all.length === 0) {
-        navigate('/quiz/select')
-        return
-      }
+      if (all.length === 0) { navigate('/quiz/select'); return }
 
       const beginner = shuffle(all.filter((q) => q.difficulty === 'Beginner'))
       const intermediate = shuffle(all.filter((q) => q.difficulty === 'Intermediate'))
@@ -42,99 +40,127 @@ export default function FinalQuizPage() {
       picked.push(...intermediate.slice(0, TARGET_INTERMEDIATE))
       picked.push(...expert.slice(0, TARGET_EXPERT))
 
-      const pickedBeginners = picked.filter(q => q.difficulty === 'Beginner').length
-      const pickedIntermediates = picked.filter(q => q.difficulty === 'Intermediate').length
-      const pickedExperts = picked.filter(q => q.difficulty === 'Expert').length
+      const pBeg = picked.filter(q => q.difficulty === 'Beginner').length
+      const pInt = picked.filter(q => q.difficulty === 'Intermediate').length
+      const pExp = picked.filter(q => q.difficulty === 'Expert').length
 
       let extra = []
-      const remainder = all.filter(
-        (q) => !picked.some((p) => p.id === q.id)
-      )
-      const shuffledRemainder = shuffle(remainder)
+      const remainder = shuffle(all.filter((q) => !picked.some((p) => p.id === q.id)))
 
-      if (pickedBeginners < TARGET_BEGINNER) {
-        const needed = TARGET_BEGINNER - pickedBeginners
-        extra.push(...shuffledRemainder.splice(0, needed))
-      }
-      if (pickedIntermediates < TARGET_INTERMEDIATE) {
-        const needed = TARGET_INTERMEDIATE - pickedIntermediates
-        extra.push(...shuffledRemainder.splice(0, needed))
-      }
-      if (pickedExperts < TARGET_EXPERT) {
-        const needed = TARGET_EXPERT - pickedExperts
-        extra.push(...shuffledRemainder.splice(0, needed))
-      }
-
-      if (picked.length + extra.length < TOTAL) {
-        extra.push(...shuffledRemainder.splice(0, TOTAL - picked.length - extra.length))
-      }
+      if (pBeg < TARGET_BEGINNER) extra.push(...remainder.splice(0, TARGET_BEGINNER - pBeg))
+      if (pInt < TARGET_INTERMEDIATE) extra.push(...remainder.splice(0, TARGET_INTERMEDIATE - pInt))
+      if (pExp < TARGET_EXPERT) extra.push(...remainder.splice(0, TARGET_EXPERT - pExp))
+      if (picked.length + extra.length < TOTAL) extra.push(...remainder.splice(0, TOTAL - picked.length - extra.length))
 
       picked = shuffle([...picked, ...extra]).slice(0, TOTAL)
 
-      if (picked.length < 10) {
-        navigate('/quiz/select')
-        return
-      }
-
+      if (picked.length < 10) { navigate('/quiz/select'); return }
       setQuestions(picked)
       setLoading(false)
     }
     fetch()
   }, [navigate])
 
+  const finishTest = useCallback(async (finalAnswers, finalScore) => {
+    const timeTaken = Math.round((Date.now() - startTime.current) / 1000)
+    try {
+      await addDoc(collection(db, 'results'), {
+        userId: profile?.uid || 'unknown',
+        userEmail: profile?.email || '',
+        displayName: profile?.displayName || '',
+        chapter: 'Final Test',
+        difficulty: 'Mixed',
+        score: finalScore,
+        totalQuestions: questions.length,
+        percentage: questions.length > 0 ? Math.round((finalScore / questions.length) * 100) : 0,
+        answers: finalAnswers,
+        completedAt: new Date().toISOString(),
+        timeTaken,
+        testType: 'final',
+      })
+    } catch (e) { console.error('Failed to save result:', e) }
+  }, [profile, questions.length])
+
+  const handleTimeUp = useCallback(() => {
+    setTimeUp(true)
+    setFinished(true)
+    setScore(scoreRef.current)
+    finishTest(answers, scoreRef.current)
+  }, [answers, finishTest])
+
   const handleNext = async (result) => {
     const newAnswers = [...answers, result]
     setAnswers(newAnswers)
-    if (result.isCorrect) setScore((s) => s + 1)
+    if (result.isCorrect) {
+      const newScore = score + 1
+      setScore(newScore)
+      scoreRef.current = newScore
+    }
 
     if (current + 1 >= questions.length) {
       const finalScore = score + (result.isCorrect ? 1 : 0)
       setScore(finalScore)
       setFinished(true)
-
-      const timeTaken = Math.round((Date.now() - startTime.current) / 1000)
-      try {
-        await addDoc(collection(db, 'results'), {
-          userId: profile?.uid || 'unknown',
-          userEmail: profile?.email || '',
-          displayName: profile?.displayName || '',
-          chapter: 'Final Test',
-          difficulty: 'Mixed',
-          score: finalScore,
-          totalQuestions: questions.length,
-          percentage: Math.round((finalScore / questions.length) * 100),
-          answers: [...newAnswers, result],
-          completedAt: new Date().toISOString(),
-          timeTaken,
-          testType: 'final',
-        })
-      } catch (e) {
-        console.error('Failed to save result:', e)
-      }
+      await finishTest(newAnswers, finalScore)
     } else {
       setCurrent((c) => c + 1)
     }
   }
 
-  if (loading) return <div className="flex justify-center items-center min-h-[60vh] text-xl">Preparing your Final Test...</div>
+  if (loading) return (
+    <div className="md:ml-64 p-8 pb-20 flex justify-center items-center min-h-[60vh]">
+      <p className="text-on-surface-variant">Preparing your Final Test...</p>
+    </div>
+  )
 
   if (finished) {
+    const totalQ = questions.length || 1
     return (
-      <div className="max-w-lg mx-auto p-6">
-        <ResultSummary score={score} total={questions.length} answers={answers} chapter="Final Test" />
+      <div className="md:ml-64 p-4 md:p-8 pb-20 md:pb-8 max-w-lg mx-auto">
+        <div className="bg-surface border border-outline-variant rounded-xl p-8 text-center shadow-sm">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+            (score / totalQ) >= 0.6 ? 'bg-green-100' : 'bg-red-100'
+          }`}>
+            <span className={`material-symbols-outlined text-[36px] ${
+              (score / totalQ) >= 0.6 ? 'text-success' : 'text-error'
+            }`}>
+              {(score / totalQ) >= 0.6 ? 'check_circle' : 'cancel'}
+            </span>
+          </div>
+          <h2 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface mb-1">
+            {(score / totalQ) >= 0.8 ? 'Excellent!' : (score / totalQ) >= 0.6 ? 'Good Job!' :
+             (score / totalQ) >= 0.4 ? 'Keep Trying' : 'Needs Improvement'}
+          </h2>
+          <p className="text-sm text-on-surface-variant mb-6">Final Test{timeUp ? ' (Time Expired)' : ''}</p>
+          <div className="text-5xl font-extrabold text-primary mb-1">{score}<span className="text-xl text-on-surface-variant">/{totalQ}</span></div>
+          <p className="text-sm text-on-surface-variant mb-8">{Math.round((score / totalQ) * 100)}% Accuracy</p>
+          <div className="flex gap-3">
+            <button onClick={() => navigate('/quiz/select')} className="flex-1 bg-primary text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer">
+              Back to Quiz Select
+            </button>
+            <button onClick={() => navigate('/dashboard')} className="flex-1 bg-surface-container-low text-on-surface py-3 rounded-xl font-semibold text-sm hover:bg-surface-container-high transition-all active:scale-[0.98] cursor-pointer">
+              Dashboard
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
 
   const q = questions[current]
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h2 className="text-lg font-semibold mb-1">Final Test</h2>
-      <p className="text-sm text-gray-500 mb-4">
-        {questions.length} questions &middot; All chapters mixed
-      </p>
-      <ProgressBar current={current} total={questions.length} />
-      <div className="bg-white rounded-xl shadow p-6">
+    <div className="md:ml-64 p-4 md:p-8 pb-20 md:pb-8 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface">Final Test</h2>
+          <p className="text-xs text-on-surface-variant">{questions.length} questions · All chapters</p>
+        </div>
+        <Timer minutes={60} onTimeUp={handleTimeUp} />
+      </div>
+      <div className="w-full bg-surface-container-low h-1.5 rounded-full mb-6 overflow-hidden">
+        <div className="bg-secondary h-full rounded-full transition-all duration-300" style={{ width: `${((current) / questions.length) * 100}%` }} />
+      </div>
+      <div className="bg-surface border border-outline-variant rounded-xl p-5 md:p-8 shadow-sm">
         <QuestionCard question={q} onNext={handleNext} total={questions.length} index={current} />
       </div>
     </div>

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Performance Analytics | NBI Prep</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Hanken+Grotesk:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#a8b8ff",
+                        "inverse-surface": "#2a313d",
+                        "surface": "#FFFFFF",
+                        "on-primary-fixed-variant": "#173bab",
+                        "on-tertiary-fixed-variant": "#802a00",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#fefcff",
+                        "warning": "#D97706",
+                        "surface-tint": "#3755c3",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-highest": "#dce2f3",
+                        "success": "#059669",
+                        "primary-fixed": "#dde1ff",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb59a",
+                        "on-surface-variant": "#444653",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-dim": "#d3daea",
+                        "surface-container-high": "#e2e8f8",
+                        "on-tertiary-container": "#ffa583",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#ffdbce",
+                        "primary-container": "#1e40af",
+                        "on-secondary-fixed-variant": "#004395",
+                        "inverse-primary": "#b8c4ff",
+                        "secondary": "#0058be",
+                        "on-surface": "#151c27",
+                        "error": "#DC2626",
+                        "ink": "#111827",
+                        "secondary-container": "#2170e4",
+                        "on-tertiary-fixed": "#380d00",
+                        "secondary-fixed": "#d8e2ff",
+                        "inverse-on-surface": "#ebf1ff",
+                        "surface-container": "#e7eefe",
+                        "surface-variant": "#dce2f3",
+                        "outline": "#757684",
+                        "on-secondary-fixed": "#001a42",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "primary": "#00288e",
+                        "surface-bright": "#f9f9ff",
+                        "on-primary-fixed": "#001453",
+                        "on-background": "#151c27",
+                        "primary-fixed-dim": "#b8c4ff",
+                        "background": "#F9FAFB",
+                        "tertiary": "#611e00",
+                        "outline-variant": "#c4c5d5",
+                        "tertiary-container": "#872d00",
+                        "on-primary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "stack-lg": "32px",
+                        "base": "4px",
+                        "container-max": "1280px",
+                        "gutter": "24px",
+                        "stack-sm": "8px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "label-sm": ["Inter"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "title-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .chart-line {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: dash 3s linear forwards;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: 0; }
+        }
+        .bar-grow {
+            transform-origin: bottom;
+            animation: grow 1s ease-out forwards;
+        }
+        @keyframes grow {
+            from { transform: scaleY(0); }
+            to { transform: scaleY(1); }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- SideNavBar (Desktop Only) -->
+<aside class="h-screen w-64 fixed left-0 top-0 hidden md:flex flex-col bg-surface border-r border-outline-variant flex flex-col h-full py-6 z-50">
+<div class="px-6 mb-8">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">NBI Prep</h1>
+<p class="font-body-md text-body-md text-outline">Licensure Excellence</p>
+</div>
+<nav class="flex-1 space-y-1 px-4">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-lowest transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-lowest transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-body-md text-body-md">Exam Modules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-lowest transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">library_books</span>
+<span class="font-body-md text-body-md">Study Materials</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-primary font-bold border-r-4 border-primary bg-surface-container-low active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">leaderboard</span>
+<span class="font-body-md text-body-md">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-lowest transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full bg-primary text-on-primary py-3 rounded-xl font-label-md text-label-md active:scale-95 transition-all">
+                Resume Last Quiz
+            </button>
+</div>
+</aside>
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-6 h-16 sticky top-0 z-40 bg-surface border-b border-outline-variant md:pl-72">
+<div class="flex items-center gap-4">
+<span class="md:hidden material-symbols-outlined text-on-surface-variant">menu</span>
+<span class="font-headline-md text-headline-md font-extrabold text-primary">NBI Exam Prep</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex items-center bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant">
+<span class="material-symbols-outlined text-outline text-[20px]">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md font-body-md ml-2 w-48" placeholder="Search analytics..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors active:opacity-80">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors active:opacity-80">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXnMZ0nj-mg8R_tWgJJbiVz5hz16Rt31VDxgfBqR6Kc4ZiMMDRQRkps0mWXuuJbDQCctTIIiZ_ArlCJ6nJsgkZPbfH-zjaG2kTsM7KjkIugPlJDrMwTCvkM3lfj-R_d1pw-HTedkiJwvRftVA9US_1g3uFhCA5qJqUXvM8avJbFuLg0O1r-qW2pqtwgy6TNPU_mH4CBjzwks-tRbxaMBfxsvVV4BIE0-_Cbf3tTFAWSxF-aSQ5r2gN_SnrgudCY1AADXOzxscWfJpt"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 p-6 md:p-8 lg:p-12 max-w-[1280px] mx-auto pb-24 md:pb-8">
+<!-- Header Section -->
+<div class="mb-stack-lg">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Performance Analytics</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Detailed insights into your licensure exam readiness.</p>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Key Metric Cards -->
+<div class="md:col-span-4 bg-surface border border-outline-variant rounded-xl p-6 flex flex-col justify-between shadow-sm">
+<div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Overall Readiness</span>
+<div class="flex items-baseline gap-2 mt-2">
+<span class="font-display-lg text-display-lg text-primary">84%</span>
+<span class="text-success font-label-md text-label-md flex items-center">
+<span class="material-symbols-outlined text-[18px]">trending_up</span> +3%
+                        </span>
+</div>
+</div>
+<div class="mt-4 h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[84%] rounded-full"></div>
+</div>
+</div>
+<div class="md:col-span-4 bg-surface border border-outline-variant rounded-xl p-6 flex flex-col justify-between shadow-sm">
+<div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Total Questions</span>
+<div class="flex items-baseline gap-2 mt-2">
+<span class="font-display-lg text-display-lg text-on-surface">1,284</span>
+</div>
+</div>
+<div class="flex gap-4 mt-4">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-success">Correct</span>
+<span class="font-title-lg text-title-lg">1,078</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-error">Incorrect</span>
+<span class="font-title-lg text-title-lg">206</span>
+</div>
+</div>
+</div>
+<div class="md:col-span-4 bg-surface border border-outline-variant rounded-xl p-6 flex flex-col justify-between shadow-sm">
+<div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Study Velocity</span>
+<div class="flex items-baseline gap-2 mt-2">
+<span class="font-display-lg text-display-lg text-on-surface">4.2h</span>
+<span class="font-body-md text-body-md text-outline">/day</span>
+</div>
+</div>
+<div class="flex -space-x-2 mt-4">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-[12px] text-white font-bold border-2 border-white">M</div>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-[12px] text-white font-bold border-2 border-white">T</div>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-[12px] text-white font-bold border-2 border-white">W</div>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-[12px] text-white font-bold border-2 border-white">T</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-[12px] text-outline font-bold border-2 border-white">F</div>
+</div>
+</div>
+<!-- Score Trends Line Chart -->
+<div class="md:col-span-8 bg-surface border border-outline-variant rounded-xl p-8 shadow-sm">
+<div class="flex justify-between items-center mb-8">
+<h3 class="font-title-lg text-title-lg">Score Trends Over Time</h3>
+<div class="flex gap-2">
+<button class="px-3 py-1 bg-surface-container-low text-primary rounded-full font-label-sm text-label-sm">7D</button>
+<button class="px-3 py-1 text-outline hover:bg-surface-container-lowest rounded-full font-label-sm text-label-sm">1M</button>
+<button class="px-3 py-1 text-outline hover:bg-surface-container-lowest rounded-full font-label-sm text-label-sm">ALL</button>
+</div>
+</div>
+<div class="relative h-64 w-full">
+<svg class="w-full h-full overflow-visible" viewbox="0 0 800 200">
+<!-- Grid Lines -->
+<line stroke="#E2E8F8" stroke-width="1" x1="0" x2="800" y1="0" y2="0"></line>
+<line stroke="#E2E8F8" stroke-width="1" x1="0" x2="800" y1="50" y2="50"></line>
+<line stroke="#E2E8F8" stroke-width="1" x1="0" x2="800" y1="100" y2="100"></line>
+<line stroke="#E2E8F8" stroke-width="1" x1="0" x2="800" y1="150" y2="150"></line>
+<line stroke="#E2E8F8" stroke-width="1" x1="0" x2="800" y1="200" y2="200"></line>
+<!-- Area Fill -->
+<path d="M0,160 L100,140 L200,150 L300,100 L400,110 L500,60 L600,70 L700,30 L800,40 L800,200 L0,200 Z" fill="url(#grad)" opacity="0.1"></path>
+<defs>
+<lineargradient id="grad" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#00288e;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#00288e;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+<!-- Line Chart -->
+<path class="chart-line" d="M0,160 L100,140 L200,150 L300,100 L400,110 L500,60 L600,70 L700,30 L800,40" fill="none" stroke="#00288e" stroke-width="3"></path>
+<!-- Data Points -->
+<circle cx="0" cy="160" fill="#00288e" r="4"></circle>
+<circle cx="300" cy="100" fill="#00288e" r="4"></circle>
+<circle cx="500" cy="60" fill="#00288e" r="4"></circle>
+<circle cx="700" cy="30" fill="#00288e" r="4"></circle>
+</svg>
+</div>
+<div class="flex justify-between mt-4 font-label-sm text-label-sm text-outline">
+<span>Mon</span>
+<span>Tue</span>
+<span>Wed</span>
+<span>Thu</span>
+<span>Fri</span>
+<span>Sat</span>
+<span>Sun</span>
+</div>
+</div>
+<!-- Weak Areas Section -->
+<div class="md:col-span-4 bg-surface border border-outline-variant rounded-xl p-8 shadow-sm">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-error">priority_high</span>
+<h3 class="font-title-lg text-title-lg">Weak Areas</h3>
+</div>
+<div class="space-y-4">
+<div class="p-4 bg-error-container/30 border-l-4 border-error rounded-r-lg">
+<div class="flex justify-between items-center mb-1">
+<span class="font-body-md font-bold text-on-error-container">Constitutional Law</span>
+<span class="font-label-sm text-label-sm text-error">42%</span>
+</div>
+<p class="text-[13px] text-on-surface-variant">Focus on Article III Bill of Rights and Due Process.</p>
+</div>
+<div class="p-4 bg-warning/10 border-l-4 border-warning rounded-r-lg">
+<div class="flex justify-between items-center mb-1">
+<span class="font-body-md font-bold text-on-background">Criminal Procedure</span>
+<span class="font-label-sm text-label-sm text-warning">58%</span>
+</div>
+<p class="text-[13px] text-on-surface-variant">Review Arrests and Search Warrants protocols.</p>
+</div>
+<div class="p-4 bg-surface-container-low border-l-4 border-outline rounded-r-lg">
+<div class="flex justify-between items-center mb-1">
+<span class="font-body-md font-bold text-on-background">Forensic Science</span>
+<span class="font-label-sm text-label-sm text-outline">65%</span>
+</div>
+<p class="text-[13px] text-on-surface-variant">Strengthen DNA analysis and Toxicology basics.</p>
+</div>
+</div>
+<button class="w-full mt-6 py-2 text-primary font-label-md text-label-md hover:underline decoration-2 underline-offset-4">
+                    View Full Subject Breakdown
+                </button>
+</div>
+<!-- Module Performance Bar Chart -->
+<div class="md:col-span-12 bg-surface border border-outline-variant rounded-xl p-8 shadow-sm">
+<h3 class="font-title-lg text-title-lg mb-8">Performance Across Modules</h3>
+<div class="flex items-end justify-between gap-4 h-48 px-4">
+<div class="flex-1 flex flex-col items-center gap-4">
+<div class="w-full max-w-[60px] bg-primary rounded-t-lg bar-grow" style="height: 85%;"></div>
+<span class="font-label-sm text-label-sm text-center">Module 1</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-4">
+<div class="w-full max-w-[60px] bg-secondary rounded-t-lg bar-grow" style="height: 60%;"></div>
+<span class="font-label-sm text-label-sm text-center">Module 2</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-4">
+<div class="w-full max-w-[60px] bg-primary rounded-t-lg bar-grow" style="height: 92%;"></div>
+<span class="font-label-sm text-label-sm text-center">Module 3</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-4">
+<div class="w-full max-w-[60px] bg-secondary rounded-t-lg bar-grow" style="height: 45%;"></div>
+<span class="font-label-sm text-label-sm text-center">Module 4</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-4">
+<div class="w-full max-w-[60px] bg-primary rounded-t-lg bar-grow" style="height: 78%;"></div>
+<span class="font-label-sm text-label-sm text-center">Module 5</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-4">
+<div class="w-full max-w-[60px] bg-secondary rounded-t-lg bar-grow" style="height: 35%;"></div>
+<span class="font-label-sm text-label-sm text-center">Module 6</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 md:hidden bg-surface border-t border-outline-variant shadow-lg">
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-1" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-1" href="#">
+<span class="material-symbols-outlined">list_alt</span>
+<span class="font-label-sm text-label-sm">Modules</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-3 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">insights</span>
+<span class="font-label-sm text-label-sm">Stats</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-1" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for hover states on bars
+        document.querySelectorAll('.bar-grow').forEach(bar => {
+            bar.addEventListener('mouseenter', () => {
+                bar.style.opacity = '0.8';
+            });
+            bar.addEventListener('mouseleave', () => {
+                bar.style.opacity = '1';
+            });
+        });
+    </script>
+</body></html>

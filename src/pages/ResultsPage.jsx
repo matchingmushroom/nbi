@@ -4,7 +4,6 @@ import { collection, query, where, getDocs, orderBy } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/utils'
-import { FiEye } from 'react-icons/fi'
 
 export default function ResultsPage() {
   const { profile } = useAuth()
@@ -30,50 +29,76 @@ export default function ResultsPage() {
 
   const filtered = filter === 'all' ? results : results.filter((r) => r.testType === filter)
 
-  if (loading) return <div className="flex justify-center items-center min-h-[60vh] text-xl">Loading...</div>
+  if (loading) return (
+    <div className="md:ml-64 p-8 pb-20 flex justify-center items-center min-h-[60vh]">
+      <p className="text-on-surface-variant">Loading...</p>
+    </div>
+  )
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-2">My Results</h1>
-      <p className="text-gray-500 mb-6">View all your test attempts and track your progress</p>
+    <div className="md:ml-64 p-4 md:p-8 pb-24 md:pb-8 max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">My Results</h1>
+        <p className="text-on-surface-variant text-sm mt-1">{results.length} total attempt{results.length !== 1 ? 's' : ''}</p>
+      </div>
 
       <div className="flex gap-2 mb-4">
-        {['all', 'chapter', 'final'].map((t) => (
+        {[
+          { key: 'all', label: 'All Tests' },
+          { key: 'chapter', label: 'Chapter' },
+          { key: 'final', label: 'Final' },
+        ].map((t) => (
           <button
-            key={t}
-            onClick={() => setFilter(t)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition cursor-pointer ${
-              filter === t ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+            key={t.key}
+            onClick={() => setFilter(t.key)}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              filter === t.key
+                ? 'bg-primary text-on-primary'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
             }`}
           >
-            {t === 'all' ? 'All' : t === 'chapter' ? 'Chapter Tests' : 'Final Tests'}
+            {t.label}
           </button>
         ))}
       </div>
 
       {filtered.length === 0 && (
-        <div className="text-center py-12 text-gray-400">
-          <p className="text-lg">No results found.</p>
-          <p className="text-sm mt-1">Take a quiz to see your results here.</p>
+        <div className="text-center py-16 text-on-surface-variant">
+          <span className="material-symbols-outlined text-[48px] mb-3">insights</span>
+          <p className="text-sm font-medium">No results found.</p>
+          <p className="text-xs mt-1">Take a quiz to see your results here.</p>
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filtered.map((r) => (
-          <div key={r.id} className="bg-white rounded-xl shadow p-4 flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">{r.chapter}</h3>
-              <p className="text-sm text-gray-500">
-                Score: <span className="font-bold text-indigo-600">{r.score}</span>/{r.totalQuestions} &middot; {r.percentage}% &middot; {formatDate(r.completedAt)}
-              </p>
+          <button
+            key={r.id}
+            onClick={() => navigate(`/results/${r.id}`)}
+            className="w-full bg-surface border border-outline-variant rounded-xl p-4 hover:shadow-sm transition-all flex items-center justify-between active:scale-[0.98] cursor-pointer"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                (r.percentage || 0) >= 80 ? 'bg-green-100' :
+                (r.percentage || 0) >= 60 ? 'bg-yellow-100' : 'bg-red-100'
+              }`}>
+                <span className={`material-symbols-outlined text-[20px] ${
+                  (r.percentage || 0) >= 80 ? 'text-success' :
+                  (r.percentage || 0) >= 60 ? 'text-warning' : 'text-error'
+                }`}>
+                  {(r.percentage || 0) >= 60 ? 'check_circle' : 'cancel'}
+                </span>
+              </div>
+              <div className="text-left min-w-0">
+                <h3 className="text-sm font-semibold text-on-surface truncate">{r.chapter}</h3>
+                <p className="text-xs text-on-surface-variant">{formatDate(r.completedAt)}</p>
+              </div>
             </div>
-            <button
-              onClick={() => navigate(`/results/${r.id}`)}
-              className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium text-sm cursor-pointer"
-            >
-              <FiEye /> View
-            </button>
-          </div>
+            <div className="text-right shrink-0 ml-3">
+              <p className="text-sm font-bold text-primary">{r.score}<span className="text-xs text-on-surface-variant font-normal">/{r.totalQuestions}</span></p>
+              <p className="text-xs text-on-surface-variant">{r.percentage}%</p>
+            </div>
+          </button>
         ))}
       </div>
     </div>

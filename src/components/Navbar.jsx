@@ -1,47 +1,114 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { FiLogOut, FiUser } from 'react-icons/fi'
+
+const studentLinks = [
+  { to: '/dashboard', icon: 'dashboard', label: 'Home' },
+  { to: '/quiz/select', icon: 'list_alt', label: 'Exam' },
+  { to: '/results', icon: 'insights', label: 'Stats' },
+  { to: '/leaderboard', icon: 'leaderboard', label: 'Rank' },
+]
+
+const adminLinks = [
+  { to: '/dashboard', icon: 'dashboard', label: 'Home' },
+  { to: '/admin/users', icon: 'group', label: 'Users' },
+  { to: '/admin/questions', icon: 'quiz', label: 'Questions' },
+  { to: '/admin/upload', icon: 'upload_file', label: 'Upload' },
+]
 
 export default function Navbar() {
   const { profile, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isAdmin = profile?.role === 'admin'
+  const links = isAdmin ? adminLinks : studentLinks
 
   const handleLogout = async () => {
     await logout()
     navigate('/login')
   }
 
-  const isAdmin = profile?.role === 'admin'
+  const isActive = (path) => {
+    if (path === '/dashboard') return location.pathname === '/dashboard'
+    return location.pathname.startsWith(path)
+  }
 
   return (
-    <nav className="bg-indigo-700 text-white shadow-lg">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/dashboard" className="text-xl font-bold tracking-tight">
-          NBI Exam
-        </Link>
-        <div className="flex items-center gap-4 text-sm">
-          {isAdmin ? (
-            <>
-              <Link to="/admin/users" className="hover:text-indigo-200 transition">Users</Link>
-              <Link to="/admin/questions" className="hover:text-indigo-200 transition">Questions</Link>
-              <Link to="/admin/upload" className="hover:text-indigo-200 transition">Upload CSV</Link>
-            </>
-          ) : (
-            <>
-              <Link to="/quiz/select" className="hover:text-indigo-200 transition">Take Quiz</Link>
-              <Link to="/results" className="hover:text-indigo-200 transition">Results</Link>
-              <Link to="/leaderboard" className="hover:text-indigo-200 transition">Leaderboard</Link>
-            </>
-          )}
-          <div className="flex items-center gap-2 ml-4 pl-4 border-l border-indigo-500">
-            <FiUser />
-            <span className="text-xs">{profile?.displayName || profile?.email}</span>
-            <button onClick={handleLogout} className="ml-2 hover:text-indigo-200 transition" title="Logout">
-              <FiLogOut size={16} />
-            </button>
-          </div>
+    <>
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface border-r border-outline-variant z-50 py-6">
+        <div className="px-6 mb-8">
+          <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary">NBI Prep</h1>
+          <p className="text-xs text-on-surface-variant mt-0.5 font-medium tracking-wide uppercase">Licensure Excellence</p>
         </div>
-      </div>
-    </nav>
+        <nav className="flex-1 space-y-1 px-3">
+          {links.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                isActive(link.to)
+                  ? 'text-primary bg-[#f0f3ff] border-r-4 border-primary'
+                  : 'text-on-surface-variant hover:bg-surface-container-lowest'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">{link.icon}</span>
+              <span>{link.label}</span>
+            </Link>
+          ))}
+        </nav>
+        <div className="px-4 mt-auto space-y-2">
+          <div className="flex items-center gap-3 px-3 py-2 text-sm text-on-surface-variant border-t border-outline-variant pt-4">
+            <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
+              {(profile?.displayName || profile?.email || '?')[0].toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-on-surface truncate">{profile?.displayName || 'User'}</p>
+              <p className="text-xs truncate">{profile?.role}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full py-2.5 bg-primary text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer"
+          >
+            Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile Top Bar */}
+      <header className="md:hidden flex items-center justify-between px-4 h-14 bg-surface border-b border-outline-variant sticky top-0 z-40">
+        <h1 className="font-['Hanken_Grotesk'] text-lg font-bold text-primary">NBI Prep</h1>
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+            {(profile?.displayName || profile?.email || '?')[0].toUpperCase()}
+          </div>
+          <button onClick={handleLogout} className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
+            <span className="material-symbols-outlined text-[20px]">logout</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Bottom Nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 bg-surface border-t border-outline-variant shadow-lg">
+        <div className="flex justify-around items-center px-2 py-1.5">
+          {links.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-colors ${
+                isActive(link.to)
+                  ? 'bg-[#f0f3ff] text-primary'
+                  : 'text-on-surface-variant'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[22px]" style={isActive(link.to) ? { fontVariationSettings: "'FILL' 1" } : {}}>
+                {link.icon}
+              </span>
+              <span className="text-[10px] font-medium leading-tight">{link.label}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
+    </>
   )
 }

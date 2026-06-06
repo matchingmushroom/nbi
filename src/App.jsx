@@ -25,9 +25,9 @@ function App() {
             path="/*"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen flex flex-col">
+                <div className="min-h-screen bg-background font-['Inter']">
                   <Navbar />
-                  <main className="flex-1">
+                  <div className="pt-0 md:pt-0">
                     <Routes>
                       <Route path="/dashboard" element={<DashboardPage />} />
                       <Route path="/quiz/select" element={<QuizSelectPage />} />
@@ -41,7 +41,7 @@ function App() {
                       <Route path="/admin/upload" element={<AdminRoute><AdminUploadPage /></AdminRoute>} />
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>
-                  </main>
+                  </div>
                 </div>
               </ProtectedRoute>
             }

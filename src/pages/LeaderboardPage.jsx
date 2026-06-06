@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../lib/firebase'
-import { FaTrophy, FaMedal } from 'react-icons/fa'
 
 export default function LeaderboardPage() {
   const [entries, setEntries] = useState([])
@@ -11,7 +10,6 @@ export default function LeaderboardPage() {
     const fetch = async () => {
       const snap = await getDocs(collection(db, 'results'))
       const allResults = snap.docs.map((d) => d.data())
-
       const finalTests = allResults.filter((r) => r.testType === 'final' || r.chapter === 'Final Test')
 
       const userBest = {}
@@ -25,7 +23,6 @@ export default function LeaderboardPage() {
             score: r.score,
             totalQuestions: r.totalQuestions || 100,
             percentage: r.percentage || Math.round((r.score / (r.totalQuestions || 100)) * 100),
-            completedAt: r.completedAt,
           }
         }
       })
@@ -37,43 +34,56 @@ export default function LeaderboardPage() {
     fetch()
   }, [])
 
-  if (loading) return <div className="flex justify-center items-center min-h-[60vh] text-xl">Loading...</div>
+  if (loading) return (
+    <div className="md:ml-64 p-8 pb-20 flex justify-center items-center min-h-[60vh]">
+      <p className="text-on-surface-variant">Loading...</p>
+    </div>
+  )
 
   const getMedal = (rank) => {
-    if (rank === 1) return <FaTrophy className="text-yellow-400" size={24} />
-    if (rank === 2) return <FaMedal className="text-gray-400" size={24} />
-    if (rank === 3) return <FaMedal className="text-orange-400" size={24} />
-    return <span className="w-6 text-center font-bold text-gray-400">{rank}</span>
+    if (rank === 1) return <span className="material-symbols-outlined text-yellow-400 text-[24px]" style={{fontVariationSettings: "'FILL' 1"}}>military_tech</span>
+    if (rank === 2) return <span className="material-symbols-outlined text-gray-400 text-[24px]" style={{fontVariationSettings: "'FILL' 1"}}>military_tech</span>
+    if (rank === 3) return <span className="material-symbols-outlined text-orange-400 text-[24px]" style={{fontVariationSettings: "'FILL' 1"}}>military_tech</span>
+    return <span className="w-6 text-center text-sm font-bold text-on-surface-variant">{rank}</span>
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-2">Leaderboard</h1>
-      <p className="text-gray-500 mb-6">Top scores from Final Tests — best attempt per user</p>
+    <div className="md:ml-64 p-4 md:p-8 pb-24 md:pb-8 max-w-3xl mx-auto">
+      <div className="mb-6">
+        <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Leaderboard</h1>
+        <p className="text-on-surface-variant text-sm mt-1">Top scores from Final Tests — best attempt per user</p>
+      </div>
 
       {entries.length === 0 && (
-        <div className="text-center py-12 text-gray-400">
-          <p className="text-lg">No Final Test results yet.</p>
-          <p className="text-sm mt-1">Be the first to take the Final Test!</p>
+        <div className="text-center py-16 text-on-surface-variant">
+          <span className="material-symbols-outlined text-[48px] mb-3">leaderboard</span>
+          <p className="text-sm font-medium">No Final Test results yet.</p>
+          <p className="text-xs mt-1">Be the first to take the Final Test!</p>
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow overflow-hidden">
-        <div className="grid grid-cols-[48px_1fr_80px_80px] gap-2 p-4 bg-gray-50 font-semibold text-sm text-gray-500 border-b">
-          <span>#</span>
-          <span>User</span>
-          <span className="text-right">Score</span>
-          <span className="text-right">%</span>
-        </div>
+      <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         {entries.map((entry, i) => (
-          <div key={entry.userId} className={`grid grid-cols-[48px_1fr_80px_80px] gap-2 p-4 items-center border-b last:border-0 hover:bg-gray-50 ${i < 3 ? 'bg-yellow-50/50' : ''}`}>
-            <div className="flex justify-center">{getMedal(i + 1)}</div>
-            <div>
-              <p className="font-medium truncate">{entry.displayName}</p>
-              <p className="text-xs text-gray-400 truncate">{entry.userEmail}</p>
+          <div
+            key={entry.userId}
+            className={`flex items-center gap-3 p-4 border-b border-outline-variant last:border-0 ${
+              i < 3 ? 'bg-yellow-50/40' : ''
+            } hover:bg-surface-container-low transition-colors`}
+          >
+            <div className="w-10 flex justify-center shrink-0">
+              {getMedal(i + 1)}
             </div>
-            <div className="text-right font-bold text-indigo-700">{entry.score}</div>
-            <div className="text-right text-gray-500">{entry.percentage}%</div>
+            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
+              {entry.displayName.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-on-surface truncate">{entry.displayName}</p>
+              <p className="text-xs text-on-surface-variant truncate">{entry.userEmail}</p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-sm font-bold text-primary">{entry.score}</p>
+              <p className="text-xs text-on-surface-variant">{entry.percentage}%</p>
+            </div>
           </div>
         ))}
       </div>
