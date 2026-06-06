@@ -8,6 +8,7 @@ import {
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { backfillUserXP } from '../lib/gamification'
+import { getCached, setCache, invalidateCache } from '../lib/cache'
 
 const AuthContext = createContext(null)
 
@@ -59,6 +60,7 @@ export function AuthProvider({ children }) {
       lastActiveDate: '',
       badges: [],
     })
+    invalidateCache('allUsers')
     return cred
   }
 
@@ -77,20 +79,27 @@ export function AuthProvider({ children }) {
       lastActiveDate: '',
       badges: [],
     })
+    invalidateCache('allUsers')
     return cred
   }
 
   const deleteUserDoc = async (uid) => {
     await deleteDoc(doc(db, 'users', uid))
+    invalidateCache('allUsers')
   }
 
   const updateUserDoc = async (uid, data) => {
     await setDoc(doc(db, 'users', uid), data, { merge: true })
+    invalidateCache('allUsers')
   }
 
   const getAllUsers = async () => {
+    const cached = getCached('allUsers')
+    if (cached) return cached
     const snap = await getDocs(collection(db, 'users'))
-    return snap.docs.map((d) => ({ uid: d.id, ...d.data() }))
+    const data = snap.docs.map((d) => ({ uid: d.id, ...d.data() }))
+    setCache('allUsers', data)
+    return data
   }
 
   const refreshProfile = async () => {

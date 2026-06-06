@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
+import ModeratorRoute from './components/ModeratorRoute'
 import Navbar from './components/Navbar'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
@@ -17,8 +18,9 @@ import ProfilePage from './pages/ProfilePage'
 import MicroLearningPage from './pages/MicroLearningPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminQuestionsPage from './pages/AdminQuestionsPage'
-import AdminUploadPage from './pages/AdminUploadPage'
 import AdminAnalyticsPage from './pages/AdminAnalyticsPage'
+import AdminCoursesPage from './pages/AdminCoursesPage'
+import AdminSettingsPage from './pages/AdminSettingsPage'
 
 function App() {
   return (
@@ -46,8 +48,9 @@ function App() {
                       <Route path="/profile" element={<ProfilePage />} />
                       <Route path="/learn" element={<MicroLearningPage />} />
                       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
-                      <Route path="/admin/questions" element={<AdminRoute><AdminQuestionsPage /></AdminRoute>} />
-                      <Route path="/admin/upload" element={<AdminRoute><AdminUploadPage /></AdminRoute>} />
+                      <Route path="/admin/questions" element={<ModeratorRoute><AdminQuestionsPage /></ModeratorRoute>} />
+                      <Route path="/admin/courses" element={<ModeratorRoute><AdminCoursesPage /></ModeratorRoute>} />
+                      <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
                       <Route path="/admin/analytics" element={<AdminRoute><AdminAnalyticsPage /></AdminRoute>} />
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>

@@ -14,8 +14,19 @@ const adminLinks = [
   { to: '/dashboard', icon: 'dashboard', label: 'Home' },
   { to: '/admin/users', icon: 'group', label: 'Users' },
   { to: '/admin/questions', icon: 'quiz', label: 'Questions' },
-  { to: '/admin/upload', icon: 'upload_file', label: 'Upload' },
+  { to: '/admin/courses', icon: 'school', label: 'Courses' },
+  { to: '/admin/settings', icon: 'tune', label: 'Settings' },
   { to: '/admin/analytics', icon: 'bar_chart', label: 'Analytics' },
+]
+
+const moderatorLinks = [
+  { to: '/dashboard', icon: 'dashboard', label: 'Home' },
+  { to: '/learn', icon: 'school', label: 'Learn' },
+  { to: '/quiz/select', icon: 'list_alt', label: 'Exam' },
+  { to: '/results', icon: 'insights', label: 'Stats' },
+  { to: '/admin/questions', icon: 'quiz', label: 'Questions' },
+  { to: '/admin/courses', icon: 'school', label: 'Courses' },
+  { to: '/profile', icon: 'person', label: 'Profile' },
 ]
 
 export default function Navbar() {
@@ -23,7 +34,8 @@ export default function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
   const isAdmin = profile?.role === 'admin'
-  const links = isAdmin ? adminLinks : studentLinks
+  const isModerator = profile?.role === 'moderator'
+  const links = isAdmin ? adminLinks : isModerator ? moderatorLinks : studentLinks
 
   const handleLogout = async () => {
     await logout()
@@ -71,7 +83,7 @@ export default function Navbar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-on-surface truncate">{profile?.displayName || 'User'}</p>
-              <p className="text-xs truncate">{profile?.role} · {profile?.xp || 0} XP</p>
+              <p className="text-xs truncate">{profile?.role === 'moderator' ? 'moderator' : profile?.role} · {profile?.xp || 0} XP</p>
             </div>
           </button>
           <button

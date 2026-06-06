@@ -1,5 +1,6 @@
-import { collection, getDocs, doc, getDoc, setDoc, query, where } from 'firebase/firestore'
+import { collection, getDocs, doc, getDoc, setDoc, query, where, writeBatch } from 'firebase/firestore'
 import { db } from './firebase'
+import { getCached, setCache, invalidateCache, invalidateCachePrefix } from './cache'
 
 function getToday() {
   return new Date().toISOString().split('T')[0]
@@ -52,21 +53,67 @@ export function getCourseProgress(learning, courseId) {
   return learning.enrolledCourses[courseId]
 }
 
-export async function getAvailableCourses() {
-  const snap = await getDocs(collection(db, 'micro_learning'))
+export async function getAllCourses() {
+  const cached = getCached('allCourses')
+  if (cached) return cached
+  const [coursesSnap, mlSnap] = await Promise.all([
+    getDocs(collection(db, 'courses')),
+    getDocs(collection(db, 'micro_learning')),
+  ])
+  const dayCounts = {}
+  mlSnap.docs.forEach((d) => {
+    const cid = d.data().courseId
+    if (cid) dayCounts[cid] = (dayCounts[cid] || 0) + 1
+  })
   const courses = {}
-  snap.docs.forEach((d) => {
+  coursesSnap.docs.forEach((d) => {
+    const data = d.data()
+    courses[d.id] = { courseId: d.id, ...data, dayCount: dayCounts[d.id] || 0 }
+  })
+  mlSnap.docs.forEach((d) => {
     const data = d.data()
     if (data.courseId && !courses[data.courseId]) {
       courses[data.courseId] = {
         courseId: data.courseId,
         courseTitle: data.courseTitle || data.courseId,
-        dayCount: 0,
+        visible: true,
+        dayCount: dayCounts[data.courseId] || 0,
       }
     }
-    if (courses[data.courseId]) courses[data.courseId].dayCount++
   })
-  return Object.values(courses).sort((a, b) => a.courseId.localeCompare(b.courseId))
+  const result = Object.values(courses).sort((a, b) => a.courseId.localeCompare(b.courseId))
+  setCache('allCourses', result)
+  return result
+}
+
+export async function getAvailableCourses() {
+  const all = await getAllCourses()
+  return all.filter((c) => c.visible !== false)
+}
+
+export async function setCourseVisibility(courseId, visible) {
+  const ref = doc(db, 'courses', courseId)
+  await setDoc(ref, { courseId, visible }, { merge: true })
+  invalidateCachePrefix('allCourses')
+}
+
+export async function updateCourseTitle(courseId, newTitle) {
+  const mlSnap = await getDocs(query(collection(db, 'micro_learning'), where('courseId', '==', courseId)))
+  const batch = writeBatch(db)
+  mlSnap.docs.forEach((d) => batch.update(doc(db, 'micro_learning', d.id), { courseTitle: newTitle }))
+  batch.set(doc(db, 'courses', courseId), { courseTitle: newTitle }, { merge: true })
+  await batch.commit()
+  invalidateCachePrefix('allCourses')
+}
+
+export async function deleteCourse(courseId) {
+  const q = query(collection(db, 'micro_learning'), where('courseId', '==', courseId))
+  const snap = await getDocs(q)
+  const batch = writeBatch(db)
+  snap.docs.forEach((d) => batch.delete(doc(db, 'micro_learning', d.id)))
+  batch.delete(doc(db, 'courses', courseId))
+  await batch.commit()
+  invalidateCachePrefix('allCourses')
 }
 
 export async function getCourseContent(courseId) {
@@ -87,8 +134,31 @@ export async function getDayContent(courseId, day) {
 export async function enrollCourse(userId, courseId) {
   const ref = doc(db, 'users', userId)
   const snap = await getDoc(ref)
-  const learning = snap.data()?.learning || getDefaultLearningProfile()
+  const userData = snap.data()
+  const learning = userData?.learning || getDefaultLearningProfile()
   if (learning.enrolledCourses?.[courseId]) return
+
+  const role = userData?.role || 'student'
+  if (role === 'student') {
+    const enrolledIds = Object.keys(learning.enrolledCourses || {})
+    if (enrolledIds.length > 0) {
+      const mlSnap = await getDocs(collection(db, 'micro_learning'))
+      const dayCounts = {}
+      mlSnap.docs.forEach((d) => {
+        const cid = d.data().courseId
+        if (cid) dayCounts[cid] = (dayCounts[cid] || 0) + 1
+      })
+      const inProgress = enrolledIds.filter((id) => {
+        const prog = learning.enrolledCourses[id]
+        const total = dayCounts[id] || 999
+        return (prog?.completedDays?.length || 0) < total
+      })
+      if (inProgress.length >= 2) {
+        throw new Error('You can have at most 2 courses in progress. Complete one before enrolling in another.')
+      }
+    }
+  }
+
   const updated = {
     ...learning,
     enrolledCourses: {
@@ -97,6 +167,7 @@ export async function enrollCourse(userId, courseId) {
     },
   }
   await setDoc(ref, { learning: updated }, { merge: true })
+  invalidateCache('allUsers')
   return updated
 }
 
@@ -168,6 +239,7 @@ export async function submitQuizResult(userId, courseId, day, answers, questions
     }
 
     await setDoc(ref, { learning: updatedLearning }, { merge: true })
+    invalidateCache('allUsers')
 
     return {
       passed: true,
@@ -200,6 +272,7 @@ export async function submitQuizResult(userId, courseId, day, answers, questions
       },
     },
   }, { merge: true })
+  invalidateCache('allUsers')
 
   return {
     passed: false,

@@ -1,54 +1,56 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { useAuth } from '../context/AuthContext'
 import { shuffle, pickByDifficulty } from '../lib/utils'
+import { getQuizSettings, getFinalSplit, getConfigTimerLabel, checkAttemptLimit } from '../lib/quizSettings'
+import { getAllQuestionsCached } from '../lib/cache'
 import QuizRunner from '../components/QuizRunner'
 
 export default function FinalQuizPage() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const [questions, setQuestions] = useState(null)
+  const [config, setConfig] = useState(null)
 
   useEffect(() => {
     const fetch = async () => {
-      const snap = await getDocs(collection(db, 'questions'))
-      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-      if (all.length < 30) { navigate('/quiz/select'); return }
+      const allowed = await checkAttemptLimit(profile, 'final')
+      if (!allowed) { navigate('/quiz/select'); return }
+      const settings = await getQuizSettings()
+      const total = settings.finalQuestionCount
+      const min = Math.round(total * 0.3)
+      const all = await getAllQuestionsCached()
+      if (all.length < min) { navigate('/quiz/select'); return }
 
       const book = all.filter((q) => q.mode === 'Book')
       const physical = all.filter((q) => q.mode === 'Physical')
       const other = all.filter((q) => q.mode !== 'Book' && q.mode !== 'Physical')
 
-      const bookTarget = 60
-      const physicalTarget = 40
+      const { bookTarget, physicalTarget, bookSplit, physicalSplit } = getFinalSplit(total)
 
-      const bookPicked = pickByDifficulty(book, { beginner: 18, intermediate: 18, expert: 24 })
-      const physicalPicked = pickByDifficulty(physical, { beginner: 12, intermediate: 12, expert: 16 })
+      const bookPicked = pickByDifficulty(book, bookSplit)
+      const physicalPicked = pickByDifficulty(physical, physicalSplit)
 
       let picked = shuffle([...bookPicked, ...physicalPicked])
 
-      if (picked.length < 100) {
+      if (picked.length < total) {
         const extra = shuffle(other)
-        const need = 100 - picked.length
+        const need = total - picked.length
         picked.push(...extra.slice(0, need))
       }
 
-      setQuestions(picked.slice(0, 100))
+      setQuestions(picked.slice(0, total))
+      setConfig({
+        title: 'Final Mock Test',
+        subtitle: `${total} Qs · All chapters · ${settings.finalTimerMinutes} min`,
+        quizType: 'final',
+        timerMinutes: settings.finalTimerMinutes,
+      })
     }
     fetch()
   }, [navigate])
 
-  if (!questions) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Preparing Final Mock Test...</p></div>
+  if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Preparing Final Mock Test...</p></div>
 
-  return (
-    <QuizRunner
-      questions={questions}
-      config={{
-        title: 'Final Mock Test',
-        subtitle: '100 Qs · All chapters · 100 min',
-        quizType: 'final',
-        timerMinutes: 100,
-      }}
-    />
-  )
+  return <QuizRunner questions={questions} config={config} />
 }

@@ -1,27 +1,32 @@
 import { useState, useEffect } from 'react'
 import { collection, getDocs, doc, deleteDoc, setDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../lib/firebase'
+import { useAuth } from '../context/AuthContext'
+import { getAllQuestionsCached, invalidateCache } from '../lib/cache'
 import { FiEdit2, FiTrash2, FiX, FiCheckSquare } from 'react-icons/fi'
+import CSVUploader from '../components/CSVUploader'
+import MicroLearningUploader from '../components/MicroLearningUploader'
 
 export default function AdminQuestionsPage() {
+  const { profile } = useAuth()
+  const isModerator = profile?.role === 'moderator'
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [chapterFilter, setChapterFilter] = useState('all')
-  const [chapters, setChapters] = useState([])
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({})
   const [batchMode, setBatchMode] = useState(false)
-  const [selectedChapters, setSelectedChapters] = useState([])
+  const [batchFilterType, setBatchFilterType] = useState('chapter')
+  const [batchSelected, setBatchSelected] = useState([])
   const [deleting, setDeleting] = useState(false)
   const [deleteMsg, setDeleteMsg] = useState(null)
+  const [showUpload, setShowUpload] = useState(false)
+  const [uploadTab, setUploadTab] = useState('questions')
 
   const fetch = async () => {
-    const snap = await getDocs(collection(db, 'questions'))
-    const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    const data = await getAllQuestionsCached()
     setQuestions(data)
-    const chs = [...new Set(data.map((q) => q.chapter).filter(Boolean))].sort()
-    setChapters(chs)
     setLoading(false)
   }
 
@@ -47,6 +52,7 @@ export default function AdminQuestionsPage() {
   const handleSave = async () => {
     if (!editing) return
     await setDoc(doc(db, 'questions', editing.id), form, { merge: true })
+    invalidateCache('allQuestions')
     setEditing(null)
     fetch()
   }
@@ -55,6 +61,7 @@ export default function AdminQuestionsPage() {
     if (!confirm('Delete this question?')) return
     try {
       await deleteDoc(doc(db, 'questions', id))
+      invalidateCache('allQuestions')
       setDeleteMsg({ ok: true, text: 'Question deleted from database.' })
       fetch()
     } catch (err) {
@@ -63,16 +70,23 @@ export default function AdminQuestionsPage() {
     setTimeout(() => setDeleteMsg(null), 3000)
   }
 
-  const toggleChapter = (ch) => {
-    setSelectedChapters((prev) =>
-      prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]
+  const toggleBatchItem = (val) => {
+    setBatchSelected((prev) =>
+      prev.includes(val) ? prev.filter((c) => c !== val) : [...prev, val]
     )
   }
 
+  const batchItems = () => {
+    const field = batchFilterType
+    const vals = [...new Set(questions.map((q) => q[field]).filter(Boolean))].sort()
+    return vals
+  }
+
   const handleBatchDelete = async () => {
-    if (selectedChapters.length === 0) return
-    const toDelete = questions.filter((q) => selectedChapters.includes(q.chapter))
-    if (!confirm(`Delete all ${toDelete.length} questions from ${selectedChapters.length} chapter(s)? This cannot be undone.`)) return
+    if (batchSelected.length === 0) return
+    const field = batchFilterType
+    const toDelete = questions.filter((q) => batchSelected.includes(q[field]))
+    if (!confirm(`Delete all ${toDelete.length} questions from ${batchSelected.length} ${batchFilterType}(s)? This cannot be undone.`)) return
       setDeleting(true)
     try {
       const batch = writeBatch(db)
@@ -80,7 +94,8 @@ export default function AdminQuestionsPage() {
         batch.delete(doc(db, 'questions', q.id))
       })
       await batch.commit()
-      setSelectedChapters([])
+      invalidateCache('allQuestions')
+      setBatchSelected([])
       setBatchMode(false)
       setDeleteMsg({ ok: true, text: `${toDelete.length} questions deleted from database.` })
       fetch()
@@ -108,6 +123,7 @@ export default function AdminQuestionsPage() {
       const batch = writeBatch(db)
       hidden.forEach((q) => { batch.delete(doc(db, 'questions', q.id)) })
       await batch.commit()
+      invalidateCache('allQuestions')
       setDeleteMsg({ ok: true, text: `${hidden.length} hidden question${hidden.length !== 1 ? 's' : ''} deleted from database.` })
       fetch()
     } catch (err) {
@@ -127,53 +143,77 @@ export default function AdminQuestionsPage() {
           <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Manage Questions</h1>
           <p className="text-on-surface-variant text-sm mt-1">{questions.length} total questions</p>
         </div>
-        <button
-          onClick={() => { setBatchMode(!batchMode); setSelectedChapters([]) }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer ${
-            batchMode ? 'bg-error text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container-high'
-          }`}
-        >
-          <FiCheckSquare size={16} />
-          {batchMode ? 'Exit Batch' : 'Batch Delete'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowUpload(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">upload_file</span>
+            Upload
+          </button>
+          {!isModerator && (
+            <button
+              onClick={() => { setBatchMode(!batchMode); setBatchSelected([]) }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer ${
+                batchMode ? 'bg-error text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container-high'
+              }`}
+            >
+              <FiCheckSquare size={16} />
+              {batchMode ? 'Exit Batch' : 'Batch Delete'}
+            </button>
+          )}
+        </div>
       </div>
 
       {batchMode && (
         <div className="bg-surface border border-error/30 rounded-xl p-4 mb-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-on-surface">Select chapters to delete all questions</h3>
-            {selectedChapters.length > 0 && (
-              <span className="text-xs text-on-surface-variant">
-                {questions.filter((q) => selectedChapters.includes(q.chapter)).length} questions selected
-              </span>
-            )}
+            <h3 className="text-sm font-bold text-on-surface">Batch Delete by</h3>
+            <div className="flex gap-1">
+              {['chapter', 'module', 'mode'].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => { setBatchFilterType(t); setBatchSelected([]) }}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer ${
+                    batchFilterType === t ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
           </div>
+          {batchSelected.length > 0 && (
+            <p className="text-xs text-on-surface-variant mb-2">
+              {questions.filter((q) => batchSelected.includes(q[batchFilterType])).length} questions selected
+            </p>
+          )}
           <div className="flex flex-wrap gap-2 mb-3">
-            {chapters.map((ch) => {
-              const count = questions.filter((q) => q.chapter === ch).length
-              const selected = selectedChapters.includes(ch)
+            {batchItems().map((val) => {
+              const count = questions.filter((q) => q[batchFilterType] === val).length
+              const selected = batchSelected.includes(val)
               return (
                 <button
-                  key={ch}
-                  onClick={() => toggleChapter(ch)}
+                  key={val}
+                  onClick={() => toggleBatchItem(val)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
                     selected
                       ? 'bg-error/10 border-error text-error'
                       : 'bg-surface-container-low border-outline-variant text-on-surface-variant hover:border-error/50'
                   }`}
                 >
-                  {ch} ({count})
+                  {val} ({count})
                 </button>
               )
             })}
           </div>
-          {selectedChapters.length > 0 && (
+          {batchSelected.length > 0 && (
             <button
               onClick={handleBatchDelete}
               disabled={deleting}
               className="w-full bg-error text-white py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all active:scale-[0.98] cursor-pointer"
             >
-              {deleting ? 'Deleting...' : `Delete ${questions.filter((q) => selectedChapters.includes(q.chapter)).length} Questions`}
+              {deleting ? 'Deleting...' : `Delete ${questions.filter((q) => batchSelected.includes(q[batchFilterType])).length} Questions`}
             </button>
           )}
         </div>
@@ -188,9 +228,9 @@ export default function AdminQuestionsPage() {
         <select value={chapterFilter} onChange={(e) => setChapterFilter(e.target.value)}
           className="px-4 py-2 bg-surface-container-low border border-outline-variant rounded-full text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
           <option value="all">All Chapters</option>
-          {chapters.map((ch) => <option key={ch} value={ch}>{ch}</option>)}
+          {[...new Set(questions.map((q) => q.chapter).filter(Boolean))].sort().map((ch) => <option key={ch} value={ch}>{ch}</option>)}
         </select>
-        {hidden.length > 0 && (
+        {!isModerator && hidden.length > 0 && (
           <button
             onClick={handleDeleteHidden}
             disabled={deleting}
@@ -231,7 +271,7 @@ export default function AdminQuestionsPage() {
                 q.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
               }`}>{q.difficulty}</span>
               <button onClick={() => openEdit(q)} className="text-primary hover:text-primary/70 cursor-pointer"><FiEdit2 size={14} /></button>
-              <button onClick={() => handleDelete(q.id)} className="text-error hover:text-error/70 cursor-pointer"><FiTrash2 size={14} /></button>
+              {!isModerator && <button onClick={() => handleDelete(q.id)} className="text-error hover:text-error/70 cursor-pointer"><FiTrash2 size={14} /></button>}
             </div>
           ))}
           {filtered.length === 0 && (
@@ -299,6 +339,31 @@ export default function AdminQuestionsPage() {
               </div>
               <button onClick={handleSave} className="w-full bg-primary text-on-primary py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer">Save Changes</button>
             </div>
+          </div>
+        </div>
+      )}
+      {showUpload && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => setShowUpload(false)}>
+          <div className="bg-surface rounded-xl p-6 w-full max-w-3xl mx-auto max-h-[85vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-on-surface">Upload CSV</h2>
+              <button onClick={() => { setShowUpload(false); setUploadTab('questions') }} className="cursor-pointer"><span className="material-symbols-outlined">close</span></button>
+            </div>
+            <div className="flex gap-2 mb-5 border-b border-outline-variant pb-3">
+              <button
+                onClick={() => setUploadTab('questions')}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${uploadTab === 'questions' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'}`}
+              >
+                Questions CSV
+              </button>
+              <button
+                onClick={() => setUploadTab('microlearning')}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${uploadTab === 'microlearning' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'}`}
+              >
+                Micro-Learning CSV
+              </button>
+            </div>
+            {uploadTab === 'questions' ? <CSVUploader onUploadComplete={() => { invalidateCache('allQuestions'); fetch() }} /> : <MicroLearningUploader />}
           </div>
         </div>
       )}

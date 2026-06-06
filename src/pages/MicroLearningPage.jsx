@@ -109,8 +109,12 @@ export default function MicroLearningPage() {
 
   const handleEnroll = async (cid) => {
     if (!profile?.uid) return
-    const updated = await enrollCourse(profile.uid, cid)
-    if (updated) setLearning(updated)
+    try {
+      const updated = await enrollCourse(profile.uid, cid)
+      if (updated) setLearning(updated)
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
   const handleStartReading = () => {
@@ -330,6 +334,8 @@ export default function MicroLearningPage() {
   const dayComplete = courseProgress?.dayStates?.[`day_${String(currentDay).padStart(2, '0')}`]
   const alreadyDoneToday = dayComplete?.state === 'SUCCESS' && dayComplete?.completedDate === new Date().toISOString().split('T')[0]
   const allDone = courseProgress?.completedDays?.length >= courseContent.length
+  const todayStr = new Date().toISOString().split('T')[0]
+  const nextDayLocked = !alreadyDoneToday && !allDone && courseProgress?.lastCompletedDate === todayStr
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
@@ -384,7 +390,7 @@ export default function MicroLearningPage() {
             const isToday = day === currentDay
             const completed = state?.state === 'SUCCESS'
             const failed = state?.state === 'FAIL'
-            const locked = day > (courseProgress?.unlockedDay || 1)
+            const locked = day > (courseProgress?.unlockedDay || 1) || (nextDayLocked && day >= (courseProgress?.unlockedDay || 1) && !completed && !failed)
             return (
               <div
                 key={day}
@@ -411,11 +417,11 @@ export default function MicroLearningPage() {
           <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-1">Course Complete!</h3>
           <p className="text-xs text-on-surface-variant mt-1">You've finished all {courseContent.length} days. Great job!</p>
         </div>
-      ) : alreadyDoneToday ? (
+      ) : alreadyDoneToday || nextDayLocked ? (
         <div className="bg-success/10 border border-success/20 rounded-xl p-5 text-center">
           <span className="material-symbols-outlined text-success text-[36px]">check_circle</span>
           <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-1">Today's Chapter Complete!</h3>
-          <p className="text-xs text-on-surface-variant mt-1">Come back tomorrow for Day {currentDay + 1}.</p>
+          <p className="text-xs text-on-surface-variant mt-1">Come back tomorrow for Day {currentDay}.</p>
         </div>
       ) : dayComplete?.state === 'FAIL' ? (
         <div className="flex gap-2">

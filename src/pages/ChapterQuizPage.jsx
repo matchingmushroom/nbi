@@ -1,40 +1,44 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { useAuth } from '../context/AuthContext'
 import { pickByDifficulty } from '../lib/utils'
+import { getQuizSettings, getDifficultySplit, getConfigTimerLabel, checkAttemptLimit } from '../lib/quizSettings'
+import { getAllQuestionsCached } from '../lib/cache'
 import QuizRunner from '../components/QuizRunner'
 
 export default function ChapterQuizPage() {
   const { chapterName } = useParams()
   const chapter = decodeURIComponent(chapterName)
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const [questions, setQuestions] = useState(null)
+  const [config, setConfig] = useState(null)
 
   useEffect(() => {
     const fetch = async () => {
-      const snap = await getDocs(collection(db, 'questions'))
-      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      const allowed = await checkAttemptLimit(profile, 'chapter')
+      if (!allowed) { navigate('/quiz/select'); return }
+      const settings = await getQuizSettings()
+      const total = settings.chapterQuestionCount
+      const min = Math.round(total * 0.5)
+      const all = await getAllQuestionsCached()
       const filtered = all.filter((q) => q.chapter === chapter && q.mode !== 'Physical')
-      if (filtered.length < 6) { navigate('/quiz/select'); return }
-      const picked = pickByDifficulty(filtered, { beginner: 2, intermediate: 4, expert: 4 })
+      if (filtered.length < min) { navigate('/quiz/select'); return }
+      const split = getDifficultySplit(total, 'chapter')
+      const picked = pickByDifficulty(filtered, split)
       setQuestions(picked)
+      setConfig({
+        title: chapter,
+        subtitle: getConfigTimerLabel('chapter', settings.chapterTimerMinutes),
+        quizType: 'chapter',
+        chapter,
+        timerMinutes: settings.chapterTimerMinutes,
+      })
     }
     fetch()
   }, [chapter, navigate])
 
-  if (!questions) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading chapter test...</p></div>
+  if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading chapter test...</p></div>
 
-  return (
-    <QuizRunner
-      questions={questions}
-      config={{
-        title: chapter,
-        subtitle: 'Chapter Test · 10 min',
-        quizType: 'chapter',
-        chapter,
-        timerMinutes: 10,
-      }}
-    />
-  )
+  return <QuizRunner questions={questions} config={config} />
 }

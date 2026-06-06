@@ -1,9 +1,8 @@
 import { useState, useEffect, Fragment } from 'react'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { BADGES, getLevelProgress, getXPForNextLevel } from '../lib/gamification'
 import { formatDate } from '../lib/utils'
+import { getAllUsersCached, getAllResultsCached } from '../lib/cache'
 
 export default function LeaderboardPage() {
   const { profile } = useAuth()
@@ -13,12 +12,10 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     const fetch = async () => {
-      const [usersSnap, resultsSnap] = await Promise.all([
-        getDocs(collection(db, 'users')),
-        getDocs(collection(db, 'results')),
+      const [allUsers, allResults] = await Promise.all([
+        getAllUsersCached(),
+        getAllResultsCached(),
       ])
-
-      const allResults = resultsSnap.docs.map((d) => d.data())
 
       const resultsByUser = {}
       allResults.forEach((r) => {
@@ -45,8 +42,7 @@ export default function LeaderboardPage() {
       })
 
       const buildEntry = (uid, entry) => {
-        const userDoc = usersSnap.docs.find((d) => d.id === uid)
-        const data = userDoc?.data() || {}
+        const data = allUsers.find((u) => u.uid === uid) || {}
         const userResults = resultsByUser[uid] || []
         const scores = userResults.map((r) => r.percentage || 0)
         const typeCounts = { chapter: 0, module: 0, mode: 0, final: 0 }

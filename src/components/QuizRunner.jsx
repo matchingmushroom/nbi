@@ -4,6 +4,7 @@ import { collection, addDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { calcQuizXP, updateGamification } from '../lib/gamification'
+import { invalidateCache, invalidateCachePrefix } from '../lib/cache'
 import QuestionCard from './QuestionCard'
 import Timer from './Timer'
 import ConfettiEffect from './ConfettiEffect'
@@ -56,6 +57,8 @@ export default function QuizRunner({ questions, config, onFinish }) {
         if (g) setGamify(g)
         await refreshProfile()
       }
+      invalidateCache('allResults')
+      if (uid) invalidateCachePrefix('results_' + uid)
     } catch (e) {
       console.error('Failed to save result:', e)
     }

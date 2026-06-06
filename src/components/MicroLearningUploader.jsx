@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import Papa from 'papaparse'
-import { collection, writeBatch, doc } from 'firebase/firestore'
+import { collection, writeBatch, doc, setDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { FiUpload, FiCheckCircle, FiAlertCircle } from 'react-icons/fi'
 
@@ -85,12 +85,21 @@ export default function MicroLearningUploader() {
     setResult(null)
     try {
       const batch = writeBatch(db)
-      const col = collection(db, 'micro_learning')
+      const mlCol = collection(db, 'micro_learning')
+      const courseIds = new Set()
       rows.forEach((r) => {
         const docId = `${r.courseId}_day_${String(r.day).padStart(2, '0')}`
-        const ref = doc(col, docId)
-        batch.set(ref, r)
+        batch.set(doc(mlCol, docId), r)
+        courseIds.add(r.courseId)
       })
+      for (const cid of courseIds) {
+        const first = rows.find((r) => r.courseId === cid)
+        await setDoc(doc(db, 'courses', cid), {
+          courseId: cid,
+          courseTitle: first?.courseTitle || cid,
+          visible: true,
+        }, { merge: true })
+      }
       await batch.commit()
       setResult({ success: true, count: rows.length })
       setRows([])

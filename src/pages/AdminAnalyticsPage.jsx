@@ -3,6 +3,7 @@ import { collection, getDocs, doc, setDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { BADGES, getLevelProgress, getLevel } from '../lib/gamification'
 import { formatDate } from '../lib/utils'
+import { getAllUsersCached, getAllResultsCached, invalidateCache } from '../lib/cache'
 
 export default function AdminAnalyticsPage() {
   const [users, setUsers] = useState([])
@@ -24,24 +25,21 @@ export default function AdminAnalyticsPage() {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const [usersSnap, resultsSnap] = await Promise.all([
-          getDocs(collection(db, 'users')),
-          getDocs(collection(db, 'results')),
+        const [allUsers, allResults] = await Promise.all([
+          getAllUsersCached(),
+          getAllResultsCached(),
         ])
 
-        const allResults = resultsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
         const allScores = allResults.map(r => r.percentage || 0)
 
         const userMap = {}
-        usersSnap.docs.forEach(d => { userMap[d.id] = { uid: d.id, ...d.data() } })
+        allUsers.forEach(u => { userMap[u.uid] = u })
 
-        const userStats = usersSnap.docs.map(d => {
-          const uid = d.id
-          const data = { uid, ...d.data() }
-          const userResults = allResults.filter(r => r.userId === uid)
+        const userStats = allUsers.map(u => {
+          const userResults = allResults.filter(r => r.userId === u.uid)
           const scores = userResults.map(r => r.percentage || 0)
           return {
-            ...data,
+            ...u,
             totalTests: userResults.length,
             avgScore: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
             bestScore: scores.length ? Math.max(...scores) : 0,
@@ -52,7 +50,7 @@ export default function AdminAnalyticsPage() {
         userStats.sort((a, b) => b.totalTests - a.totalTests)
         setUsers(userStats)
         setTotals({
-          userCount: usersSnap.size,
+          userCount: allUsers.length,
           testCount: allResults.length,
           avgScore: allScores.length ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : 0,
         })
@@ -114,21 +112,19 @@ export default function AdminAnalyticsPage() {
                   updated++
                 }
               }
+              if (updated > 0) invalidateCache('allUsers')
               setRecalcResult({ success: true, message: `Done! ${updated} user${updated !== 1 ? 's' : ''} updated.` })
               // Refresh table
               setExpanded(null)
-              const [usersSnap, resultsSnap] = await Promise.all([
-                getDocs(collection(db, 'users')),
-                getDocs(collection(db, 'results')),
+              const [allUsers, allResults] = await Promise.all([
+                getAllUsersCached(),
+                getAllResultsCached(),
               ])
-              const allResults = resultsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-              const userStats = usersSnap.docs.map(d => {
-                const uid = d.id
-                const data = { uid, ...d.data() }
-                const userResults = allResults.filter(r => r.userId === uid)
+              const userStats = allUsers.map(u => {
+                const userResults = allResults.filter(r => r.userId === u.uid)
                 const scores = userResults.map(r => r.percentage || 0)
                 return {
-                  ...data,
+                  ...u,
                   totalTests: userResults.length,
                   avgScore: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
                   bestScore: scores.length ? Math.max(...scores) : 0,

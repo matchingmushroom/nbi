@@ -6,7 +6,7 @@ import { FiUpload, FiCheckCircle, FiAlertCircle } from 'react-icons/fi'
 
 const EXPECTED_COLS = ['SN', 'chapter', 'question', 'option-a', 'option-b', 'option-c', 'option-d', 'correct-answer', 'explanation', 'difficulty', 'module', 'mode']
 
-export default function CSVUploader() {
+export default function CSVUploader({ onUploadComplete }) {
   const [rows, setRows] = useState([])
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState(null)
@@ -65,6 +65,7 @@ export default function CSVUploader() {
       setResult({ success: true, count: rows.length })
       setRows([])
       if (inputRef.current) inputRef.current.value = ''
+      if (onUploadComplete) onUploadComplete()
     } catch (err) {
       setError(err.message)
     } finally {

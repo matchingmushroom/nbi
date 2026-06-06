@@ -1,40 +1,44 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { useAuth } from '../context/AuthContext'
 import { pickByDifficulty } from '../lib/utils'
+import { getQuizSettings, getDifficultySplit, getConfigTimerLabel, checkAttemptLimit } from '../lib/quizSettings'
+import { getAllQuestionsCached } from '../lib/cache'
 import QuizRunner from '../components/QuizRunner'
 
 export default function ModuleQuizPage() {
   const { moduleName } = useParams()
   const mod = decodeURIComponent(moduleName)
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const [questions, setQuestions] = useState(null)
+  const [config, setConfig] = useState(null)
 
   useEffect(() => {
     const fetch = async () => {
-      const snap = await getDocs(collection(db, 'questions'))
-      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      const allowed = await checkAttemptLimit(profile, 'module')
+      if (!allowed) { navigate('/quiz/select'); return }
+      const settings = await getQuizSettings()
+      const total = settings.moduleQuestionCount
+      const min = Math.round(total * 0.5)
+      const all = await getAllQuestionsCached()
       const filtered = all.filter((q) => q.module === mod)
-      if (filtered.length < 12) { navigate('/quiz/select'); return }
-      const picked = pickByDifficulty(filtered, { beginner: 4, intermediate: 8, expert: 8 })
+      if (filtered.length < min) { navigate('/quiz/select'); return }
+      const split = getDifficultySplit(total, 'module')
+      const picked = pickByDifficulty(filtered, split)
       setQuestions(picked)
+      setConfig({
+        title: mod,
+        subtitle: getConfigTimerLabel('module', settings.moduleTimerMinutes),
+        quizType: 'module',
+        module: mod,
+        timerMinutes: settings.moduleTimerMinutes,
+      })
     }
     fetch()
   }, [mod, navigate])
 
-  if (!questions) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading module test...</p></div>
+  if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading module test...</p></div>
 
-  return (
-    <QuizRunner
-      questions={questions}
-      config={{
-        title: mod,
-        subtitle: 'Module Test · 30 min',
-        quizType: 'module',
-        module: mod,
-        timerMinutes: 30,
-      }}
-    />
-  )
+  return <QuizRunner questions={questions} config={config} />
 }

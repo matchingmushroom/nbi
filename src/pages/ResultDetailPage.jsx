@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { doc, getDoc, collection, getDocs } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { formatDate } from '../lib/utils'
+import { getAllQuestionsCached } from '../lib/cache'
 
 export default function ResultDetailPage() {
   const { id } = useParams()
@@ -18,10 +19,9 @@ export default function ResultDetailPage() {
       const data = { id: snap.id, ...snap.data() }
       setResult(data)
 
-      const qSnap = await getDocs(collection(db, 'questions'))
+      const allQuestions = await getAllQuestionsCached()
       const map = {}
-      qSnap.docs.forEach((d) => {
-        const q = d.data()
+      allQuestions.forEach((q) => {
         map[q.question] = q
       })
       setQuestionMap(map)

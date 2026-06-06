@@ -1,26 +1,43 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { getQuizSettings } from '../lib/quizSettings'
+import { getAllQuestionsCached } from '../lib/cache'
 
-const TEST_TYPES = [
-  { key: 'chapter', icon: 'menu_book', label: 'Chapter Based Test', desc: '10 Qs · 10 min · 2B / 4I / 4E', color: 'from-blue-600 to-blue-500' },
-  { key: 'module', icon: 'folder', label: 'Module Based Test', desc: '20 Qs · 30 min · 4B / 8I / 8E', color: 'from-emerald-600 to-emerald-500' },
-  { key: 'mode', icon: 'school', label: 'Mode Based Test', desc: '50 Qs · 50 min · 15B / 15I / 20E', color: 'from-purple-600 to-purple-500' },
-  { key: 'final', icon: 'military_tech', label: 'Final Mock Test', desc: '100 Qs · 100 min · 60% Book / 40% Physical', color: 'from-amber-600 to-orange-500' },
-]
+function getTestTypes(settings) {
+  return [
+    { key: 'chapter', icon: 'menu_book', label: 'Chapter Based Test', desc: `${settings.chapterQuestionCount} Qs · ${settings.chapterTimerMinutes} min · 20% B / 40% I / 40% E`, color: 'from-blue-600 to-blue-500' },
+    { key: 'module', icon: 'folder', label: 'Module Based Test', desc: `${settings.moduleQuestionCount} Qs · ${settings.moduleTimerMinutes} min · 20% B / 40% I / 40% E`, color: 'from-emerald-600 to-emerald-500' },
+    { key: 'mode', icon: 'school', label: 'Mode Based Test', desc: `${settings.modeQuestionCount} Qs · ${settings.modeTimerMinutes} min · 30% B / 30% I / 40% E`, color: 'from-purple-600 to-purple-500' },
+    { key: 'final', icon: 'military_tech', label: 'Final Mock Test', desc: `${settings.finalQuestionCount} Qs · ${settings.finalTimerMinutes} min · 60% Book / 40% Physical`, color: 'from-amber-600 to-orange-500' },
+  ]
+}
 
 export default function QuizSelectPage() {
   const navigate = useNavigate()
-  const [step, setStep] = useState('choose') // 'choose' | 'list'
+  const [step, setStep] = useState('choose')
   const [selectedType, setSelectedType] = useState(null)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [settings, setSettings] = useState(null)
+  const [limitError, setLimitError] = useState(null)
+
+  useEffect(() => {
+    const data = sessionStorage.getItem('nbi_attempt_limit')
+    if (data) {
+      const parsed = JSON.parse(data)
+      const labels = { chapter: 'Chapter', module: 'Module', mode: 'Mode', final: 'Final Mock' }
+      setLimitError(`You've reached your attempt limit for ${labels[parsed.quizType] || parsed.quizType} Tests. Contact admin to increase your limit.`)
+      sessionStorage.removeItem('nbi_attempt_limit')
+    }
+  }, [])
 
   useEffect(() => {
     const fetch = async () => {
-      const snap = await getDocs(collection(db, 'questions'))
-      const qs = snap.docs.map((d) => d.data())
+      const [qs, s] = await Promise.all([
+        getAllQuestionsCached(),
+        getQuizSettings(),
+      ])
+      setSettings(s)
 
       const modules = {}
       const chaptersByModule = {}
@@ -188,14 +205,27 @@ export default function QuizSelectPage() {
     )
   }
 
+  const testTypes = settings ? getTestTypes(settings) : []
+
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto">
       <div className="mb-6">
         <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Choose Type of Test</h1>
         <p className="text-on-surface-variant text-sm mt-1">Select a test type to begin your exam</p>
       </div>
+
+      {limitError && (
+        <div className="mb-4 bg-error/5 border border-error/20 rounded-xl p-3 flex items-start gap-2">
+          <span className="material-symbols-outlined text-error text-[18px] shrink-0 mt-0.5">error</span>
+          <p className="text-sm text-on-surface">{limitError}</p>
+          <button onClick={() => setLimitError(null)} className="text-on-surface-variant hover:text-on-surface cursor-pointer shrink-0">
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      )}
+
       <div className="space-y-3">
-        {TEST_TYPES.map((t) => (
+        {testTypes.map((t) => (
           <button
             key={t.key}
             onClick={() => handleTypeSelect(t.key)}

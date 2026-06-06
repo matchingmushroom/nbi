@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc, collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from './firebase'
+import { invalidateCache } from './cache'
 
 export const QUIZ_XP_BASE = {
   chapter: 10,
@@ -209,6 +210,7 @@ export async function backfillUserXP(userId) {
     lastActiveDate: lastDate,
     badges: newBadges.map(b => b.id),
   }, { merge: true })
+  invalidateCache('allUsers')
 
   return { xp: totalXp, level, streak: currentStreak, lastActiveDate: lastDate, badges: newBadges.map(b => b.id) }
 }
@@ -256,6 +258,7 @@ export async function updateGamification(userId, quizResult, quizQuestions) {
     lastActiveDate: today,
     badges: allBadges,
   }, { merge: true })
+  invalidateCache('allUsers')
 
   return {
     xpEarned: xpEarned + badgeXpBonus,
