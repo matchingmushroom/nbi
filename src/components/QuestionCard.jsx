@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import OptionButton from './OptionButton'
-import { getLetters } from '../lib/utils'
 
 export default function QuestionCard({ question, onNext, total, index }) {
   const [selected, setSelected] = useState(null)
   const [revealed, setRevealed] = useState(false)
 
-  const letters = getLetters()
   const options = [
     { label: 'A', text: question.optionA },
     { label: 'B', text: question.optionB },
@@ -32,16 +30,11 @@ export default function QuestionCard({ question, onNext, total, index }) {
   return (
     <div className="flex flex-col h-full">
       {/* Question Meta */}
-      <div className="flex items-center justify-between mb-2 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold text-primary uppercase tracking-widest bg-primary-fixed px-1.5 py-0.5 rounded">
-            {question.chapter?.split(':')[0]?.trim() || 'Chapter'}
-          </span>
-          <span className="text-xs text-on-surface-variant font-medium">Q{index + 1}/{total}</span>
-        </div>
-        <span className="text-[10px] text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded-full">
-          {question.difficulty}
+      <div className="flex items-center gap-2 mb-2 shrink-0">
+        <span className="text-[10px] font-semibold text-primary uppercase tracking-widest bg-primary-fixed px-1.5 py-0.5 rounded">
+          {question.chapter?.split(':')[0]?.trim() || 'Chapter'}
         </span>
+        <span className="text-xs text-on-surface-variant font-medium">Q{index + 1}/{total}</span>
       </div>
 
       {/* Question Text - scrolls if too long */}
