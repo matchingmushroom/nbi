@@ -98,6 +98,26 @@ export default function AdminQuestionsPage() {
     return true
   })
 
+  const hidden = questions.filter((q) => !filtered.includes(q))
+
+  const handleDeleteHidden = async () => {
+    if (hidden.length === 0) return
+    if (!confirm(`Delete ${hidden.length} question${hidden.length !== 1 ? 's' : ''} not shown in the current view? This cannot be undone.`)) return
+    setDeleting(true)
+    try {
+      const batch = writeBatch(db)
+      hidden.forEach((q) => { batch.delete(doc(db, 'questions', q.id)) })
+      await batch.commit()
+      setDeleteMsg({ ok: true, text: `${hidden.length} hidden question${hidden.length !== 1 ? 's' : ''} deleted from database.` })
+      fetch()
+    } catch (err) {
+      setDeleteMsg({ ok: false, text: 'Delete failed: ' + err.message })
+    } finally {
+      setDeleting(false)
+      setTimeout(() => setDeleteMsg(null), 4000)
+    }
+  }
+
   if (loading) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading...</p></div>
 
   return (
@@ -170,6 +190,16 @@ export default function AdminQuestionsPage() {
           <option value="all">All Chapters</option>
           {chapters.map((ch) => <option key={ch} value={ch}>{ch}</option>)}
         </select>
+        {hidden.length > 0 && (
+          <button
+            onClick={handleDeleteHidden}
+            disabled={deleting}
+            className="shrink-0 px-4 py-2 bg-error/10 text-error border border-error/30 rounded-full text-sm font-semibold hover:bg-error/20 disabled:opacity-50 transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
+            Delete Hidden ({hidden.length})
+          </button>
+        )}
       </div>
 
       {deleteMsg && (
