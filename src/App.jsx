@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
@@ -16,9 +16,8 @@ import AdminQuestionsPage from './pages/AdminQuestionsPage'
 import AdminUploadPage from './pages/AdminUploadPage'
 
 function App() {
-  const basename = window.location.hostname === 'matchingmushroom.github.io' ? '/nbi' : '/'
   return (
-        <BrowserRouter basename={basename}>
+    <HashRouter>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -49,7 +48,7 @@ function App() {
           />
         </Routes>
       </AuthProvider>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 
