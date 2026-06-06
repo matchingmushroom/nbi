@@ -16,6 +16,7 @@ import LeaderboardPage from './pages/LeaderboardPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminQuestionsPage from './pages/AdminQuestionsPage'
 import AdminUploadPage from './pages/AdminUploadPage'
+import AdminAnalyticsPage from './pages/AdminAnalyticsPage'
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
                       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
                       <Route path="/admin/questions" element={<AdminRoute><AdminQuestionsPage /></AdminRoute>} />
                       <Route path="/admin/upload" element={<AdminRoute><AdminUploadPage /></AdminRoute>} />
+                      <Route path="/admin/analytics" element={<AdminRoute><AdminAnalyticsPage /></AdminRoute>} />
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>
                   </div>

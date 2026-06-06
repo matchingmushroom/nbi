@@ -13,6 +13,7 @@ const adminLinks = [
   { to: '/admin/users', icon: 'group', label: 'Users' },
   { to: '/admin/questions', icon: 'quiz', label: 'Questions' },
   { to: '/admin/upload', icon: 'upload_file', label: 'Upload' },
+  { to: '/admin/analytics', icon: 'bar_chart', label: 'Analytics' },
 ]
 
 export default function Navbar() {
