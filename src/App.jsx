@@ -13,6 +13,7 @@ import FinalQuizPage from './pages/FinalQuizPage'
 import ResultsPage from './pages/ResultsPage'
 import ResultDetailPage from './pages/ResultDetailPage'
 import LeaderboardPage from './pages/LeaderboardPage'
+import ProfilePage from './pages/ProfilePage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminQuestionsPage from './pages/AdminQuestionsPage'
 import AdminUploadPage from './pages/AdminUploadPage'
@@ -41,6 +42,7 @@ function App() {
                       <Route path="/results" element={<ResultsPage />} />
                       <Route path="/results/:id" element={<ResultDetailPage />} />
                       <Route path="/leaderboard" element={<LeaderboardPage />} />
+                      <Route path="/profile" element={<ProfilePage />} />
                       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
                       <Route path="/admin/questions" element={<AdminRoute><AdminQuestionsPage /></AdminRoute>} />
                       <Route path="/admin/upload" element={<AdminRoute><AdminUploadPage /></AdminRoute>} />
