@@ -8,7 +8,7 @@ import Timer from './Timer'
 
 export default function QuizRunner({ questions, config, onFinish }) {
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
   const [current, setCurrent] = useState(0)
   const [answers, setAnswers] = useState([])
   const [finished, setFinished] = useState(false)
@@ -21,9 +21,9 @@ export default function QuizRunner({ questions, config, onFinish }) {
   const saveResult = useCallback(async (finalAnswers, finalScore) => {
     const timeTaken = Math.round((Date.now() - startTime.current) / 1000)
     const result = {
-      userId: profile?.uid || 'unknown',
-      userEmail: profile?.email || '',
-      displayName: profile?.displayName || '',
+      userId: profile?.uid || user?.uid || 'unknown',
+      userEmail: profile?.email || user?.email || '',
+      displayName: profile?.displayName || user?.displayName || profile?.email || user?.email || '',
       quizType: config.quizType,
       chapter: config.chapter || '',
       module: config.module || '',
@@ -43,7 +43,7 @@ export default function QuizRunner({ questions, config, onFinish }) {
       console.error('Failed to save result:', e)
     }
     onFinish?.()
-  }, [profile, config, questions.length, onFinish])
+  }, [user, profile, config, questions.length, onFinish])
 
   const handleTimeUp = useCallback(() => {
     setTimeUp(true)

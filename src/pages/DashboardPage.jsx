@@ -123,7 +123,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-on-surface truncate">
-                      <span className="font-semibold">{r.displayName || r.userEmail || 'Unknown'}</span>
+                      <span className="font-semibold">{r.displayName || r.userEmail?.split('@')[0] || r.userEmail || 'Unknown'}</span>
                       {' '}took{' '}
                       {getResultTitle(r)}
                     </p>
