@@ -5,6 +5,7 @@ import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/utils'
 import { BADGES, getLevelProgress } from '../lib/gamification'
+import { DAILY_MISSIONS, checkDailyMission } from '../lib/missions'
 import { FiUsers, FiFileText, FiBookOpen } from 'react-icons/fi'
 
 export default function DashboardPage() {
@@ -14,6 +15,7 @@ export default function DashboardPage() {
   const isAdmin = profile?.role === 'admin'
   const [recentResults, setRecentResults] = useState([])
   const [stats, setStats] = useState({ total: 0, avgScore: 0, bestScore: 0 })
+  const [completedMissions, setCompletedMissions] = useState([])
 
   useEffect(() => {
     if (!profile?.uid) return
@@ -53,6 +55,9 @@ export default function DashboardPage() {
               bestScore: Math.max(...scores),
             })
           }
+          const todayStr = new Date().toISOString().split('T')[0]
+          const todayResults = all.filter(r => (r.completedAt || '').split('T')[0] === todayStr)
+          setCompletedMissions(DAILY_MISSIONS.filter(m => checkDailyMission(m.id, todayResults)).map(m => m.id))
         }
       } catch (e) {
         console.error('Dashboard fetch error:', e)
@@ -175,6 +180,30 @@ export default function DashboardPage() {
         </div>
         <div className="w-full h-2 bg-surface-container-low rounded-full overflow-hidden">
           <div className="h-full bg-secondary rounded-full transition-all" style={{ width: `${getLevelProgress(profile?.xp || 0)}%` }} />
+        </div>
+      </div>
+
+      {/* Daily Missions */}
+      <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-4">
+        <div className="flex items-center gap-1.5 mb-3">
+          <span className="material-symbols-outlined text-[14px] text-on-surface-variant">assignment</span>
+          <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Today's Missions</h3>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {DAILY_MISSIONS.map(m => {
+            const done = completedMissions.includes(m.id)
+            return (
+              <div key={m.id} className={`flex items-center gap-2 p-2 rounded-lg border ${done ? 'bg-success/5 border-success/20' : 'bg-surface-container-low/50 border-outline-variant/50'}`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${done ? 'bg-success/20 text-success' : 'bg-outline-variant/50 text-on-surface-variant'}`}>
+                  <span className="material-symbols-outlined text-[14px]">{done ? 'check' : m.icon}</span>
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-[11px] font-semibold leading-tight ${done ? 'text-success' : 'text-on-surface'}`}>{m.name}</p>
+                  <p className="text-[9px] text-on-surface-variant leading-tight truncate">{m.desc}</p>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 

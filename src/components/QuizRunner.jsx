@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, addDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { calcQuizXP, updateGamification } from '../lib/gamification'
 import QuestionCard from './QuestionCard'
 import Timer from './Timer'
+import ConfettiEffect from './ConfettiEffect'
 
 export default function QuizRunner({ questions, config, onFinish }) {
   const navigate = useNavigate()
@@ -16,9 +17,14 @@ export default function QuizRunner({ questions, config, onFinish }) {
   const [score, setScore] = useState(0)
   const [timeUp, setTimeUp] = useState(false)
   const [gamify, setGamify] = useState(null)
+  const [combo, setCombo] = useState(0)
+  const [displayScore, setDisplayScore] = useState(0)
+  const [showConfetti, setShowConfetti] = useState(false)
   const startTime = useRef(Date.now())
   const scoreRef = useRef(0)
   const resultIdRef = useRef(null)
+  const comboRef = useRef(0)
+  const animStarted = useRef(false)
 
   const saveResult = useCallback(async (finalAnswers, finalScore) => {
     const timeTaken = Math.round((Date.now() - startTime.current) / 1000)
@@ -67,6 +73,14 @@ export default function QuizRunner({ questions, config, onFinish }) {
     const newScore = score + (result.isCorrect ? 1 : 0)
     setScore(newScore)
     scoreRef.current = newScore
+
+    if (result.isCorrect) {
+      comboRef.current += 1
+    } else {
+      comboRef.current = 0
+    }
+    setCombo(comboRef.current)
+
     if (current + 1 >= questions.length) {
       setFinished(true)
       await saveResult(newAnswers, newScore)
@@ -74,6 +88,28 @@ export default function QuizRunner({ questions, config, onFinish }) {
       setCurrent((c) => c + 1)
     }
   }
+
+  useEffect(() => {
+    if (!finished || animStarted.current) return
+    animStarted.current = true
+    const target = score
+    if (target === 0) { setDisplayScore(0); return }
+    const duration = 1000
+    const startTime = performance.now()
+    const animate = (now) => {
+      const elapsed = now - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setDisplayScore(Math.round(eased * target))
+      if (progress < 1) requestAnimationFrame(animate)
+    }
+    requestAnimationFrame(animate)
+  }, [finished])
+
+  useEffect(() => {
+    if (!gamify) return
+    if (gamify.leveledUp) setShowConfetti(true)
+  }, [gamify])
 
   if (!questions.length) {
     return (
@@ -90,8 +126,11 @@ export default function QuizRunner({ questions, config, onFinish }) {
   if (finished) {
     const totalQ = questions.length || 1
     const pct = score / totalQ
+    const isPerfect = score === totalQ
+    if (isPerfect) setTimeout(() => setShowConfetti(true), 300)
     return (
       <div className="h-full flex items-center justify-center p-4">
+        <ConfettiEffect active={showConfetti} />
         <div className="bg-surface border border-outline-variant rounded-xl p-6 text-center shadow-sm max-w-sm w-full">
           <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 ${pct >= 0.6 ? 'bg-green-100' : 'bg-red-100'}`}>
             <span className={`material-symbols-outlined text-[32px] ${pct >= 0.6 ? 'text-success' : 'text-error'}`}>
@@ -102,7 +141,7 @@ export default function QuizRunner({ questions, config, onFinish }) {
             {pct >= 0.8 ? 'Excellent!' : pct >= 0.6 ? 'Good Job!' : pct >= 0.4 ? 'Keep Trying' : 'Needs Improvement'}
           </h2>
           <p className="text-xs text-on-surface-variant mb-4">{config.title}{timeUp ? ' (Time Expired)' : ''}</p>
-          <div className="text-4xl font-extrabold text-primary mb-1">{score}<span className="text-lg text-on-surface-variant">/{totalQ}</span></div>
+          <div className="text-4xl font-extrabold text-primary mb-1">{displayScore}<span className="text-lg text-on-surface-variant">/{totalQ}</span></div>
           <p className="text-xs text-on-surface-variant">{Math.round(pct * 100)}% Accuracy</p>
 
           {/* Gamification */}
@@ -164,12 +203,21 @@ export default function QuizRunner({ questions, config, onFinish }) {
   const q = questions[current]
   return (
     <div className="h-full overflow-hidden flex flex-col p-3 md:p-4">
+      <ConfettiEffect active={showConfetti} />
       <div className="flex items-center justify-between mb-2 shrink-0">
         <div>
           <h2 className="font-['Hanken_Grotesk'] text-sm md:text-base font-bold text-on-surface leading-tight">{config.title}</h2>
           <p className="text-[10px] text-on-surface-variant">{questions.length} Qs · {config.subtitle}</p>
         </div>
-        <Timer minutes={config.timerMinutes} onTimeUp={handleTimeUp} />
+        <div className="flex items-center gap-2">
+          {combo >= 2 && (
+            <div className="hidden sm:flex items-center gap-1 bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full text-[11px] font-bold animate-combo-bounce">
+              <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
+              x{combo}
+            </div>
+          )}
+          <Timer minutes={config.timerMinutes} onTimeUp={handleTimeUp} />
+        </div>
       </div>
       <div className="w-full bg-surface-container-low h-1 rounded-full mb-2 shrink-0">
         <div className="bg-secondary h-full rounded-full transition-all duration-300" style={{ width: `${((current) / questions.length) * 100}%` }} />

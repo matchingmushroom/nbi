@@ -54,3 +54,22 @@
   transform: rotate(-90deg);
   transform-origin: 50% 50%;
 }
+
+@keyframes confetti-fall {
+  0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg) translateX(var(--x-drift, 0)); opacity: 0; }
+}
+
+.animate-confetti {
+  animation: confetti-fall 2.5s ease-in forwards;
+}
+
+@keyframes combo-bounce-in {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-combo-bounce {
+  animation: combo-bounce-in 0.3s ease-out;
+}
