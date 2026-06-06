@@ -139,6 +139,80 @@ export function checkBadges(userData, allResults) {
   return newBadges
 }
 
+function getDateOnly(iso) {
+  return iso ? iso.split('T')[0] : ''
+}
+
+export async function backfillUserXP(userId) {
+  const userRef = doc(db, 'users', userId)
+  const userSnap = await getDoc(userRef)
+  if (!userSnap.exists()) return null
+  const userData = userSnap.data()
+
+  if ((userData.xp || 0) > 0) return null
+
+  const resultsSnap = await getDocs(query(
+    collection(db, 'results'),
+    where('userId', '==', userId)
+  ))
+  const allResults = resultsSnap.docs.map(d => d.data())
+
+  if (allResults.length === 0) return null
+
+  let totalXp = 0
+  allResults.forEach(r => {
+    totalXp += calcQuizXP(r.quizType, r.score, r.answers, null)
+  })
+
+  const sortedDates = allResults
+    .map(r => getDateOnly(r.completedAt))
+    .filter(Boolean)
+    .sort()
+
+  let streak = 1
+  let longest = 1
+  for (let i = 1; i < sortedDates.length; i++) {
+    const prev = new Date(sortedDates[i - 1])
+    const curr = new Date(sortedDates[i])
+    const diff = (curr - prev) / (1000 * 60 * 60 * 24)
+    if (diff === 1) {
+      streak++
+      longest = Math.max(longest, streak)
+    } else if (diff > 1) {
+      streak = 1
+    }
+  }
+
+  const today = getToday()
+  const lastDate = sortedDates[sortedDates.length - 1] || today
+  const currentStreak = lastDate === today || lastDate === getYesterday()
+    ? (sortedDates.length >= 2 ? (() => {
+        let s = 1
+        for (let i = sortedDates.length - 1; i > 0; i--) {
+          const curr = new Date(sortedDates[i])
+          const prev = new Date(sortedDates[i - 1])
+          const diff = (curr - prev) / (1000 * 60 * 60 * 24)
+          if (diff === 1) s++
+          else break
+        }
+        return s
+      })() : 1)
+    : 0
+
+  const level = getLevel(totalXp)
+  const newBadges = checkBadges({ xp: totalXp, streak: currentStreak, badges: [] }, allResults)
+
+  await setDoc(userRef, {
+    xp: totalXp,
+    level,
+    streak: currentStreak,
+    lastActiveDate: lastDate,
+    badges: newBadges.map(b => b.id),
+  }, { merge: true })
+
+  return { xp: totalXp, level, streak: currentStreak, lastActiveDate: lastDate, badges: newBadges.map(b => b.id) }
+}
+
 export async function updateGamification(userId, quizResult, quizQuestions) {
   const userRef = doc(db, 'users', userId)
   const userSnap = await getDoc(userRef)

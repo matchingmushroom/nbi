@@ -7,6 +7,7 @@ import {
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
+import { backfillUserXP } from '../lib/gamification'
 
 const AuthContext = createContext(null)
 
@@ -20,7 +21,18 @@ export function AuthProvider({ children }) {
       setUser(firebaseUser)
       if (firebaseUser) {
         const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
-        setProfile(snap.exists() ? { uid: firebaseUser.uid, ...snap.data() } : null)
+        const data = snap.exists() ? { uid: firebaseUser.uid, ...snap.data() } : null
+        if (data && data.xp === undefined) {
+          const backfill = await backfillUserXP(firebaseUser.uid)
+          if (backfill) {
+            data.xp = backfill.xp
+            data.level = backfill.level
+            data.streak = backfill.streak
+            data.lastActiveDate = backfill.lastActiveDate
+            data.badges = backfill.badges
+          }
+        }
+        setProfile(data)
       } else {
         setProfile(null)
       }
