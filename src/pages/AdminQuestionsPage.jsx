@@ -14,6 +14,7 @@ export default function AdminQuestionsPage() {
   const [batchMode, setBatchMode] = useState(false)
   const [selectedChapters, setSelectedChapters] = useState([])
   const [deleting, setDeleting] = useState(false)
+  const [deleteMsg, setDeleteMsg] = useState(null)
 
   const fetch = async () => {
     const snap = await getDocs(collection(db, 'questions'))
@@ -52,8 +53,14 @@ export default function AdminQuestionsPage() {
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this question?')) return
-    await deleteDoc(doc(db, 'questions', id))
-    fetch()
+    try {
+      await deleteDoc(doc(db, 'questions', id))
+      setDeleteMsg({ ok: true, text: 'Question deleted from database.' })
+      fetch()
+    } catch (err) {
+      setDeleteMsg({ ok: false, text: 'Delete failed: ' + err.message })
+    }
+    setTimeout(() => setDeleteMsg(null), 3000)
   }
 
   const toggleChapter = (ch) => {
@@ -66,7 +73,7 @@ export default function AdminQuestionsPage() {
     if (selectedChapters.length === 0) return
     const toDelete = questions.filter((q) => selectedChapters.includes(q.chapter))
     if (!confirm(`Delete all ${toDelete.length} questions from ${selectedChapters.length} chapter(s)? This cannot be undone.`)) return
-    setDeleting(true)
+      setDeleting(true)
     try {
       const batch = writeBatch(db)
       toDelete.forEach((q) => {
@@ -75,11 +82,13 @@ export default function AdminQuestionsPage() {
       await batch.commit()
       setSelectedChapters([])
       setBatchMode(false)
+      setDeleteMsg({ ok: true, text: `${toDelete.length} questions deleted from database.` })
       fetch()
     } catch (err) {
-      alert('Error deleting questions: ' + err.message)
+      setDeleteMsg({ ok: false, text: 'Batch delete failed: ' + err.message })
     } finally {
       setDeleting(false)
+      setTimeout(() => setDeleteMsg(null), 4000)
     }
   }
 
@@ -162,6 +171,12 @@ export default function AdminQuestionsPage() {
           {chapters.map((ch) => <option key={ch} value={ch}>{ch}</option>)}
         </select>
       </div>
+
+      {deleteMsg && (
+        <div className={`mb-3 px-4 py-2 rounded-lg text-sm font-medium ${deleteMsg.ok ? 'bg-success/10 text-success border border-success/20' : 'bg-error-container/30 text-on-error-container border border-red-200'}`}>
+          {deleteMsg.text}
+        </div>
+      )}
 
       <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <div className="divide-y divide-outline-variant">
