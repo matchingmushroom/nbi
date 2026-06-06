@@ -10,17 +10,17 @@ export const QUIZ_XP_BASE = {
 
 export const LEVEL_THRESHOLDS = [
   { level: 1, xp: 0 },
-  { level: 2, xp: 100 },
-  { level: 3, xp: 250 },
-  { level: 4, xp: 500 },
-  { level: 5, xp: 1000 },
-  { level: 6, xp: 2000 },
-  { level: 7, xp: 3500 },
-  { level: 8, xp: 5500 },
-  { level: 9, xp: 8000 },
-  { level: 10, xp: 11000 },
-  { level: 11, xp: 15000 },
-  { level: 12, xp: 20000 },
+  { level: 2, xp: 2000 },
+  { level: 3, xp: 5000 },
+  { level: 4, xp: 10000 },
+  { level: 5, xp: 20000 },
+  { level: 6, xp: 30000 },
+  { level: 7, xp: 40000 },
+  { level: 8, xp: 50000 },
+  { level: 9, xp: 70000 },
+  { level: 10, xp: 100000 },
+  { level: 11, xp: 500000 },
+  { level: 12, xp: 1000000 },
 ]
 
 export const BADGES = [
