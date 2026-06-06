@@ -1,7 +1,7 @@
 import { useState, useEffect, Fragment } from 'react'
-import { collection, getDocs } from 'firebase/firestore'
+import { collection, getDocs, doc, setDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
-import { BADGES, getLevelProgress } from '../lib/gamification'
+import { BADGES, getLevelProgress, getLevel } from '../lib/gamification'
 import { formatDate } from '../lib/utils'
 
 export default function AdminAnalyticsPage() {
@@ -9,6 +9,8 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(null)
   const [totals, setTotals] = useState({ userCount: 0, testCount: 0, avgScore: 0 })
+  const [recalculating, setRecalculating] = useState(false)
+  const [recalcResult, setRecalcResult] = useState(null)
 
   const getResultTitle = (r) => {
     const qt = r.quizType || r.testType || ''
@@ -85,6 +87,67 @@ export default function AdminAnalyticsPage() {
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Avg Score (All)</span>
           <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{totals.avgScore}%</p>
         </div>
+      </div>
+
+      {/* Recalculate Levels */}
+      <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-on-surface">Recalculate Levels</h3>
+          <p className="text-[11px] text-on-surface-variant mt-0.5">Update all users' levels based on their current XP and the latest thresholds</p>
+          {recalcResult && (
+            <p className="text-xs font-medium mt-1" style={{ color: recalcResult.success ? '#059669' : '#DC2626' }}>{recalcResult.message}</p>
+          )}
+        </div>
+        <button
+          onClick={async () => {
+            setRecalculating(true)
+            setRecalcResult(null)
+            try {
+              const snap = await getDocs(collection(db, 'users'))
+              let updated = 0
+              for (const userDoc of snap.docs) {
+                const data = userDoc.data()
+                const currentXp = data.xp || 0
+                const correctLevel = getLevel(currentXp)
+                if (data.level !== correctLevel) {
+                  await setDoc(doc(db, 'users', userDoc.id), { level: correctLevel }, { merge: true })
+                  updated++
+                }
+              }
+              setRecalcResult({ success: true, message: `Done! ${updated} user${updated !== 1 ? 's' : ''} updated.` })
+              // Refresh table
+              setExpanded(null)
+              const [usersSnap, resultsSnap] = await Promise.all([
+                getDocs(collection(db, 'users')),
+                getDocs(collection(db, 'results')),
+              ])
+              const allResults = resultsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+              const userStats = usersSnap.docs.map(d => {
+                const uid = d.id
+                const data = { uid, ...d.data() }
+                const userResults = allResults.filter(r => r.userId === uid)
+                const scores = userResults.map(r => r.percentage || 0)
+                return {
+                  ...data,
+                  totalTests: userResults.length,
+                  avgScore: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
+                  bestScore: scores.length ? Math.max(...scores) : 0,
+                  results: userResults.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || '')),
+                }
+              })
+              userStats.sort((a, b) => b.totalTests - a.totalTests)
+              setUsers(userStats)
+            } catch (e) {
+              setRecalcResult({ success: false, message: `Error: ${e.message}` })
+            }
+            setRecalculating(false)
+          }}
+          disabled={recalculating}
+          className="shrink-0 bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
+        >
+          {recalculating && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+          {recalculating ? 'Recalculating...' : 'Recalculate'}
+        </button>
       </div>
 
       {/* User Table */}
