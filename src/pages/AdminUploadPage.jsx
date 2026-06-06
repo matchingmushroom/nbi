@@ -2,7 +2,7 @@ import CSVUploader from '../components/CSVUploader'
 
 export default function AdminUploadPage() {
   return (
-    <div className="md:ml-64 p-4 md:p-8 pb-24 md:pb-8 max-w-3xl mx-auto">
+    <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
       <div className="mb-6">
         <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Upload Questions via CSV</h1>
         <p className="text-on-surface-variant text-sm mt-1">Bulk add questions to the database</p>

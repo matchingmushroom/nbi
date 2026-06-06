@@ -25,14 +25,14 @@ export default function OptionButton({ label, text, selected, correct, revealed,
     <button
       disabled={disabled}
       onClick={onClick}
-      className={`w-full flex items-center p-4 md:p-5 rounded-xl border-2 transition-all duration-200 ${containerStyle} ${
+      className={`w-full flex items-center p-2.5 md:p-3 rounded-lg border-2 transition-all duration-200 ${containerStyle} ${
         !revealed && !disabled ? 'hover:border-primary hover:bg-[#f0f3ff] active:scale-[0.99]' : ''
       } cursor-pointer`}
     >
-      <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center mr-4 shrink-0 transition-colors ${circleStyle}`}>
-        <span className="text-sm font-bold">{label}</span>
+      <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center mr-3 shrink-0 transition-colors ${circleStyle}`}>
+        <span className="text-xs md:text-sm font-bold">{label}</span>
       </div>
-      <span className={`text-sm md:text-base text-left leading-relaxed ${textStyle}`}>{text}</span>
+      <span className={`text-xs md:text-sm text-left leading-snug ${textStyle}`}>{text}</span>
     </button>
   )
 }

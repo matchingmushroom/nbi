@@ -30,7 +30,7 @@ export default function ResultDetailPage() {
     fetch()
   }, [id, navigate])
 
-  if (loading) return <div className="md:ml-64 p-8 pb-20 flex justify-center items-center min-h-[60vh]"><p className="text-on-surface-variant">Loading...</p></div>
+  if (loading) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading...</p></div>
   if (!result) return null
 
   const getOptionText = (q, letter) => {
@@ -40,7 +40,7 @@ export default function ResultDetailPage() {
   }
 
   return (
-    <div className="md:ml-64 p-4 md:p-8 pb-24 md:pb-8 max-w-3xl mx-auto">
+    <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
       <button onClick={() => navigate('/results')} className="flex items-center gap-1 text-sm text-primary font-semibold hover:underline mb-4 cursor-pointer">
         <span className="material-symbols-outlined text-[18px]">arrow_back</span>
         Back to Results

@@ -30,37 +30,29 @@ export default function QuestionCard({ question, onNext, total, index }) {
   }
 
   return (
-    <div>
+    <div className="flex flex-col h-full">
       {/* Question Meta */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-        <div>
-          <span className="text-xs font-semibold text-primary uppercase tracking-widest bg-primary-fixed px-2 py-0.5 rounded">
+      <div className="flex items-center justify-between mb-2 shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold text-primary uppercase tracking-widest bg-primary-fixed px-1.5 py-0.5 rounded">
             {question.chapter?.split(':')[0]?.trim() || 'Chapter'}
           </span>
-          <h2 className="font-['Hanken_Grotesk'] text-lg font-semibold text-on-surface mt-1">
-            Question {index + 1} of {total}
-          </h2>
+          <span className="text-xs text-on-surface-variant font-medium">Q{index + 1}/{total}</span>
         </div>
-        <span className="text-xs text-on-surface-variant bg-surface-container-low px-2 py-1 rounded-full">
+        <span className="text-[10px] text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded-full">
           {question.difficulty}
         </span>
       </div>
 
-      {/* Question Text */}
-      <div className="relative mb-8">
-        <div className="absolute top-0 right-0 w-24 h-24 opacity-[0.03] pointer-events-none">
-          <svg viewBox="0 0 100 100" className="w-full h-full text-primary fill-current">
-            <circle cx="50" cy="50" fill="none" r="40" stroke="currentColor" strokeWidth="2" />
-            <path d="M10 50 L90 50 M50 10 L50 90" stroke="currentColor" strokeWidth="1" />
-          </svg>
-        </div>
+      {/* Question Text - scrolls if too long */}
+      <div className="flex-1 min-h-0 overflow-y-auto mb-2">
         <p className="text-sm md:text-base text-on-surface leading-relaxed font-medium">
           {question.question}
         </p>
       </div>
 
       {/* Options */}
-      <div className="space-y-3">
+      <div className="space-y-1.5 shrink-0">
         {options.map((opt) => (
           <OptionButton
             key={opt.label}
@@ -77,24 +69,24 @@ export default function QuestionCard({ question, onNext, total, index }) {
 
       {/* Feedback */}
       {revealed && (
-        <div className="mt-6">
-          <div className={`p-4 md:p-5 rounded-xl border-2 ${
+        <div className="mt-2 shrink-0">
+          <div className={`p-2.5 rounded-lg border ${
             isCorrect ? 'bg-green-50 border-success' : 'bg-red-50 border-error'
           }`}>
-            <p className="font-bold text-sm mb-1 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">
+            <p className="font-bold text-xs flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px]">
                 {isCorrect ? 'check_circle' : 'cancel'}
               </span>
               {isCorrect ? 'Correct!' : 'Wrong!'}
             </p>
-            <p className="text-sm text-on-surface-variant leading-relaxed">{question.explanation}</p>
+            <p className="text-xs text-on-surface-variant leading-snug mt-0.5">{question.explanation}</p>
           </div>
           <button
             onClick={handleNext}
-            className="mt-4 w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer"
+            className="mt-2 w-full bg-primary text-white py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1"
           >
-            {index < total - 1 ? 'Save & Next' : 'See Results'}
-            <span className="material-symbols-outlined text-[18px] ml-1 align-middle">chevron_right</span>
+            <span>{index < total - 1 ? 'Save & Next' : 'See Results'}</span>
+            <span className="material-symbols-outlined text-[18px]">chevron_right</span>
           </button>
         </div>
       )}

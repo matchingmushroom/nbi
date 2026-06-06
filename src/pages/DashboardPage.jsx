@@ -45,7 +45,7 @@ export default function DashboardPage() {
 
   if (isAdmin) {
     return (
-      <div className="md:ml-64 p-4 md:p-8 pb-20 md:pb-8 max-w-5xl mx-auto">
+    <div className="h-full overflow-y-auto p-4 md:p-8 max-w-5xl mx-auto">
         <div className="mb-6">
           <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Admin Dashboard</h1>
           <p className="text-on-surface-variant text-sm mt-1">Welcome, {profile?.displayName || profile?.email}</p>
@@ -72,7 +72,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="md:ml-64 p-4 md:p-8 pb-20 md:pb-8 max-w-5xl mx-auto">
+      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-5xl mx-auto">
       {/* Greeting */}
       <section className="mb-6">
         <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Welcome back, {profile?.displayName?.split(' ')[0] || 'Student'}</h1>

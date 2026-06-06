@@ -35,7 +35,7 @@ export default function LeaderboardPage() {
   }, [])
 
   if (loading) return (
-    <div className="md:ml-64 p-8 pb-20 flex justify-center items-center min-h-[60vh]">
+    <div className="h-full flex items-center justify-center">
       <p className="text-on-surface-variant">Loading...</p>
     </div>
   )
@@ -48,7 +48,7 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="md:ml-64 p-4 md:p-8 pb-24 md:pb-8 max-w-3xl mx-auto">
+    <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
       <div className="mb-6">
         <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Leaderboard</h1>
         <p className="text-on-surface-variant text-sm mt-1">Top scores from Final Tests — best attempt per user</p>

@@ -53,7 +53,6 @@ export default function FinalQuizPage() {
       if (picked.length + extra.length < TOTAL) extra.push(...remainder.splice(0, TOTAL - picked.length - extra.length))
 
       picked = shuffle([...picked, ...extra]).slice(0, TOTAL)
-
       if (picked.length < 10) { navigate('/quiz/select'); return }
       setQuestions(picked)
       setLoading(false)
@@ -96,7 +95,6 @@ export default function FinalQuizPage() {
       setScore(newScore)
       scoreRef.current = newScore
     }
-
     if (current + 1 >= questions.length) {
       const finalScore = score + (result.isCorrect ? 1 : 0)
       setScore(finalScore)
@@ -108,7 +106,7 @@ export default function FinalQuizPage() {
   }
 
   if (loading) return (
-    <div className="md:ml-64 p-8 pb-20 flex justify-center items-center min-h-[60vh]">
+    <div className="h-full flex items-center justify-center">
       <p className="text-on-surface-variant">Preparing your Final Test...</p>
     </div>
   )
@@ -116,31 +114,23 @@ export default function FinalQuizPage() {
   if (finished) {
     const totalQ = questions.length || 1
     return (
-      <div className="md:ml-64 p-4 md:p-8 pb-20 md:pb-8 max-w-lg mx-auto">
-        <div className="bg-surface border border-outline-variant rounded-xl p-8 text-center shadow-sm">
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-            (score / totalQ) >= 0.6 ? 'bg-green-100' : 'bg-red-100'
-          }`}>
-            <span className={`material-symbols-outlined text-[36px] ${
-              (score / totalQ) >= 0.6 ? 'text-success' : 'text-error'
-            }`}>
+      <div className="h-full flex items-center justify-center p-4">
+        <div className="bg-surface border border-outline-variant rounded-xl p-6 text-center shadow-sm max-w-sm w-full">
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 ${(score / totalQ) >= 0.6 ? 'bg-green-100' : 'bg-red-100'}`}>
+            <span className={`material-symbols-outlined text-[32px] ${(score / totalQ) >= 0.6 ? 'text-success' : 'text-error'}`}>
               {(score / totalQ) >= 0.6 ? 'check_circle' : 'cancel'}
             </span>
           </div>
-          <h2 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface mb-1">
+          <h2 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface mb-1">
             {(score / totalQ) >= 0.8 ? 'Excellent!' : (score / totalQ) >= 0.6 ? 'Good Job!' :
              (score / totalQ) >= 0.4 ? 'Keep Trying' : 'Needs Improvement'}
           </h2>
-          <p className="text-sm text-on-surface-variant mb-6">Final Test{timeUp ? ' (Time Expired)' : ''}</p>
-          <div className="text-5xl font-extrabold text-primary mb-1">{score}<span className="text-xl text-on-surface-variant">/{totalQ}</span></div>
-          <p className="text-sm text-on-surface-variant mb-8">{Math.round((score / totalQ) * 100)}% Accuracy</p>
-          <div className="flex gap-3">
-            <button onClick={() => navigate('/quiz/select')} className="flex-1 bg-primary text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer">
-              Back to Quiz Select
-            </button>
-            <button onClick={() => navigate('/dashboard')} className="flex-1 bg-surface-container-low text-on-surface py-3 rounded-xl font-semibold text-sm hover:bg-surface-container-high transition-all active:scale-[0.98] cursor-pointer">
-              Dashboard
-            </button>
+          <p className="text-xs text-on-surface-variant mb-4">Final Test{timeUp ? ' (Time Expired)' : ''}</p>
+          <div className="text-4xl font-extrabold text-primary mb-1">{score}<span className="text-lg text-on-surface-variant">/{totalQ}</span></div>
+          <p className="text-xs text-on-surface-variant mb-5">{Math.round((score / totalQ) * 100)}% Accuracy</p>
+          <div className="flex gap-2">
+            <button onClick={() => navigate('/quiz/select')} className="flex-1 bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] cursor-pointer">Back</button>
+            <button onClick={() => navigate('/dashboard')} className="flex-1 bg-surface-container-low text-on-surface py-2.5 rounded-xl font-semibold text-sm hover:bg-surface-container-high active:scale-[0.98] cursor-pointer">Dashboard</button>
           </div>
         </div>
       </div>
@@ -149,18 +139,18 @@ export default function FinalQuizPage() {
 
   const q = questions[current]
   return (
-    <div className="md:ml-64 p-4 md:p-8 pb-20 md:pb-8 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
+    <div className="h-full overflow-hidden flex flex-col p-3 md:p-4">
+      <div className="flex items-center justify-between mb-2 shrink-0">
         <div>
-          <h2 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface">Final Test</h2>
-          <p className="text-xs text-on-surface-variant">{questions.length} questions · All chapters</p>
+          <h2 className="font-['Hanken_Grotesk'] text-sm md:text-base font-bold text-on-surface leading-tight">Final Test</h2>
+          <p className="text-[10px] text-on-surface-variant">{questions.length} Qs · All chapters</p>
         </div>
         <Timer minutes={60} onTimeUp={handleTimeUp} />
       </div>
-      <div className="w-full bg-surface-container-low h-1.5 rounded-full mb-6 overflow-hidden">
-        <div className="bg-secondary h-full rounded-full transition-all duration-300" style={{ width: `${((current) / questions.length) * 100}%` }} />
+      <div className="w-full bg-surface-container-low h-1 rounded-full mb-2 shrink-0">
+        <div className="bg-secondary h-full rounded-full transition-all duration-300" style={{ width: `${(current / questions.length) * 100}%` }} />
       </div>
-      <div className="bg-surface border border-outline-variant rounded-xl p-5 md:p-8 shadow-sm">
+      <div className="flex-1 min-h-0 bg-surface border border-outline-variant rounded-xl p-3 md:p-4 shadow-sm overflow-hidden">
         <QuestionCard question={q} onNext={handleNext} total={questions.length} index={current} />
       </div>
     </div>

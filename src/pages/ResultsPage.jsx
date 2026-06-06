@@ -30,13 +30,13 @@ export default function ResultsPage() {
   const filtered = filter === 'all' ? results : results.filter((r) => r.testType === filter)
 
   if (loading) return (
-    <div className="md:ml-64 p-8 pb-20 flex justify-center items-center min-h-[60vh]">
+    <div className="h-full flex items-center justify-center">
       <p className="text-on-surface-variant">Loading...</p>
     </div>
   )
 
   return (
-    <div className="md:ml-64 p-4 md:p-8 pb-24 md:pb-8 max-w-4xl mx-auto">
+    <div className="h-full overflow-y-auto p-4 md:p-8 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">My Results</h1>
         <p className="text-on-surface-variant text-sm mt-1">{results.length} total attempt{results.length !== 1 ? 's' : ''}</p>

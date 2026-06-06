@@ -25,9 +25,9 @@ function App() {
             path="/*"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen bg-background font-['Inter']">
+                <div className="h-dvh flex flex-col bg-background font-['Inter']">
                   <Navbar />
-                  <div className="pt-0 md:pt-0">
+                  <div className="flex-1 min-h-0 overflow-hidden md:ml-64 pb-14 md:pb-0">
                     <Routes>
                       <Route path="/dashboard" element={<DashboardPage />} />
                       <Route path="/quiz/select" element={<QuizSelectPage />} />
