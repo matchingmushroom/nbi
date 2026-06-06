@@ -37,14 +37,14 @@ export default function QuestionCard({ question, onNext, total, index }) {
         <span className="text-xs text-on-surface-variant font-medium">Q{index + 1}/{total}</span>
       </div>
 
-      {/* Question Text - scrolls if too long */}
-      <div className="flex-1 min-h-0 overflow-y-auto mb-2">
+      {/* Question Text - natural height, scroll if too long */}
+      <div className="shrink-0 max-h-[45%] overflow-y-auto mb-1.5">
         <p className="text-sm md:text-base text-on-surface leading-relaxed font-medium">
           {question.question}
         </p>
       </div>
 
-      {/* Options */}
+      {/* Options - close to question */}
       <div className="space-y-1.5 shrink-0">
         {options.map((opt) => (
           <OptionButton
@@ -60,9 +60,11 @@ export default function QuestionCard({ question, onNext, total, index }) {
         ))}
       </div>
 
+      {/* Spacer - pushes feedback to bottom when revealed */}
+      <div className="flex-1 min-h-0" />
       {/* Feedback */}
       {revealed && (
-        <div className="mt-2 shrink-0">
+        <div className="shrink-0">
           <div className={`p-2.5 rounded-lg border ${
             isCorrect ? 'bg-green-50 border-success' : 'bg-red-50 border-error'
           }`}>
