@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
+import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/utils'
@@ -36,23 +36,14 @@ export default function DashboardPage() {
             userCount: userSnap.size,
           })
         } else {
-          const q = query(
-            collection(db, 'results'),
-            where('userId', '==', profile.uid),
-            orderBy('completedAt', 'desc'),
-            limit(5)
-          )
-          const snap = await getDocs(q)
-          if (cancelled) return
-          const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-          setRecentResults(data)
-
           const allSnap = await getDocs(query(
             collection(db, 'results'),
             where('userId', '==', profile.uid)
           ))
           if (cancelled) return
-          const all = allSnap.docs.map((d) => d.data())
+          const all = allSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
+          all.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))
+          setRecentResults(all.slice(0, 5))
           if (all.length) {
             const scores = all.map((r) => r.percentage || 0)
             setStats({

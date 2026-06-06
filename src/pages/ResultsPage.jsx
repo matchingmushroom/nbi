@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore'
+import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/utils'
@@ -21,12 +21,12 @@ export default function ResultsPage() {
       try {
         const q = query(
           collection(db, 'results'),
-          where('userId', '==', profile.uid),
-          orderBy('completedAt', 'desc')
+          where('userId', '==', profile.uid)
         )
         const snap = await getDocs(q)
         if (cancelled) return
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        data.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))
         setResults(data)
       } catch (e) {
         console.error('Results fetch error:', e)
