@@ -132,6 +132,8 @@ export default function MicroLearningPage() {
   const [examQuestions, setExamQuestions] = useState([])
   const [showConfetti, setShowConfetti] = useState(false)
   const [carouselIndex, setCarouselIndex] = useState(0)
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
 
   const load = async () => {
     setLoading(true)
@@ -346,8 +348,6 @@ export default function MicroLearningPage() {
       : [{ title: dayData.title, content: dayData.shortExplanation }]
     const currentPost = posts[carouselIndex]
 
-    const touchStartX = useRef(0)
-    const touchStartY = useRef(0)
     const handleTouchStart = (e) => {
       touchStartX.current = e.touches[0].clientX
       touchStartY.current = e.touches[0].clientY
