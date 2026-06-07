@@ -128,6 +128,24 @@ export async function resetCourseProgress(userId, courseId) {
   return { success: true }
 }
 
+export async function resetDailyLimit(userId, courseId) {
+  const ref = doc(db, 'users', userId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return { error: 'User not found' }
+  const userData = snap.data()
+  const learning = userData.learning || getDefaultLearningProfile()
+  if (!learning.enrolledCourses?.[courseId]) return { error: 'User not enrolled in this course' }
+
+  learning.enrolledCourses[courseId] = {
+    ...learning.enrolledCourses[courseId],
+    dayStates: {},
+    reviewedDays: [],
+  }
+  await setDoc(ref, { learning }, { merge: true })
+  invalidateCache('allUsers')
+  return { success: true }
+}
+
 export async function deleteCourse(courseId) {
   const q = query(collection(db, 'micro_learning'), where('courseId', '==', courseId))
   const snap = await getDocs(q)

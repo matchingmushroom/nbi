@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getAllCourses, setCourseVisibility, deleteCourse, updateCourseTitle, resetCourseProgress } from '../lib/steakService'
+import { getAllCourses, setCourseVisibility, deleteCourse, updateCourseTitle, resetCourseProgress, resetDailyLimit } from '../lib/steakService'
 import { useAuth } from '../context/AuthContext'
 import { invalidateCachePrefix } from '../lib/cache'
 import MicroLearningUploader from '../components/MicroLearningUploader'
@@ -19,6 +19,10 @@ export default function AdminCoursesPage() {
   const [resetUserId, setResetUserId] = useState('')
   const [showResetModal, setShowResetModal] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [dailyResetCourseId, setDailyResetCourseId] = useState(null)
+  const [dailyResetUserId, setDailyResetUserId] = useState('')
+  const [showDailyResetModal, setShowDailyResetModal] = useState(false)
+  const [dailyResetting, setDailyResetting] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -75,6 +79,30 @@ export default function AdminCoursesPage() {
       alert('Failed: ' + err.message)
     } finally {
       setResetting(false)
+    }
+  }
+
+  const openDailyReset = (courseId) => {
+    setDailyResetCourseId(courseId)
+    setDailyResetUserId('')
+    setShowDailyResetModal(true)
+  }
+
+  const handleDailyReset = async () => {
+    if (!dailyResetCourseId || !dailyResetUserId) return
+    const user = users.find((u) => u.uid === dailyResetUserId)
+    const course = courses.find((c) => c.courseId === dailyResetCourseId)
+    if (!confirm(`Reset daily limit for "${course?.courseTitle || dailyResetCourseId}" for ${user?.displayName || user?.email}? This clears all dayStates and reviewedDays for that day.`)) return
+    setDailyResetting(true)
+    try {
+      await resetDailyLimit(dailyResetUserId, dailyResetCourseId)
+      setShowDailyResetModal(false)
+      setDailyResetCourseId(null)
+      setDailyResetUserId('')
+    } catch (err) {
+      alert('Failed: ' + err.message)
+    } finally {
+      setDailyResetting(false)
     }
   }
 
@@ -158,7 +186,39 @@ export default function AdminCoursesPage() {
             <div className="flex gap-2 justify-end">
               <button onClick={() => setShowResetModal(false)} disabled={resetting} className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-gray-100 rounded-xl cursor-pointer disabled:opacity-50">Cancel</button>
               <button onClick={handleResetCourse} disabled={!resetUserId || resetting} className="px-4 py-2 text-sm font-semibold text-on-primary bg-warning rounded-xl hover:opacity-90 transition-all cursor-pointer disabled:opacity-50">
-                {resetting ? 'Resetting...' : 'Reset'}
+                {resetting ? 'Resetting...' : 'Reset All'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDailyResetModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => !dailyResetting && setShowDailyResetModal(false)}>
+          <div className="bg-surface rounded-xl p-6 w-full max-w-sm mx-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-on-surface mb-1">Reset Daily Limit</h3>
+            <p className="text-xs text-on-surface-variant mb-4">
+              Clear dayStates and reviewedDays for <strong>{courses.find((c) => c.courseId === dailyResetCourseId)?.courseTitle || dailyResetCourseId}</strong> — allows the student to re-review days.
+            </p>
+            <select
+              value={dailyResetUserId}
+              onChange={(e) => setDailyResetUserId(e.target.value)}
+              className="w-full px-3 py-2.5 border border-outline-variant rounded-xl text-sm bg-surface outline-none focus:ring-2 focus:ring-primary/30 mb-4"
+            >
+              <option value="">— Select student —</option>
+              {users.map((u) => {
+                const enrolled = u.learning?.enrolledCourses?.[dailyResetCourseId]
+                return (
+                  <option key={u.uid} value={u.uid}>
+                    {u.displayName || u.email}{enrolled ? ` (Day ${enrolled.completedDays?.length || 0}/${courses.find((c) => c.courseId === dailyResetCourseId)?.dayCount || '?'})` : ' (not enrolled)'}
+                  </option>
+                )
+              })}
+            </select>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowDailyResetModal(false)} disabled={dailyResetting} className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-gray-100 rounded-xl cursor-pointer disabled:opacity-50">Cancel</button>
+              <button onClick={handleDailyReset} disabled={!dailyResetUserId || dailyResetting} className="px-4 py-2 text-sm font-semibold text-on-primary bg-secondary rounded-xl hover:opacity-90 transition-all cursor-pointer disabled:opacity-50">
+                {dailyResetting ? 'Resetting...' : 'Reset Daily Limit'}
               </button>
             </div>
           </div>
@@ -210,9 +270,16 @@ export default function AdminCoursesPage() {
                 {!isModerator && (
                   <>
                     <button
+                      onClick={() => openDailyReset(course.courseId)}
+                      className="p-2 text-secondary hover:bg-[#e7eefe] rounded-lg transition-colors cursor-pointer"
+                      title="Reset daily limit"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">lock_reset</span>
+                    </button>
+                    <button
                       onClick={() => openReset(course.courseId)}
                       className="p-2 text-warning hover:bg-warning/5 rounded-lg transition-colors cursor-pointer"
-                      title="Reset student progress"
+                      title="Reset all progress"
                     >
                       <span className="material-symbols-outlined text-[20px]">refresh</span>
                     </button>
