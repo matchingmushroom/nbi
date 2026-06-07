@@ -233,78 +233,86 @@ export default function AdminCoursesPage() {
       ) : (
         <div className="space-y-2">
           {courses.map((course) => (
-            <div key={course.courseId} className="flex items-center justify-between bg-surface rounded-xl px-4 py-3 border border-outline-variant">
-              <div className="flex-1 min-w-0">
-                {editingId === course.courseId ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null) }}
-                      className="flex-1 px-2 py-1 text-sm font-semibold border border-primary rounded-lg outline-none focus:ring-2 focus:ring-primary/30"
-                      autoFocus
-                    />
-                    <button onClick={saveEdit} className="p-1.5 text-success hover:bg-success/5 rounded-lg cursor-pointer" title="Save">
-                      <span className="material-symbols-outlined text-[18px]">check</span>
-                    </button>
-                    <button onClick={() => setEditingId(null)} className="p-1.5 text-on-surface-variant hover:bg-gray-100 rounded-lg cursor-pointer" title="Cancel">
-                      <span className="material-symbols-outlined text-[18px]">close</span>
-                    </button>
-                  </div>
-                ) : (
-                  <p className="font-semibold text-on-surface truncate">{course.courseTitle}</p>
-                )}
-                <p className="text-xs text-on-surface-variant">
-                  ID: {course.courseId} &middot; {course.dayCount} day{course.dayCount !== 1 ? 's' : ''}
-                </p>
+            <div key={course.courseId} className="bg-surface rounded-xl px-4 py-3 border border-outline-variant">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  {editingId === course.courseId ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null) }}
+                        className="flex-1 px-2 py-1 text-sm font-semibold border border-primary rounded-lg outline-none focus:ring-2 focus:ring-primary/30"
+                        autoFocus
+                      />
+                      <button onClick={saveEdit} className="p-1.5 text-success hover:bg-success/5 rounded-lg cursor-pointer" title="Save">
+                        <span className="material-symbols-outlined text-[18px]">check</span>
+                      </button>
+                      <button onClick={() => setEditingId(null)} className="p-1.5 text-on-surface-variant hover:bg-gray-100 rounded-lg cursor-pointer" title="Cancel">
+                        <span className="material-symbols-outlined text-[18px]">close</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="font-semibold text-on-surface truncate">{course.courseTitle}</p>
+                  )}
+                  <p className="text-xs text-on-surface-variant">
+                    ID: {course.courseId} &middot; {course.dayCount} day{course.dayCount !== 1 ? 's' : ''}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-1 shrink-0 ml-4">
+              <div className="flex items-center flex-wrap gap-1 mt-2 pt-2 border-t border-outline-variant/40">
                 <button
                   onClick={() => startEdit(course)}
-                  className="p-2 text-on-surface-variant hover:text-primary hover:bg-[#f0f3ff] rounded-lg transition-colors cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-on-surface-variant hover:text-primary hover:bg-[#f0f3ff] rounded-lg transition-colors cursor-pointer"
                   title="Edit title"
                 >
-                  <span className="material-symbols-outlined text-[20px]">edit</span>
+                  <span className="material-symbols-outlined text-[16px]">edit</span>
+                  Edit
                 </button>
                 {!isModerator && (
                   <>
                     <button
                       onClick={() => openDailyReset(course.courseId)}
-                      className="p-2 text-secondary hover:bg-[#e7eefe] rounded-lg transition-colors cursor-pointer"
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-secondary hover:bg-[#e7eefe] rounded-lg transition-colors cursor-pointer"
                       title="Reset daily limit"
                     >
-                      <span className="material-symbols-outlined text-[20px]">lock_reset</span>
+                      <span className="material-symbols-outlined text-[16px]">lock_reset</span>
+                      Reset Daily
                     </button>
                     <button
                       onClick={() => openReset(course.courseId)}
-                      className="p-2 text-warning hover:bg-warning/5 rounded-lg transition-colors cursor-pointer"
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-warning hover:bg-warning/5 rounded-lg transition-colors cursor-pointer"
                       title="Reset all progress"
                     >
-                      <span className="material-symbols-outlined text-[20px]">refresh</span>
+                      <span className="material-symbols-outlined text-[16px]">refresh</span>
+                      Reset All
                     </button>
                     <button
                       onClick={() => handleDelete(course.courseId)}
                       disabled={deleting === course.courseId}
-                      className="p-2 text-error hover:bg-error/5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-error hover:bg-error/5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                       title="Delete course"
                     >
-                      <span className="material-symbols-outlined text-[20px]">delete</span>
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                      Delete
                     </button>
                   </>
                 )}
-                <button
-                  onClick={() => handleToggle(course.courseId, course.visible !== false)}
-                  disabled={toggling === course.courseId}
-                  className={'relative inline-flex items-center shrink-0 cursor-pointer disabled:opacity-50' + (toggling === course.courseId ? ' opacity-50' : '')}
-                >
-                  <div className={'w-11 h-6 rounded-full transition-colors relative ' + (course.visible !== false ? 'bg-primary' : 'bg-gray-300')}>
-                    <div className="w-5 h-5 bg-white rounded-full shadow-sm absolute top-0.5 transition-all" style={{ left: course.visible !== false ? '22px' : '2px' }} />
-                  </div>
-                  <span className="ml-2 text-xs font-medium text-on-surface-variant">
-                    {course.visible !== false ? 'Visible' : 'Hidden'}
-                  </span>
-                </button>
+                <div className="ml-auto flex items-center gap-1">
+                  <button
+                    onClick={() => handleToggle(course.courseId, course.visible !== false)}
+                    disabled={toggling === course.courseId}
+                    className={'relative inline-flex items-center shrink-0 cursor-pointer disabled:opacity-50' + (toggling === course.courseId ? ' opacity-50' : '')}
+                  >
+                    <div className={'w-9 h-5 rounded-full transition-colors relative ' + (course.visible !== false ? 'bg-primary' : 'bg-gray-300')}>
+                      <div className="w-4 h-4 bg-white rounded-full shadow-sm absolute top-0.5 transition-all" style={{ left: course.visible !== false ? '18px' : '2px' }} />
+                    </div>
+                    <span className="ml-1.5 text-[10px] font-medium text-on-surface-variant">
+                      {course.visible !== false ? 'Visible' : 'Hidden'}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}
