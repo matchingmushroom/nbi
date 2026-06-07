@@ -132,6 +132,7 @@ export default function MicroLearningPage() {
   const [examQuestions, setExamQuestions] = useState([])
   const [showConfetti, setShowConfetti] = useState(false)
   const [carouselIndex, setCarouselIndex] = useState(0)
+  const [completedMsg, setCompletedMsg] = useState(null)
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
 
@@ -150,6 +151,7 @@ export default function MicroLearningPage() {
 
   const enterCourse = async (cid) => {
     setCourseId(cid)
+    setCompletedMsg(null)
     resetQuizState()
     const [content, learn] = await Promise.all([
       getCourseContent(cid),
@@ -223,6 +225,8 @@ export default function MicroLearningPage() {
     if (result.xpGained) playLevelUp()
     await refreshProgress()
     await refreshProfile()
+    setCompletedMsg(`Day ${dayData.day} completed! Learning finished for today. Return back tomorrow.`)
+    setTimeout(() => setCompletedMsg(null), 5000)
     setView(VIEWS.DASHBOARD)
   }
 
@@ -300,6 +304,7 @@ export default function MicroLearningPage() {
 
   const handleBackToDashboard = () => {
     setView(VIEWS.DASHBOARD)
+    setCompletedMsg(null)
     refreshProgress()
   }
 
@@ -320,6 +325,7 @@ export default function MicroLearningPage() {
     setCourseProgress(null)
     setDayData(null)
     setExamQuestions([])
+    setCompletedMsg(null)
     resetQuizState()
     setView(VIEWS.CATALOG)
     load()
@@ -595,6 +601,13 @@ export default function MicroLearningPage() {
         </button>
       </div>
 
+      {completedMsg && (
+        <div className="bg-success/10 border border-success/30 rounded-xl px-4 py-3 mb-4 text-sm font-medium text-success flex items-center gap-2">
+          <span className="material-symbols-outlined text-[20px]">check_circle</span>
+          {completedMsg}
+        </div>
+      )}
+
       {/* Steak Hero */}
       <div className={`bg-gradient-to-br ${vis.color} rounded-xl p-5 md:p-6 text-white shadow-sm mb-4`}>
         <div className="flex items-center gap-4">
@@ -663,7 +676,7 @@ export default function MicroLearningPage() {
               icon = '✓'
             } else if (completed && !reviewed && day < courseContent.length) {
               cls = 'bg-primary text-white'
-              icon = '📋'
+              icon = '✓'
             } else if (isLocked) {
               cls = 'bg-outline-variant/30 text-on-surface-variant/40'
               icon = '🔒'
