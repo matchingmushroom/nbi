@@ -33,8 +33,8 @@ function buildQuestions(row) {
   return questions.length === 3 ? questions : null
 }
 
-export default function MicroLearningUploader() {
-  const [rows, setRows] = useState([])
+export default function MicroLearningUploader({ onUploadComplete } = {}) {
+  const [days, setDays] = useState([])
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -52,34 +52,71 @@ export default function MicroLearningUploader() {
         const cols = Object.keys(res.data[0] || {})
         const hasAll = EXPECTED_COLS.every((c) => cols.includes(c))
         if (!hasAll) {
-          setError(`CSV must have columns: ${EXPECTED_COLS.slice(0, 8).join(', ')}, q1_text...q3_text, q1_optionA...q3_optionD, q1_correctAnswer...q3_correctAnswer, q1_explanation...q3_explanation`)
-          setRows([])
+          setError(`CSV must have columns: courseId, courseTitle, day, conceptId, title, category, estimatedReadingTime, shortExplanation, q1_text...q3_text, q1_optionA...q3_optionD, q1_correctAnswer...q3_correctAnswer, q1_explanation...q3_explanation`)
+          setDays([])
           return
         }
+        const hasPostNumber = cols.includes('postNumber')
         const valid = []
-        for (const r of res.data) {
-          const questions = buildQuestions(r)
-          if (!questions) continue
-          valid.push({
-            courseId: r.courseId?.trim(),
-            courseTitle: r.courseTitle?.trim(),
-            day: parseInt(r.day) || 0,
-            conceptId: r.conceptId?.trim(),
-            title: r.title?.trim(),
-            category: r.category?.trim(),
-            estimatedReadingTime: r.estimatedReadingTime?.trim(),
-            shortExplanation: r.shortExplanation?.trim(),
-            questions,
-          })
+
+        if (hasPostNumber) {
+          // Group rows by courseId + day
+          const groups = {}
+          for (const r of res.data) {
+            const key = `${r.courseId?.trim()}|${r.day}`
+            if (!groups[key]) groups[key] = []
+            groups[key].push(r)
+          }
+          for (const rows of Object.values(groups)) {
+            const sorted = rows.sort((a, b) => (parseInt(a.postNumber) || 1) - (parseInt(b.postNumber) || 1))
+            const first = sorted[0]
+            const questions = buildQuestions(first)
+            if (!questions) continue
+            const posts = sorted
+              .map(r => ({
+                title: r.title?.trim() || '',
+                content: r.shortExplanation?.trim() || '',
+              }))
+              .filter(p => p.content)
+            if (!posts.length) continue
+            valid.push({
+              courseId: first.courseId?.trim(),
+              courseTitle: first.courseTitle?.trim(),
+              day: parseInt(first.day) || 0,
+              conceptId: first.conceptId?.trim(),
+              title: first.title?.trim(),
+              category: first.category?.trim(),
+              estimatedReadingTime: first.estimatedReadingTime?.trim(),
+              shortExplanation: first.shortExplanation?.trim(),
+              posts,
+              questions,
+            })
+          }
+        } else {
+          for (const r of res.data) {
+            const questions = buildQuestions(r)
+            if (!questions) continue
+            valid.push({
+              courseId: r.courseId?.trim(),
+              courseTitle: r.courseTitle?.trim(),
+              day: parseInt(r.day) || 0,
+              conceptId: r.conceptId?.trim(),
+              title: r.title?.trim(),
+              category: r.category?.trim(),
+              estimatedReadingTime: r.estimatedReadingTime?.trim(),
+              shortExplanation: r.shortExplanation?.trim(),
+              questions,
+            })
+          }
         }
-        setRows(valid.filter((r) => r.courseId && r.day > 0 && r.title))
+        setDays(valid.filter((d) => d.courseId && d.day > 0 && d.title))
       },
       error: () => setError('Failed to parse CSV file'),
     })
   }
 
   const handleUpload = async () => {
-    if (!rows.length) return
+    if (!days.length) return
     setUploading(true)
     setError(null)
     setResult(null)
@@ -87,13 +124,13 @@ export default function MicroLearningUploader() {
       const batch = writeBatch(db)
       const mlCol = collection(db, 'micro_learning')
       const courseIds = new Set()
-      rows.forEach((r) => {
-        const docId = `${r.courseId}_day_${String(r.day).padStart(2, '0')}`
-        batch.set(doc(mlCol, docId), r)
-        courseIds.add(r.courseId)
+      days.forEach((d) => {
+        const docId = `${d.courseId}_day_${String(d.day).padStart(2, '0')}`
+        batch.set(doc(mlCol, docId), d)
+        courseIds.add(d.courseId)
       })
       for (const cid of courseIds) {
-        const first = rows.find((r) => r.courseId === cid)
+        const first = days.find((d) => d.courseId === cid)
         await setDoc(doc(db, 'courses', cid), {
           courseId: cid,
           courseTitle: first?.courseTitle || cid,
@@ -101,9 +138,10 @@ export default function MicroLearningUploader() {
         }, { merge: true })
       }
       await batch.commit()
-      setResult({ success: true, count: rows.length })
-      setRows([])
+      setResult({ success: true, count: days.length })
+      setDays([])
       if (inputRef.current) inputRef.current.value = ''
+      if (onUploadComplete) onUploadComplete()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -111,12 +149,12 @@ export default function MicroLearningUploader() {
     }
   }
 
-  if (rows.length > 0) {
+  if (days.length > 0) {
     return (
       <div>
         <div className="bg-green-50 border border-success/30 rounded-xl p-4 mb-4 flex items-center gap-2 text-sm text-green-700">
           <FiCheckCircle />
-          <span>{rows.length} days parsed across {[...new Set(rows.map(r => r.courseId))].length} course(s). Ready to upload.</span>
+          <span>{days.length} day{days.length !== 1 ? 's' : ''} parsed across {[...new Set(days.map(d => d.courseId))].length} course(s). Ready to upload.</span>
         </div>
         <div className="max-h-48 overflow-auto border border-outline-variant rounded-xl mb-4">
           <table className="w-full text-xs">
@@ -126,29 +164,31 @@ export default function MicroLearningUploader() {
                 <th className="p-2 text-left">Day</th>
                 <th className="p-2 text-left">Title</th>
                 <th className="p-2 text-left">Category</th>
+                <th className="p-2 text-left">Posts</th>
               </tr>
             </thead>
             <tbody>
-              {rows.slice(0, 10).map((r, i) => (
+              {days.slice(0, 10).map((d, i) => (
                 <tr key={i} className="border-t border-outline-variant">
-                  <td className="p-2 max-w-[120px] truncate">{r.courseTitle || r.courseId}</td>
-                  <td className="p-2">{r.day}</td>
-                  <td className="p-2 max-w-[200px] truncate">{r.title}</td>
-                  <td className="p-2">{r.category}</td>
+                  <td className="p-2 max-w-[120px] truncate">{d.courseTitle || d.courseId}</td>
+                  <td className="p-2">{d.day}</td>
+                  <td className="p-2 max-w-[200px] truncate">{d.title}</td>
+                  <td className="p-2">{d.category}</td>
+                  <td className="p-2">{d.posts?.length || '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {rows.length > 10 && <p className="text-xs text-on-surface-variant p-2">...and {rows.length - 10} more</p>}
+          {days.length > 10 && <p className="text-xs text-on-surface-variant p-2">...and {days.length - 10} more</p>}
         </div>
         <div className="flex gap-3">
-          <button onClick={() => { setRows([]); if (inputRef.current) inputRef.current.value = '' }}
+          <button onClick={() => { setDays([]); if (inputRef.current) inputRef.current.value = '' }}
             className="px-4 py-2 bg-surface-container-low text-on-surface rounded-xl text-sm font-medium hover:bg-surface-container-high transition-all cursor-pointer">
             Cancel
           </button>
           <button onClick={handleUpload} disabled={uploading}
             className="px-6 py-2 bg-primary text-on-primary rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all active:scale-[0.98] cursor-pointer">
-            {uploading ? 'Uploading...' : `Upload ${rows.length} Days`}
+            {uploading ? 'Uploading...' : `Upload ${days.length} Day${days.length !== 1 ? 's' : ''}`}
           </button>
         </div>
       </div>
@@ -158,15 +198,16 @@ export default function MicroLearningUploader() {
   return (
     <div>
       <p className="text-xs text-on-surface-variant mb-4 font-mono bg-surface-container-low p-3 rounded-lg leading-relaxed">
-        courseId, courseTitle, day, conceptId, title, category, estimatedReadingTime, shortExplanation,<br />
+        Required: courseId, courseTitle, day, conceptId, title, category, estimatedReadingTime, shortExplanation,<br />
         q1_text, q1_optionA, q1_optionB, q1_optionC, q1_optionD, q1_correctAnswer, q1_explanation,<br />
-        q2_text ... q3_explanation
+        q2_text ... q3_explanation<br />
+        <span className="text-primary font-semibold">Optional:</span> postNumber — repeat same courseId+day with postNumber 1,2,3... for carousel slides. Questions on first row only.
       </p>
       <div className="border-2 border-dashed border-outline-variant rounded-xl p-10 text-center hover:border-primary/50 transition-colors cursor-pointer"
         onClick={() => inputRef.current?.click()}>
         <FiUpload size={36} className="mx-auto text-on-surface-variant mb-3" />
         <p className="text-sm text-on-surface-variant mb-1">Upload a Micro-Learning CSV</p>
-        <p className="text-xs text-on-surface-variant/60 mb-4">Each row = one day of one course, with 3 questions</p>
+        <p className="text-xs text-on-surface-variant/60 mb-4">Each row = one day or one carousel post, with 3 questions</p>
         <input ref={inputRef} type="file" accept=".csv" onChange={handleFile} className="hidden" />
         <span className="inline-block bg-primary text-on-primary px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer">
           Select CSV File
@@ -183,7 +224,7 @@ export default function MicroLearningUploader() {
       {result?.success && (
         <div className="mt-4 bg-green-50 border border-success/30 rounded-xl p-4 flex items-center gap-2 text-sm text-green-700">
           <FiCheckCircle />
-          <span>Successfully uploaded {result.count} days to Firestore!</span>
+          <span>Successfully uploaded {result.count} day{result.count !== 1 ? 's' : ''} to Firestore!</span>
         </div>
       )}
     </div>

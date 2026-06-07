@@ -2,6 +2,8 @@ import { collection, getDocs, doc, getDoc, setDoc, query, where, writeBatch } fr
 import { db } from './firebase'
 import { getCached, setCache, invalidateCache, invalidateCachePrefix } from './cache'
 
+const EXAM_WINDOW_DAYS = 7
+
 function getToday() {
   return new Date().toISOString().split('T')[0]
 }
@@ -21,6 +23,12 @@ function getDefaultCourseProgress() {
     unlockedDay: 1,
     completedDays: [],
     dayStates: {},
+    reviewedDays: [],
+    dailyRawScore: 0,
+    courseStatus: 'LESSONS_IN_PROGRESS',
+    lessonsCompletedAt: null,
+    finalExamWindowEndsAt: null,
+    examResult: null,
   }
 }
 
@@ -188,19 +196,20 @@ export async function submitQuizResult(userId, courseId, day, answers, questions
   if (!course) return { error: 'Not enrolled in this course' }
 
   const today = getToday()
-
   const conceptId = `day_${String(day).padStart(2, '0')}`
 
-  const doneToday = Object.entries(course.dayStates || {})
-    .filter(([, s]) => s.completedDate === today)
-  if (doneToday.length > 0) {
-    return { error: 'You already completed a chapter for this course today. Come back tomorrow!' }
+  // Calendar lock: only one review per day per course
+  const reviewedToday = Object.entries(course.dayStates || {})
+    .filter(([, s]) => s.state === 'REVIEWED' && s.completedDate === today)
+  if (reviewedToday.length > 0) {
+    return { error: 'You already completed a review today. Come back tomorrow!' }
   }
 
-  const score = answers.filter((a, i) => a === questions[i]?.correctAnswer).length
-  const passed = score >= 2
+  // Take first 3 questions
+  const reviewQuestions = questions.slice(0, 3)
+  const score = answers.slice(0, 3).filter((a, i) => a === reviewQuestions[i]?.correctAnswer).length
 
-  const details = questions.map((q, i) => ({
+  const details = reviewQuestions.map((q, i) => ({
     questionId: q.questionId,
     text: q.text,
     options: q.options,
@@ -210,57 +219,155 @@ export async function submitQuizResult(userId, courseId, day, answers, questions
     explanation: q.explanation,
   }))
 
-  if (passed) {
-    const steakResult = computeSteak(course.lastCompletedDate, today)
-    let newSteak = course.currentSteak
-    if (steakResult === 'increment') newSteak++
-    else if (steakResult === 1) newSteak = 1
+  // Streak tracking
+  const steakResult = computeSteak(course.lastCompletedDate, today)
+  let newSteak = course.currentSteak
+  if (steakResult === 'increment') newSteak++
+  else if (steakResult === 1) newSteak = 1
 
-    const updatedCourse = {
-      ...course,
-      currentSteak: newSteak,
-      highestSteak: Math.max(newSteak, course.highestSteak),
-      lastCompletedDate: today,
-      unlockedDay: Math.max(course.unlockedDay, day + 1),
-      completedDays: [...new Set([...course.completedDays, conceptId])],
-      dayStates: {
-        ...course.dayStates,
-        [conceptId]: { state: 'SUCCESS', completedDate: today, score },
-      },
-    }
+  // Always unlock next day regardless of score
+  const updatedCourse = {
+    ...course,
+    currentSteak: newSteak,
+    highestSteak: Math.max(newSteak, course.highestSteak),
+    lastCompletedDate: today,
+    unlockedDay: Math.max(course.unlockedDay, day + 1),
+    reviewedDays: [...new Set([...course.reviewedDays, conceptId])],
+    dailyRawScore: (course.dailyRawScore || 0) + score,
+    dayStates: {
+      ...course.dayStates,
+      [conceptId]: { state: 'REVIEWED', completedDate: today, score },
+    },
+  }
 
-    const updatedLearning = {
-      ...learning,
-      learningXp: (learning.learningXp || 0) + 20,
-      enrolledCourses: {
-        ...learning.enrolledCourses,
-        [courseId]: updatedCourse,
-      },
-    }
+  const updatedLearning = {
+    ...learning,
+    enrolledCourses: {
+      ...learning.enrolledCourses,
+      [courseId]: updatedCourse,
+    },
+  }
 
-    await setDoc(ref, { learning: updatedLearning }, { merge: true })
-    invalidateCache('allUsers')
+  await setDoc(ref, { learning: updatedLearning }, { merge: true })
+  invalidateCache('allUsers')
 
-    return {
-      passed: true,
-      score,
-      total: questions.length,
-      details,
-      steakChanged: steakResult !== null,
-      newSteak,
-      highestSteak: updatedCourse.highestSteak,
-      dayCompleted: conceptId,
-      learningXp: updatedLearning.learningXp,
-      xpGained: 20,
-    }
+  return {
+    score,
+    total: 3,
+    details,
+    steakChanged: steakResult !== null,
+    newSteak,
+    highestSteak: updatedCourse.highestSteak,
+    dayReviewed: conceptId,
+  }
+}
+
+export async function markDayComplete(userId, courseId, day, dayCount) {
+  const ref = doc(db, 'users', userId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return { error: 'User not found' }
+  const userData = snap.data()
+  const learning = userData.learning || getDefaultLearningProfile()
+  const course = learning.enrolledCourses?.[courseId]
+  if (!course) return { error: 'Not enrolled' }
+
+  const today = getToday()
+  const conceptId = `day_${String(day).padStart(2, '0')}`
+  if (course.completedDays?.includes(conceptId)) return { error: 'Already completed' }
+
+  const updatedCourse = {
+    ...course,
+    completedDays: [...new Set([...(course.completedDays || []), conceptId])],
+    dayStates: {
+      ...course.dayStates,
+      [conceptId]: { state: 'COMPLETED', completedDate: today },
+    },
+  }
+
+  // If this is the final day, transition to LESSONS_COMPLETED + start 7-day window
+  let isFinalDay = false
+  if (day === dayCount) {
+    isFinalDay = true
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + EXAM_WINDOW_DAYS)
+    updatedCourse.courseStatus = 'LESSONS_COMPLETED'
+    updatedCourse.lessonsCompletedAt = today
+    updatedCourse.finalExamWindowEndsAt = endDate.toISOString().split('T')[0]
+  }
+
+  const updatedLearning = {
+    ...learning,
+    learningXp: (learning.learningXp || 0) + 20,
+    enrolledCourses: {
+      ...learning.enrolledCourses,
+      [courseId]: updatedCourse,
+    },
+  }
+
+  await setDoc(ref, { learning: updatedLearning }, { merge: true })
+  invalidateCache('allUsers')
+
+  return {
+    dayCompleted: conceptId,
+    isFinalDay,
+    learningXp: updatedLearning.learningXp,
+    xpGained: 20,
+    courseStatus: updatedCourse.courseStatus,
+    finalExamWindowEndsAt: updatedCourse.finalExamWindowEndsAt,
+  }
+}
+
+export async function submitFinalExam(userId, courseId, answers, questions, dayCount) {
+  const ref = doc(db, 'users', userId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return { error: 'User not found' }
+  const userData = snap.data()
+  const learning = userData.learning || getDefaultLearningProfile()
+  const course = learning.enrolledCourses?.[courseId]
+  if (!course) return { error: 'Not enrolled' }
+  if (course.courseStatus !== 'LESSONS_COMPLETED') return { error: 'Lessons not completed yet' }
+
+  // Validate 7-day window
+  const now = new Date()
+  const windowEnd = new Date(course.finalExamWindowEndsAt + 'T23:59:59')
+  if (now > windowEnd) return { error: 'Exam window has expired' }
+
+  // Score exam: 2 marks per correct
+  const examCorrect = answers.filter((a, i) => a === questions[i]?.correctAnswer).length
+  const examRaw = examCorrect * 2
+
+  // Daily portion: (dailyRawScore / (3 * (dayCount - 1))) * 40
+  const maxDaily = 3 * (dayCount - 1)
+  const dailyScore = course.dailyRawScore || 0
+  const dailyPortion = maxDaily > 0 ? (dailyScore / maxDaily) * 40 : 0
+
+  // Final score
+  const finalScore = dailyPortion + examRaw
+  const passed = finalScore >= 60
+
+  const details = questions.map((q, i) => ({
+    text: q.text,
+    options: q.options,
+    selected: answers[i],
+    correct: q.correctAnswer,
+    isCorrect: answers[i] === q.correctAnswer,
+    explanation: q.explanation,
+  }))
+
+  const result = {
+    examCorrect,
+    examRaw,
+    total: questions.length,
+    dailyPortion: Math.round(dailyPortion * 100) / 100,
+    finalScore: Math.round(finalScore * 100) / 100,
+    passed,
+    submittedAt: new Date().toISOString(),
   }
 
   const updatedCourse = {
     ...course,
-    dayStates: {
-      ...course.dayStates,
-      [conceptId]: { state: 'FAIL', completedDate: today, score },
-    },
+    courseStatus: passed ? 'PASSED' : 'FAILED',
+    examResult: result,
   }
 
   await setDoc(ref, {
@@ -274,11 +381,83 @@ export async function submitQuizResult(userId, courseId, day, answers, questions
   }, { merge: true })
   invalidateCache('allUsers')
 
-  return {
-    passed: false,
-    score,
-    total: questions.length,
-    details,
-    dayCompleted: conceptId,
+  return { ...result, details }
+}
+
+export function getCoursePhase(progress, dayCount, isModerator = false) {
+  if (!progress || !dayCount) return null
+
+  const {
+    courseStatus = 'LESSONS_IN_PROGRESS',
+    completedDays = [],
+    reviewedDays = [],
+    unlockedDay = 1,
+    finalExamWindowEndsAt,
+  } = progress
+
+  // Terminal states
+  if (courseStatus === 'PASSED') return { phase: 'PASSED' }
+  if (courseStatus === 'FAILED') return { phase: 'FAILED' }
+
+  // Lessons completed — exam window
+  if (courseStatus === 'LESSONS_COMPLETED') {
+    if (!finalExamWindowEndsAt) return { phase: 'EXAM_AVAILABLE' }
+    const now = new Date()
+    const end = new Date(finalExamWindowEndsAt + 'T23:59:59')
+    if (now <= end) return { phase: 'EXAM_AVAILABLE', windowEndsAt: finalExamWindowEndsAt }
+    return { phase: 'EXPIRED' }
   }
+
+  // Moderator: all days accessible, no locking
+  if (isModerator) {
+    const isDayComplete = (day) => {
+      const id = `day_${String(day).padStart(2, '0')}`
+      return completedDays.includes(id)
+    }
+    for (let day = 1; day <= dayCount; day++) {
+      if (!isDayComplete(day)) return { phase: 'READ_AND_COMPLETE', day }
+    }
+    return { phase: 'ALL_DONE' }
+  }
+
+  // Check if a review was done today (calendar lock)
+  const today = new Date().toISOString().split('T')[0]
+  const reviewedToday = Object.values(progress.dayStates || {}).some(
+    s => s.state === 'REVIEWED' && s.completedDate === today
+  )
+
+  // Find the first incomplete day
+  const isDayComplete = (day) => {
+    const id = `day_${String(day).padStart(2, '0')}`
+    return completedDays.includes(id)
+  }
+  const isDayReviewed = (day) => {
+    const id = `day_${String(day).padStart(2, '0')}`
+    return reviewedDays.includes(id)
+  }
+
+  for (let day = 1; day <= dayCount; day++) {
+    const complete = isDayComplete(day)
+    const reviewed = isDayReviewed(day)
+
+    if (!complete) {
+      if (day <= unlockedDay) {
+        return { phase: 'READ_AND_COMPLETE', day }
+      }
+      // Day is locked — need review of previous day
+      const prevDay = day - 1
+      if (prevDay >= 1 && isDayComplete(prevDay) && !isDayReviewed(prevDay)) {
+        return { phase: reviewedToday ? 'REVIEW_LOCKED' : 'REVIEW', day: prevDay }
+      }
+      return { phase: 'LOCKED', day }
+    }
+
+    // Day is complete but needs review (for non-final days)
+    if (day < dayCount && !reviewed) {
+      return { phase: reviewedToday ? 'REVIEW_LOCKED' : 'REVIEW', day }
+    }
+  }
+
+  // All days complete
+  return { phase: 'ALL_DONE' }
 }

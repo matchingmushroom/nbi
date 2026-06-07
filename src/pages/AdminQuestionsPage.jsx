@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext'
 import { getAllQuestionsCached, invalidateCache } from '../lib/cache'
 import { FiEdit2, FiTrash2, FiX, FiCheckSquare } from 'react-icons/fi'
 import CSVUploader from '../components/CSVUploader'
-import MicroLearningUploader from '../components/MicroLearningUploader'
 
 export default function AdminQuestionsPage() {
   const { profile } = useAuth()
@@ -22,7 +21,6 @@ export default function AdminQuestionsPage() {
   const [deleting, setDeleting] = useState(false)
   const [deleteMsg, setDeleteMsg] = useState(null)
   const [showUpload, setShowUpload] = useState(false)
-  const [uploadTab, setUploadTab] = useState('questions')
 
   const fetch = async () => {
     const data = await getAllQuestionsCached()
@@ -346,24 +344,10 @@ export default function AdminQuestionsPage() {
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => setShowUpload(false)}>
           <div className="bg-surface rounded-xl p-6 w-full max-w-3xl mx-auto max-h-[85vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-on-surface">Upload CSV</h2>
-              <button onClick={() => { setShowUpload(false); setUploadTab('questions') }} className="cursor-pointer"><span className="material-symbols-outlined">close</span></button>
+              <h2 className="text-lg font-bold text-on-surface">Upload Questions CSV</h2>
+              <button onClick={() => setShowUpload(false)} className="cursor-pointer"><span className="material-symbols-outlined">close</span></button>
             </div>
-            <div className="flex gap-2 mb-5 border-b border-outline-variant pb-3">
-              <button
-                onClick={() => setUploadTab('questions')}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${uploadTab === 'questions' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'}`}
-              >
-                Questions CSV
-              </button>
-              <button
-                onClick={() => setUploadTab('microlearning')}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${uploadTab === 'microlearning' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'}`}
-              >
-                Micro-Learning CSV
-              </button>
-            </div>
-            {uploadTab === 'questions' ? <CSVUploader onUploadComplete={() => { invalidateCache('allQuestions'); fetch() }} /> : <MicroLearningUploader />}
+            <CSVUploader onUploadComplete={() => { invalidateCache('allQuestions'); fetch() }} />
           </div>
         </div>
       )}
