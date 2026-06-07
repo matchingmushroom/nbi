@@ -482,7 +482,7 @@ export function getCoursePhase(progress, dayCount, isModerator = false, bypassDa
     const reviewed = isDayReviewed(day)
 
     if (!complete) {
-      if (day <= unlockedDay) {
+      if (day <= unlockedDay || bypassDailyLimit) {
         return { phase: 'READ_AND_COMPLETE', day }
       }
       // Day is locked — need review of previous day
