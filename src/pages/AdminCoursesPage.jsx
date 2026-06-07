@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { getAllCourses, setCourseVisibility, deleteCourse, updateCourseTitle } from '../lib/steakService'
+import { getAllCourses, setCourseVisibility, deleteCourse, updateCourseTitle, resetCourseProgress } from '../lib/steakService'
 import { useAuth } from '../context/AuthContext'
 import { invalidateCachePrefix } from '../lib/cache'
 import MicroLearningUploader from '../components/MicroLearningUploader'
 
 export default function AdminCoursesPage() {
-  const { profile } = useAuth()
+  const { profile, getAllUsers } = useAuth()
   const isModerator = profile?.role === 'moderator'
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
@@ -14,11 +14,17 @@ export default function AdminCoursesPage() {
   const [editingId, setEditingId] = useState(null)
   const [editValue, setEditValue] = useState('')
   const [showUpload, setShowUpload] = useState(false)
+  const [users, setUsers] = useState([])
+  const [resetCourseId, setResetCourseId] = useState(null)
+  const [resetUserId, setResetUserId] = useState('')
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   const load = async () => {
     setLoading(true)
-    const all = await getAllCourses()
-    setCourses(all)
+    const [allCourses, allUsers] = await Promise.all([getAllCourses(), getAllUsers()])
+    setCourses(allCourses)
+    setUsers(allUsers.filter((u) => u.role !== 'admin' && u.role !== 'moderator'))
     setLoading(false)
   }
 
@@ -46,6 +52,30 @@ export default function AdminCoursesPage() {
   const startEdit = (course) => {
     setEditingId(course.courseId)
     setEditValue(course.courseTitle)
+  }
+
+  const openReset = (courseId) => {
+    setResetCourseId(courseId)
+    setResetUserId('')
+    setShowResetModal(true)
+  }
+
+  const handleResetCourse = async () => {
+    if (!resetCourseId || !resetUserId) return
+    const user = users.find((u) => u.uid === resetUserId)
+    const course = courses.find((c) => c.courseId === resetCourseId)
+    if (!confirm(`Reset "${course?.courseTitle || resetCourseId}" for ${user?.displayName || user?.email}? This erases all progress, reviews, and exam data.`)) return
+    setResetting(true)
+    try {
+      await resetCourseProgress(resetUserId, resetCourseId)
+      setShowResetModal(false)
+      setResetCourseId(null)
+      setResetUserId('')
+    } catch (err) {
+      alert('Failed: ' + err.message)
+    } finally {
+      setResetting(false)
+    }
   }
 
   const saveEdit = async () => {
@@ -103,6 +133,38 @@ export default function AdminCoursesPage() {
         </div>
       )}
 
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => !resetting && setShowResetModal(false)}>
+          <div className="bg-surface rounded-xl p-6 w-full max-w-sm mx-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-on-surface mb-1">Reset Course Progress</h3>
+            <p className="text-xs text-on-surface-variant mb-4">
+              Select a student to reset <strong>{courses.find((c) => c.courseId === resetCourseId)?.courseTitle || resetCourseId}</strong> for.
+            </p>
+            <select
+              value={resetUserId}
+              onChange={(e) => setResetUserId(e.target.value)}
+              className="w-full px-3 py-2.5 border border-outline-variant rounded-xl text-sm bg-surface outline-none focus:ring-2 focus:ring-primary/30 mb-4"
+            >
+              <option value="">— Select student —</option>
+              {users.map((u) => {
+                const enrolled = u.learning?.enrolledCourses?.[resetCourseId]
+                return (
+                  <option key={u.uid} value={u.uid}>
+                    {u.displayName || u.email}{enrolled ? ` (Day ${enrolled.completedDays?.length || 0}/${courses.find((c) => c.courseId === resetCourseId)?.dayCount || '?'})` : ' (not enrolled)'}
+                  </option>
+                )
+              })}
+            </select>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowResetModal(false)} disabled={resetting} className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-gray-100 rounded-xl cursor-pointer disabled:opacity-50">Cancel</button>
+              <button onClick={handleResetCourse} disabled={!resetUserId || resetting} className="px-4 py-2 text-sm font-semibold text-on-primary bg-warning rounded-xl hover:opacity-90 transition-all cursor-pointer disabled:opacity-50">
+                {resetting ? 'Resetting...' : 'Reset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {courses.length === 0 ? (
         <div className="text-center py-12">
           <span className="material-symbols-outlined text-5xl text-on-surface-variant">school</span>
@@ -146,14 +208,23 @@ export default function AdminCoursesPage() {
                   <span className="material-symbols-outlined text-[20px]">edit</span>
                 </button>
                 {!isModerator && (
-                  <button
-                    onClick={() => handleDelete(course.courseId)}
-                    disabled={deleting === course.courseId}
-                    className="p-2 text-error hover:bg-error/5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                    title="Delete course"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">delete</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={() => openReset(course.courseId)}
+                      className="p-2 text-warning hover:bg-warning/5 rounded-lg transition-colors cursor-pointer"
+                      title="Reset student progress"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">refresh</span>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(course.courseId)}
+                      disabled={deleting === course.courseId}
+                      className="p-2 text-error hover:bg-error/5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                      title="Delete course"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">delete</span>
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => handleToggle(course.courseId, course.visible !== false)}
