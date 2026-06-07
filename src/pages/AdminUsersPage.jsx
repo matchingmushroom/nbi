@@ -135,30 +135,43 @@ export default function AdminUsersPage() {
       <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <div className="divide-y divide-outline-variant">
           {users.map((u) => (
-            <div key={u.uid} className="flex items-center gap-3 p-4 hover:bg-surface-container-low transition-colors">
-              <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
-                {(u.displayName || u.email || '?')[0].toUpperCase()}
+            <div key={u.uid} className="p-4 hover:bg-surface-container-low transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
+                  {(u.displayName || u.email || '?')[0].toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-on-surface truncate">{u.displayName || '—'}</p>
+                  <p className="text-xs text-on-surface-variant truncate">{u.email}</p>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
+                  u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                  u.role === 'moderator' ? 'bg-blue-100 text-blue-700' :
+                  'bg-green-100 text-green-700'
+                }`}>
+                  {u.role || 'student'}
+                </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-on-surface truncate">{u.displayName || '—'}</p>
-                <p className="text-xs text-on-surface-variant truncate">{u.email}</p>
+              <div className="flex items-center flex-wrap gap-1.5 mt-2 pt-2 border-t border-outline-variant/40">
+                <button onClick={() => openLimits(u)} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-on-surface-variant hover:text-primary hover:bg-[#f0f3ff] rounded-lg transition-colors cursor-pointer" title="Attempt limits">
+                  <FiSettings size={13} /> Limits
+                </button>
+                <button onClick={() => toggleBypassDaily(u)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${u.bypassDailyLimit ? 'text-success hover:bg-success/5' : 'text-on-surface-variant hover:text-warning hover:bg-warning/5'}`}
+                  title={u.bypassDailyLimit ? 'Daily-limit bypass ON' : 'Daily-limit bypass OFF'}>
+                  <span className="material-symbols-outlined text-[15px]">{u.bypassDailyLimit ? 'lock_open' : 'lock'}</span>
+                  Bypass
+                </button>
+                <button onClick={() => openReset(u)} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-warning hover:bg-warning/5 rounded-lg transition-colors cursor-pointer" title="Reset course progress">
+                  <FiRefreshCw size={13} /> Reset
+                </button>
+                <button onClick={() => openEdit(u)} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-[#f0f3ff] rounded-lg transition-colors cursor-pointer">
+                  <FiEdit2 size={13} /> Edit
+                </button>
+                <button onClick={() => handleDelete(u.uid)} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-error hover:bg-error/5 rounded-lg transition-colors cursor-pointer">
+                  <FiTrash2 size={13} /> Delete
+                </button>
               </div>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                u.role === 'moderator' ? 'bg-blue-100 text-blue-700' :
-                'bg-green-100 text-green-700'
-              }`}>
-                {u.role || 'student'}
-              </span>
-              <button onClick={() => openLimits(u)} className="text-on-surface-variant hover:text-primary ml-1 cursor-pointer" title="Attempt limits"><FiSettings size={14} /></button>
-              <button onClick={() => toggleBypassDaily(u)}
-                className={`ml-1 cursor-pointer ${u.bypassDailyLimit ? 'text-success' : 'text-on-surface-variant hover:text-warning'}`}
-                title={u.bypassDailyLimit ? 'Daily-limit bypass ON' : 'Daily-limit bypass OFF'}>
-                <span className="material-symbols-outlined text-[18px]">{u.bypassDailyLimit ? 'lock_open' : 'lock'}</span>
-              </button>
-              <button onClick={() => openReset(u)} className="text-warning hover:text-warning/70 ml-1 cursor-pointer" title="Reset course progress"><FiRefreshCw size={14} /></button>
-              <button onClick={() => openEdit(u)} className="text-primary hover:text-primary/70 ml-1 cursor-pointer"><FiEdit2 size={15} /></button>
-              <button onClick={() => handleDelete(u.uid)} className="text-error hover:text-error/70 cursor-pointer"><FiTrash2 size={15} /></button>
             </div>
           ))}
         </div>

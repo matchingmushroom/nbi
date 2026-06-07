@@ -249,27 +249,37 @@ export default function AdminQuestionsPage() {
       <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <div className="divide-y divide-outline-variant">
           {filtered.map((q, i) => (
-            <div key={q.id} className="flex items-center gap-3 p-3 hover:bg-surface-container-low transition-colors">
-              <span className="text-xs text-on-surface-variant w-6 shrink-0">{i + 1}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-on-surface truncate">{q.question}</p>
-                <p className="text-xs text-on-surface-variant truncate">
-                  {q.module && <span className="mr-2">{q.module}</span>}
-                  {q.mode && <span className="mr-2 text-primary">{q.mode}</span>}
-                  {q.chapter}
-                </p>
+            <div key={q.id} className="p-3 hover:bg-surface-container-low transition-colors">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-on-surface-variant w-5 shrink-0">{i + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-on-surface truncate">{q.question}</p>
+                  <p className="text-xs text-on-surface-variant truncate">
+                    {q.module && <span className="mr-2">{q.module}</span>}
+                    {q.mode && <span className="mr-2 text-primary">{q.mode}</span>}
+                    {q.chapter}
+                  </p>
+                </div>
               </div>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                q.correctAnswer === 'A' ? 'bg-blue-100 text-blue-700' :
-                q.correctAnswer === 'B' ? 'bg-green-100 text-green-700' :
-                q.correctAnswer === 'C' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-              }`}>{q.correctAnswer}</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
-                q.difficulty === 'Beginner' ? 'bg-green-100 text-green-700' :
-                q.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-              }`}>{q.difficulty}</span>
-              <button onClick={() => openEdit(q)} className="text-primary hover:text-primary/70 cursor-pointer"><FiEdit2 size={14} /></button>
-              {!isModerator && <button onClick={() => handleDelete(q.id)} className="text-error hover:text-error/70 cursor-pointer"><FiTrash2 size={14} /></button>}
+              <div className="flex items-center flex-wrap gap-1.5 mt-1.5 ml-7">
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                  q.correctAnswer === 'A' ? 'bg-blue-100 text-blue-700' :
+                  q.correctAnswer === 'B' ? 'bg-green-100 text-green-700' :
+                  q.correctAnswer === 'C' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                }`}>Ans: {q.correctAnswer}</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                  q.difficulty === 'Beginner' ? 'bg-green-100 text-green-700' :
+                  q.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                }`}>{q.difficulty}</span>
+                <button onClick={() => openEdit(q)} className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary hover:bg-[#f0f3ff] rounded-lg transition-colors cursor-pointer">
+                  <FiEdit2 size={12} /> Edit
+                </button>
+                {!isModerator && (
+                  <button onClick={() => handleDelete(q.id)} className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-error hover:bg-error/5 rounded-lg transition-colors cursor-pointer">
+                    <FiTrash2 size={12} /> Delete
+                  </button>
+                )}
+              </div>
             </div>
           ))}
           {filtered.length === 0 && (

@@ -146,11 +146,11 @@ export default function AdminAnalyticsPage() {
         </button>
       </div>
 
-      {/* User Table */}
+      {/* User Table — cards on mobile, table on md+ */}
       <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
+            <thead className="hidden md:table-header-group">
               <tr className="bg-surface-container-low border-b border-outline-variant">
                 <th className="text-left py-3 px-4 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">User</th>
                 <th className="text-center py-3 px-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Tests</th>
@@ -165,8 +165,39 @@ export default function AdminAnalyticsPage() {
             <tbody>
               {users.map((u) => (
                 <Fragment key={u.uid}>
+                  {/* Mobile card */}
+                  <tr className="md:hidden">
+                    <td colSpan={8} className="p-0">
+                      <div
+                        className={`m-2 bg-surface border border-outline-variant rounded-xl overflow-hidden cursor-pointer ${expanded === u.uid ? 'ring-1 ring-primary/20' : ''}`}
+                        onClick={() => setExpanded(expanded === u.uid ? null : u.uid)}
+                      >
+                        <div className="p-3 flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold shrink-0">
+                            {(u.displayName || u.email || '?')[0].toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-on-surface truncate">{u.displayName || 'Unnamed'}</p>
+                            <p className="text-[10px] text-on-surface-variant truncate">{u.email || ''}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="inline-flex items-center gap-1 bg-warning/10 text-warning px-1.5 py-0.5 rounded-full text-[10px] font-bold">Lv{u.level || 1}</span>
+                            <span className="material-symbols-outlined text-on-surface-variant text-[18px] transition-transform" style={{ transform: expanded === u.uid ? 'rotate(180deg)' : '' }}>expand_more</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 px-3 pb-3 text-[11px]">
+                          <span className="text-on-surface-variant">{u.totalTests} tests</span>
+                          <span className={`font-semibold ${u.avgScore >= 80 ? 'text-success' : u.avgScore >= 60 ? 'text-warning' : 'text-error'}`}>{u.avgScore}% avg</span>
+                          <span className={`font-semibold ${u.bestScore >= 80 ? 'text-success' : u.bestScore >= 60 ? 'text-warning' : 'text-error'}`}>{u.bestScore}% best</span>
+                          <span className="font-semibold text-on-surface">{u.xp || 0} XP</span>
+                          <span className="font-semibold text-on-surface">{u.badges?.length || 0} badges</span>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  {/* Desktop row */}
                   <tr
-                    className={`border-b border-outline-variant/50 hover:bg-surface-container-low transition-colors cursor-pointer ${expanded === u.uid ? 'bg-surface-container-low' : ''}`}
+                    className={`hidden md:table-row border-b border-outline-variant/50 hover:bg-surface-container-low transition-colors cursor-pointer ${expanded === u.uid ? 'bg-surface-container-low' : ''}`}
                     onClick={() => setExpanded(expanded === u.uid ? null : u.uid)}
                   >
                     <td className="py-3 px-4">
