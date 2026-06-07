@@ -22,6 +22,7 @@ const DEFAULTS = {
   certificationQuestionCount: 20,
   certificationTimerMinutes: 30,
   certificationAttemptLimit: 0,
+  courseLinkedQuizzes: {},
 }
 
 export async function getQuizSettings() {

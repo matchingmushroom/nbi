@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getQuizSettings, saveQuizSettings } from '../lib/quizSettings'
 import { getAllCourses } from '../lib/steakService'
+import { getAllQuestionsCached } from '../lib/cache'
 
 const FIELDS = [
   { key: 'chapterQuestionCount', label: 'Chapter Questions', desc: 'Default: 10' },
@@ -23,30 +24,29 @@ const ATTEMPT_FIELDS = [
   { key: 'certificationAttemptLimit', label: 'Certification Attempt Limit', desc: '0 = unlimited' },
 ]
 
-const LINKED_FIELDS = [
-  { key: 'chapterLinkedCourse', label: 'Chapter', fieldKey: 'chapterLinkedCourse' },
-  { key: 'moduleLinkedCourse', label: 'Module', fieldKey: 'moduleLinkedCourse' },
-  { key: 'modeLinkedCourse', label: 'Mode', fieldKey: 'modeLinkedCourse' },
-  { key: 'finalLinkedCourse', label: 'Final Mock', fieldKey: 'finalLinkedCourse' },
-]
-
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [courses, setCourses] = useState([])
+  const [questions, setQuestions] = useState([])
+  const [selectedCourse, setSelectedCourse] = useState('')
+  const [linkMode, setLinkMode] = useState('')
+  const [linkChapter, setLinkChapter] = useState('')
 
   useEffect(() => {
-    Promise.all([getQuizSettings(), getAllCourses()]).then(([s, c]) => {
+    Promise.all([getQuizSettings(), getAllCourses(), getAllQuestionsCached()]).then(([s, c, q]) => {
+      s.courseLinkedQuizzes = s.courseLinkedQuizzes || {}
       setSettings(s)
       setCourses(c)
+      setQuestions(q)
+      if (c.length > 0) setSelectedCourse(c[0].courseId)
       setLoading(false)
     })
   }, [])
 
   const update = (key, value) => setSettings((prev) => ({ ...prev, [key]: Number(value) }))
-  const updateStr = (key, value) => setSettings((prev) => ({ ...prev, [key]: value }))
 
   const handleSave = async () => {
     setSaving(true)
@@ -54,6 +54,40 @@ export default function AdminSettingsPage() {
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const distinctModes = [...new Set(questions.map((q) => q.mode).filter(Boolean))].sort()
+
+  const chaptersForMode = [...new Set(
+    questions.filter((q) => q.mode === linkMode && q.chapter).map((q) => q.chapter)
+  )].sort()
+
+  const linkedQuizzes = selectedCourse ? (settings.courseLinkedQuizzes[selectedCourse] || []) : []
+
+  const addLink = () => {
+    if (!linkMode || !linkChapter || !selectedCourse) return
+    const existing = settings.courseLinkedQuizzes[selectedCourse] || []
+    if (existing.some((l) => l.mode === linkMode && l.chapter === linkChapter)) return
+    setSettings((prev) => ({
+      ...prev,
+      courseLinkedQuizzes: {
+        ...prev.courseLinkedQuizzes,
+        [selectedCourse]: [...(prev.courseLinkedQuizzes[selectedCourse] || []), { mode: linkMode, chapter: linkChapter }]
+      }
+    }))
+    setLinkMode('')
+    setLinkChapter('')
+  }
+
+  const removeLink = (idx) => {
+    if (!selectedCourse) return
+    setSettings((prev) => ({
+      ...prev,
+      courseLinkedQuizzes: {
+        ...prev.courseLinkedQuizzes,
+        [selectedCourse]: (prev.courseLinkedQuizzes[selectedCourse] || []).filter((_, i) => i !== idx)
+      }
+    }))
   }
 
   if (loading) return <div className="p-4 md:p-6"><div className="animate-pulse space-y-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-12 bg-gray-200 rounded-lg" />)}</div></div>
@@ -115,24 +149,96 @@ export default function AdminSettingsPage() {
 
       <div className="bg-surface border border-outline-variant rounded-xl p-5 space-y-4">
         <h2 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Course-Linked Quizzes</h2>
-        <p className="text-xs text-on-surface-variant -mt-2">Link a quiz type to a course. Quiz only visible to users who completed that course. Leave empty for public.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {LINKED_FIELDS.map((f) => (
-            <div key={f.key}>
-              <label className="block text-sm font-medium text-on-surface mb-1">{f.label}</label>
-              <select
-                value={settings[f.key] || ''}
-                onChange={(e) => updateStr(f.key, e.target.value)}
-                className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-              >
-                <option value="">— None (visible to all) —</option>
-                {courses.map((c) => (
-                  <option key={c.courseId} value={c.courseId}>{c.courseTitle || c.courseId}</option>
-                ))}
-              </select>
+        <p className="text-xs text-on-surface-variant -mt-2">
+          Select a course, choose a mode and chapter, then link them. Quizzes matching the linked mode+chapter will only be visible to users who completed that course.
+        </p>
+
+        {courses.length === 0 ? (
+          <p className="text-sm text-on-surface-variant">No courses found. Create courses first.</p>
+        ) : (
+          <>
+            <div className="flex gap-1 flex-wrap border-b border-outline-variant pb-2">
+              {courses.map((c) => (
+                <button
+                  key={c.courseId}
+                  onClick={() => { setSelectedCourse(c.courseId); setLinkMode(''); setLinkChapter('') }}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer ${
+                    selectedCourse === c.courseId
+                      ? 'bg-primary text-on-primary'
+                      : 'text-on-surface-variant hover:bg-[#f0f3ff]'
+                  }`}
+                >
+                  {c.courseTitle || c.courseId}
+                </button>
+              ))}
             </div>
-          ))}
-        </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-on-surface">
+                Linked Quizzes for: <span className="text-primary">{courses.find((c) => c.courseId === selectedCourse)?.courseTitle || selectedCourse}</span>
+              </p>
+
+              {linkedQuizzes.length === 0 ? (
+                <p className="text-xs text-on-surface-variant">No quizzes linked yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {linkedQuizzes.map((link, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 bg-[#f0f3ff] text-primary text-xs font-medium px-3 py-1.5 rounded-full">
+                      <span className="material-symbols-outlined text-[14px]">quiz</span>
+                      {link.chapter} · {link.mode}
+                      <button
+                        onClick={() => removeLink(idx)}
+                        className="ml-0.5 text-on-surface-variant hover:text-error cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="border-t border-outline-variant pt-3">
+                <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Add New Link</p>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-[10px] font-medium text-on-surface-variant mb-1">Mode</label>
+                    <select
+                      value={linkMode}
+                      onChange={(e) => { setLinkMode(e.target.value); setLinkChapter('') }}
+                      className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm bg-surface outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">— Select mode —</option>
+                      {distinctModes.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-[10px] font-medium text-on-surface-variant mb-1">Chapter</label>
+                    <select
+                      value={linkChapter}
+                      onChange={(e) => setLinkChapter(e.target.value)}
+                      disabled={!linkMode}
+                      className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm bg-surface outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                    >
+                      <option value="">— Select chapter —</option>
+                      {chaptersForMode.map((ch) => (
+                        <option key={ch} value={ch}>{ch}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={addLink}
+                    disabled={!linkMode || !linkChapter}
+                    className="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px] align-middle">add</span> Link
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
