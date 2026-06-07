@@ -497,8 +497,7 @@ export function getCoursePhase(progress, dayCount, isModerator = false, bypassDa
     // Day is complete but needs review (for non-final days)
     if (day < dayCount && !reviewed) {
       if (bypassDailyLimit) continue
-      if (isDayReviewedToday(day)) return { phase: 'REVIEW_LOCKED', day }
-      return { phase: 'REVIEW', day }
+      return { phase: isDayReviewedToday(day) ? 'REVIEW_LOCKED' : 'REVIEW', day }
     }
   }
 

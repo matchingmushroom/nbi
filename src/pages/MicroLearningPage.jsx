@@ -692,7 +692,7 @@ export default function MicroLearningPage() {
             return (
               <TileTag
                 key={day}
-                onClick={isModerator ? () => handleModeratorDayClick(day) : (isLocked ? undefined : () => handleStartReading(day))}
+                onClick={isModerator ? () => handleModeratorDayClick(day) : (isLocked ? undefined : () => completed && !reviewed ? handleStartReview(day) : handleStartReading(day))}
                 className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold transition-all ${cls} ${TileTag === 'button' ? 'hover:opacity-80 active:scale-[0.95] cursor-pointer' : ''}`}
                 title={`Day ${day}${completed ? ' ✅' : isLocked ? ' 🔒' : ''}`}
               >
