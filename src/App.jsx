@@ -11,6 +11,7 @@ import ChapterQuizPage from './pages/ChapterQuizPage'
 import ModuleQuizPage from './pages/ModuleQuizPage'
 import ModeQuizPage from './pages/ModeQuizPage'
 import FinalQuizPage from './pages/FinalQuizPage'
+import CertificationQuizPage from './pages/CertificationQuizPage'
 import ResultsPage from './pages/ResultsPage'
 import ResultDetailPage from './pages/ResultDetailPage'
 import LeaderboardPage from './pages/LeaderboardPage'
@@ -42,6 +43,7 @@ function App() {
                       <Route path="/quiz/module/:moduleName" element={<ModuleQuizPage />} />
                       <Route path="/quiz/mode/:modeName" element={<ModeQuizPage />} />
                       <Route path="/quiz/final" element={<FinalQuizPage />} />
+                      <Route path="/quiz/certification/:courseChapter" element={<CertificationQuizPage />} />
                       <Route path="/results" element={<ResultsPage />} />
                       <Route path="/results/:id" element={<ResultDetailPage />} />
                       <Route path="/leaderboard" element={<LeaderboardPage />} />

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiEdit2, FiTrash2, FiPlus, FiX, FiSettings } from 'react-icons/fi'
+import { FiEdit2, FiTrash2, FiPlus, FiX, FiSettings, FiRefreshCw } from 'react-icons/fi'
 import { getQuizSettings } from '../lib/quizSettings'
+import { resetCourseProgress, getAllCourses } from '../lib/steakService'
 
 export default function AdminUsersPage() {
   const { getAllUsers, createUserAsAdmin, deleteUserDoc, updateUserDoc } = useAuth()
@@ -14,10 +15,16 @@ export default function AdminUsersPage() {
   const [limits, setLimits] = useState({ chapter: 0, module: 0, mode: 0, final: 0 })
   const [showLimits, setShowLimits] = useState(false)
   const [savingLimits, setSavingLimits] = useState(false)
+  const [resetUser, setResetUser] = useState(null)
+  const [courses, setCourses] = useState([])
+  const [showReset, setShowReset] = useState(false)
+  const [resetCourseId, setResetCourseId] = useState('')
+  const [resetting, setResetting] = useState(false)
 
   const fetch = async () => {
-    const data = await getAllUsers()
+    const [data, allCourses] = await Promise.all([getAllUsers(), getAllCourses()])
     setUsers(data)
+    setCourses(allCourses)
     setLoading(false)
   }
 
@@ -64,6 +71,36 @@ export default function AdminUsersPage() {
     })
     setLimitsUser(u)
     setShowLimits(true)
+  }
+
+  const toggleBypassDaily = async (u) => {
+    const current = u.bypassDailyLimit === true
+    if (!confirm(`${current ? 'Disable' : 'Enable'} daily-limit bypass for ${u.displayName || u.email}? This lets them review unlimited days per day.`)) return
+    await updateUserDoc(u.uid, { bypassDailyLimit: !current })
+    fetch()
+  }
+
+  const openReset = (u) => {
+    setResetUser(u)
+    setResetCourseId('')
+    setShowReset(true)
+  }
+
+  const handleResetCourse = async () => {
+    if (!resetUser || !resetCourseId) return
+    if (!confirm(`Reset course "${courses.find(c => c.courseId === resetCourseId)?.courseTitle || resetCourseId}" for ${resetUser.displayName || resetUser.email}? This will erase all progress, reviews, and exam data.`)) return
+    setResetting(true)
+    try {
+      await resetCourseProgress(resetUser.uid, resetCourseId)
+      setShowReset(false)
+      setResetUser(null)
+      setResetCourseId('')
+      fetch()
+    } catch (err) {
+      alert('Failed to reset course: ' + err.message)
+    } finally {
+      setResetting(false)
+    }
   }
 
   const saveLimits = async () => {
@@ -114,6 +151,12 @@ export default function AdminUsersPage() {
                 {u.role || 'student'}
               </span>
               <button onClick={() => openLimits(u)} className="text-on-surface-variant hover:text-primary ml-1 cursor-pointer" title="Attempt limits"><FiSettings size={14} /></button>
+              <button onClick={() => toggleBypassDaily(u)}
+                className={`ml-1 cursor-pointer ${u.bypassDailyLimit ? 'text-success' : 'text-on-surface-variant hover:text-warning'}`}
+                title={u.bypassDailyLimit ? 'Daily-limit bypass ON' : 'Daily-limit bypass OFF'}>
+                <span className="material-symbols-outlined text-[18px]">{u.bypassDailyLimit ? 'lock_open' : 'lock'}</span>
+              </button>
+              <button onClick={() => openReset(u)} className="text-warning hover:text-warning/70 ml-1 cursor-pointer" title="Reset course progress"><FiRefreshCw size={14} /></button>
               <button onClick={() => openEdit(u)} className="text-primary hover:text-primary/70 ml-1 cursor-pointer"><FiEdit2 size={15} /></button>
               <button onClick={() => handleDelete(u.uid)} className="text-error hover:text-error/70 cursor-pointer"><FiTrash2 size={15} /></button>
             </div>
@@ -188,6 +231,42 @@ export default function AdminUsersPage() {
               ))}
               <button onClick={saveLimits} disabled={savingLimits} className="w-full bg-primary text-on-primary py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all active:scale-[0.98] cursor-pointer">
                 {savingLimits ? 'Saving...' : 'Save Limits'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReset && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => setShowReset(false)}>
+          <div className="bg-surface rounded-xl p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-on-surface">Reset Course Progress</h2>
+              <button onClick={() => setShowReset(false)} className="cursor-pointer"><FiX size={20} /></button>
+            </div>
+            <p className="text-xs text-on-surface-variant mb-4">Select a course to reset for <strong>{resetUser?.displayName || resetUser?.email}</strong>. All day progress, reviews, exam data, and scores will be erased.</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Course</label>
+                <select value={resetCourseId} onChange={(e) => setResetCourseId(e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                  <option value="">— Select course —</option>
+                  {courses.map((c) => {
+                    const enrolled = resetUser?.learning?.enrolledCourses?.[c.courseId]
+                    if (!enrolled) return null
+                    const pct = enrolled.completedDays?.length || 0
+                    const total = c.dayCount || '?'
+                    return (
+                      <option key={c.courseId} value={c.courseId}>
+                        {c.courseTitle || c.courseId} ({pct}/{total} days)
+                      </option>
+                    )
+                  })}
+                </select>
+              </div>
+              <button onClick={handleResetCourse} disabled={!resetCourseId || resetting}
+                className="w-full bg-error text-white py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all active:scale-[0.98] cursor-pointer">
+                {resetting ? 'Resetting...' : 'Reset Course'}
               </button>
             </div>
           </div>

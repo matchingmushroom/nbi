@@ -51,11 +51,19 @@ export default function QuizSelectPage() {
       const modules = {}
       const chaptersByModule = {}
       const modes = {}
+      const certGrouped = {}
 
       qs.forEach((q) => {
         const mod = q.module || 'General'
         const ch = q.chapter || 'Unknown'
         const mode = q.mode || 'Unknown'
+        const isCert = q.module === 'Course' && q.mode === 'Certification'
+
+        if (isCert) {
+          if (!certGrouped[ch]) certGrouped[ch] = []
+          certGrouped[ch].push(q)
+          return
+        }
 
         modules[mod] = (modules[mod] || 0) + 1
         modes[mode] = (modes[mode] || 0) + 1
@@ -65,7 +73,16 @@ export default function QuizSelectPage() {
         }
       })
 
-      setItems({ modules, chaptersByModule, modes })
+      // Resolve certification chapter names to course titles
+      const resolvedCert = {}
+      Object.entries(certGrouped).forEach(([chapter, qs]) => {
+        const course = courses.find((c) => c.courseTitle === chapter || c.courseId === chapter)
+        const key = course?.courseId || chapter
+        if (!resolvedCert[key]) resolvedCert[key] = { courseId: key, courseTitle: course?.courseTitle || chapter, count: 0 }
+        resolvedCert[key].count += qs.length
+      })
+
+      setItems({ modules, chaptersByModule, modes, certificationGroups: Object.values(resolvedCert).sort((a, b) => a.courseTitle.localeCompare(b.courseTitle)) })
       setLoading(false)
     }
     fetch()
@@ -271,6 +288,41 @@ export default function QuizSelectPage() {
           )
         })}
       </div>
+
+      {/* Certification Quizzes */}
+      {items?.certificationGroups?.length > 0 && (
+        <div className="mt-8">
+          <h2 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mb-1">Certification Quizzes</h2>
+          <p className="text-xs text-on-surface-variant mb-4">Course-specific certification exams</p>
+          <div className="space-y-2">
+            {items.certificationGroups.map((g) => {
+              const passed = isCourseCompleted(g.courseId)
+              const unlocked = passed || isModerator
+              return (
+                <button
+                  key={g.courseId}
+                  onClick={() => unlocked && navigate(`/quiz/certification/${encodeURIComponent(g.courseId)}`)}
+                  disabled={!unlocked}
+                  className={`w-full border p-4 rounded-xl transition-all flex items-center gap-3 text-left ${
+                    unlocked
+                      ? 'bg-surface border-outline-variant hover:shadow-md active:scale-[0.98] cursor-pointer'
+                      : 'bg-surface-container-low border-outline-variant opacity-60 cursor-not-allowed'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${unlocked ? 'bg-amber-50 text-amber-600' : 'bg-surface-container-high text-on-surface-variant'}`}>
+                    <span className="material-symbols-outlined text-[22px]">{unlocked ? 'verified' : 'lock'}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-sm text-on-surface">{g.courseTitle}</h3>
+                    <p className="text-xs text-on-surface-variant">{g.count} certification questions</p>
+                  </div>
+                  <span className="material-symbols-outlined text-on-surface-variant text-[20px]">{unlocked ? 'chevron_right' : 'lock'}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

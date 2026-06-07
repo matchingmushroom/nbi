@@ -114,6 +114,20 @@ export async function updateCourseTitle(courseId, newTitle) {
   invalidateCachePrefix('allCourses')
 }
 
+export async function resetCourseProgress(userId, courseId) {
+  const ref = doc(db, 'users', userId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return { error: 'User not found' }
+  const userData = snap.data()
+  const learning = userData.learning || getDefaultLearningProfile()
+  if (!learning.enrolledCourses?.[courseId]) return { error: 'User not enrolled in this course' }
+
+  learning.enrolledCourses[courseId] = getDefaultCourseProgress()
+  await setDoc(ref, { learning }, { merge: true })
+  invalidateCache('allUsers')
+  return { success: true }
+}
+
 export async function deleteCourse(courseId) {
   const q = query(collection(db, 'micro_learning'), where('courseId', '==', courseId))
   const snap = await getDocs(q)
@@ -202,7 +216,8 @@ export async function submitQuizResult(userId, courseId, day, answers, questions
   const alreadyReviewed = course.dayStates?.[conceptId]?.state === 'REVIEWED' &&
     course.dayStates?.[conceptId]?.completedDate === today
   if (alreadyReviewed) {
-    return { error: 'You already completed this review today.' }
+    const bypass = userData?.bypassDailyLimit === true
+    if (!bypass) return { error: 'You already completed this review today.' }
   }
 
   // Take first 3 questions
@@ -384,7 +399,7 @@ export async function submitFinalExam(userId, courseId, answers, questions, dayC
   return { ...result, details }
 }
 
-export function getCoursePhase(progress, dayCount, isModerator = false) {
+export function getCoursePhase(progress, dayCount, isModerator = false, bypassDailyLimit = false) {
   if (!progress || !dayCount) return null
 
   const {
@@ -455,6 +470,7 @@ export function getCoursePhase(progress, dayCount, isModerator = false) {
       // Day is locked — need review of previous day
       const prevDay = day - 1
       if (prevDay >= 1 && isDayComplete(prevDay) && !isDayReviewed(prevDay)) {
+        if (bypassDailyLimit && isDayReviewedToday(prevDay)) return { phase: 'REVIEW', day: prevDay }
         return { phase: isDayReviewedToday(prevDay) ? 'REVIEW_LOCKED' : 'REVIEW', day: prevDay }
       }
       return { phase: 'LOCKED', day }
@@ -462,6 +478,7 @@ export function getCoursePhase(progress, dayCount, isModerator = false) {
 
     // Day is complete but needs review (for non-final days)
     if (day < dayCount && !reviewed) {
+      if (bypassDailyLimit && isDayReviewedToday(day)) return { phase: 'REVIEW', day }
       return { phase: isDayReviewedToday(day) ? 'REVIEW_LOCKED' : 'REVIEW', day }
     }
   }

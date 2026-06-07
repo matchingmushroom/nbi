@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   getAvailableCourses, getCourseContent,
@@ -105,6 +106,7 @@ function QuestionFlow({ questions, questionIndex, selected, revealed, handleSele
 }
 
 export default function MicroLearningPage() {
+  const navigate = useNavigate()
   const { profile, refreshProfile } = useAuth()
   const isModerator = profile?.role === 'moderator' || profile?.role === 'admin'
   const { playCorrect, playWrong, playLevelUp } = useSound()
@@ -344,6 +346,23 @@ export default function MicroLearningPage() {
       : [{ title: dayData.title, content: dayData.shortExplanation }]
     const currentPost = posts[carouselIndex]
 
+    const touchStartX = useRef(0)
+    const touchStartY = useRef(0)
+    const handleTouchStart = (e) => {
+      touchStartX.current = e.touches[0].clientX
+      touchStartY.current = e.touches[0].clientY
+    }
+    const handleTouchEnd = (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX.current
+      const dy = e.changedTouches[0].clientY - touchStartY.current
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return
+      if (dx < 0 && carouselIndex < posts.length - 1) {
+        setCarouselIndex(i => i + 1)
+      } else if (dx > 0 && carouselIndex > 0) {
+        setCarouselIndex(i => i - 1)
+      }
+    }
+
     return (
       <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto">
         <div className="mb-4">
@@ -361,7 +380,11 @@ export default function MicroLearningPage() {
           </div>
         )}
 
-        <div className="bg-surface border border-outline-variant rounded-xl p-5 md:p-6 shadow-sm mb-4">
+        <div
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          className="bg-surface border border-outline-variant rounded-xl p-5 md:p-6 shadow-sm mb-4"
+        >
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-semibold text-primary uppercase tracking-widest bg-primary-fixed px-1.5 py-0.5 rounded">{dayData.category}</span>
             <span className="text-[10px] text-on-surface-variant">{dayData.estimatedReadingTime}</span>
@@ -533,11 +556,18 @@ export default function MicroLearningPage() {
 
           <div className="flex flex-col gap-2">
             {examResult.passed && (
-              <button onClick={() => handleDownloadCertificate(examResult.finalScore)}
-                className="w-full bg-success text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-1.5">
-                <span className="material-symbols-outlined text-[18px]">download</span>
-                Download Certificate
-              </button>
+              <>
+                <button onClick={() => handleDownloadCertificate(examResult.finalScore)}
+                  className="w-full bg-success text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  Download Certificate
+                </button>
+                <button onClick={() => navigate(`/quiz/certification/${encodeURIComponent(courseId)}`)}
+                  className="w-full bg-amber-600 text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px]">verified</span>
+                  Certification Quiz
+                </button>
+              </>
             )}
             <button
               onClick={handleBackToDashboard}
@@ -552,7 +582,7 @@ export default function MicroLearningPage() {
   }
 
   // ==================== DASHBOARD ====================
-  const phase = getCoursePhase(courseProgress, courseContent.length, isModerator)
+  const phase = getCoursePhase(courseProgress, courseContent.length, isModerator, profile?.bypassDailyLimit === true)
   const vis = getSteakVisual(courseProgress?.currentSteak || 0)
   const todayStr = new Date().toISOString().split('T')[0]
 
@@ -753,11 +783,18 @@ export default function MicroLearningPage() {
           <span className="material-symbols-outlined text-success text-[36px]">verified</span>
           <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-1">Course Passed!</h3>
           <p className="text-xs text-on-surface-variant mt-1">Final score: {courseProgress?.examResult?.finalScore}%</p>
-          <button onClick={() => handleDownloadCertificate(courseProgress?.examResult?.finalScore)}
-            className="mt-3 bg-success text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-2 mx-auto">
-            <span className="material-symbols-outlined text-[18px]">download</span>
-            Download Certificate
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center mt-3">
+            <button onClick={() => handleDownloadCertificate(courseProgress?.examResult?.finalScore)}
+              className="bg-success text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-2 justify-center">
+              <span className="material-symbols-outlined text-[18px]">download</span>
+              Download Certificate
+            </button>
+            <button onClick={() => navigate(`/quiz/certification/${encodeURIComponent(courseId)}`)}
+              className="bg-amber-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-2 justify-center">
+              <span className="material-symbols-outlined text-[18px]">verified</span>
+              Certification Quiz
+            </button>
+          </div>
         </div>
       )}
 

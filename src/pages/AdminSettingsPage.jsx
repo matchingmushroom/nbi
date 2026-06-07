@@ -11,6 +11,8 @@ const FIELDS = [
   { key: 'moduleTimerMinutes', label: 'Module Timer (min)', desc: 'Default: 30' },
   { key: 'modeTimerMinutes', label: 'Mode Timer (min)', desc: 'Default: 50' },
   { key: 'finalTimerMinutes', label: 'Final Mock Timer (min)', desc: 'Default: 100' },
+  { key: 'certificationQuestionCount', label: 'Certification Questions', desc: 'Default: 20' },
+  { key: 'certificationTimerMinutes', label: 'Certification Timer (min)', desc: 'Default: 30' },
 ]
 
 const ATTEMPT_FIELDS = [
@@ -18,6 +20,7 @@ const ATTEMPT_FIELDS = [
   { key: 'moduleAttemptLimit', label: 'Module Attempt Limit', desc: '0 = unlimited' },
   { key: 'modeAttemptLimit', label: 'Mode Attempt Limit', desc: '0 = unlimited' },
   { key: 'finalAttemptLimit', label: 'Final Mock Attempt Limit', desc: '0 = unlimited' },
+  { key: 'certificationAttemptLimit', label: 'Certification Attempt Limit', desc: '0 = unlimited' },
 ]
 
 const LINKED_FIELDS = [

@@ -19,6 +19,9 @@ const DEFAULTS = {
   moduleLinkedCourse: '',
   modeLinkedCourse: '',
   finalLinkedCourse: '',
+  certificationQuestionCount: 20,
+  certificationTimerMinutes: 30,
+  certificationAttemptLimit: 0,
 }
 
 export async function getQuizSettings() {
@@ -64,6 +67,7 @@ export function getConfigTimerLabel(quizType, timerMinutes) {
     module: 'Module Test',
     mode: 'Mode Test',
     final: 'Final Mock Test',
+    certification: 'Certification Quiz',
   }
   return `${labels[quizType] || 'Quiz'} · ${timerMinutes} min`
 }
