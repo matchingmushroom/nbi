@@ -21,7 +21,7 @@ function buildQuestions(row) {
     const optionD = row[`q${i}_optionD`]?.trim()
     const correctLetter = row[`q${i}_correctAnswer`]?.trim().toUpperCase()
     const explanation = row[`q${i}_explanation`]?.trim()
-    if (!text || !optionA || !correctLetter) return null
+    if (!text || !optionA || !correctLetter) continue
     questions.push({
       questionId: `q${i}`,
       text,
@@ -30,7 +30,7 @@ function buildQuestions(row) {
       explanation: explanation || '',
     })
   }
-  return questions.length === 3 ? questions : null
+  return questions.length ? questions : null
 }
 
 export default function MicroLearningUploader({ onUploadComplete } = {}) {
