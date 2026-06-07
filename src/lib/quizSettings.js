@@ -86,7 +86,7 @@ export async function getAttemptLimit(profile, quizType) {
 }
 
 export async function checkAttemptLimit(profile, quizType) {
-  if (profile?.role === 'moderator') return true
+  if (profile?.role === 'moderator' || profile?.role === 'admin') return true
   const limit = await getAttemptLimit(profile, quizType)
   if (limit <= 0) return true
   const q = query(
