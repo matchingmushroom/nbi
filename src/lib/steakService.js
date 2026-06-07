@@ -136,10 +136,10 @@ export async function resetDailyLimit(userId, courseId) {
   const learning = userData.learning || getDefaultLearningProfile()
   if (!learning.enrolledCourses?.[courseId]) return { error: 'User not enrolled in this course' }
 
+  // Only clear dayStates (calendar lock) — keep reviewedDays so day progression is maintained
   learning.enrolledCourses[courseId] = {
     ...learning.enrolledCourses[courseId],
     dayStates: {},
-    reviewedDays: [],
   }
   await setDoc(ref, { learning }, { merge: true })
   invalidateCache('allUsers')

@@ -690,45 +690,7 @@ export default function MicroLearningPage() {
         </div>
       </div>
 
-      {/* Scoring Breakdown */}
-      {courseContent.length > 1 && courseProgress?.courseStatus === 'LESSONS_IN_PROGRESS' && (
-        <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-4">
-          <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Scoring Breakdown</p>
-          <div className="space-y-2">
-            {(() => {
-              const maxDaily = 3 * (courseContent.length - 1)
-              const raw = courseProgress?.dailyRawScore || 0
-              const dailyPortion = maxDaily > 0 ? (raw / maxDaily) * 40 : 0
-              const examNeed = Math.max(0, Math.ceil(60 - dailyPortion))
-              const correctNeed = Math.ceil(examNeed / 2)
-              return (
-                <>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-on-surface-variant">Daily Reviews Score</span>
-                    <span className="font-semibold text-on-surface">{raw} / {maxDaily}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-on-surface-variant">Contribution to Final</span>
-                    <span className="font-semibold text-primary">{Math.round(dailyPortion * 100) / 100} / 40</span>
-                  </div>
-                  {raw > 0 && (
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-on-surface-variant">Need in Exam to Pass (60%)</span>
-                      <span className="font-semibold text-warning">{examNeed} marks ({correctNeed} correct)</span>
-                    </div>
-                  )}
-                  <div className="mt-2 pt-2 border-t border-outline-variant/50">
-                    <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                      Final = <span className="text-primary font-medium">(dailyRaw / {maxDaily}) × 40</span> + <span className="text-primary font-medium">examRaw</span>.
-                      Pass at <strong>60%</strong>.
-                    </p>
-                  </div>
-                </>
-              )
-            })()}
-          </div>
-        </div>
-      )}
+      {/* Scoring Breakdown runs in background via grade formula — hidden from UI */}
 
       {/* CTA based on phase */}
       {phase?.phase === 'READ_AND_COMPLETE' && phase.day && (
