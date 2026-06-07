@@ -7,6 +7,7 @@ import {
   markDayComplete, submitFinalExam, getCoursePhase,
 } from '../lib/steakService'
 import { useSound } from '../hooks/useSound'
+import { downloadCertificate } from '../lib/certificate'
 import CourseCatalog from '../components/CourseCatalog'
 
 const STEAK_VISUALS = [
@@ -188,6 +189,19 @@ export default function MicroLearningPage() {
     }
   }
 
+  // -- Moderator day click: check if previous day review needed --
+  const handleModeratorDayClick = (day) => {
+    if (day <= 1) { handleStartReading(day); return }
+    const prevConceptId = `day_${String(day - 1).padStart(2, '0')}`
+    const prevComplete = courseProgress?.completedDays?.includes(prevConceptId)
+    const prevReviewed = courseProgress?.reviewedDays?.includes(prevConceptId)
+    if (prevComplete && !prevReviewed) {
+      handleStartReview(day - 1)
+    } else {
+      handleStartReading(day)
+    }
+  }
+
   // -- READING: open day content --
   const handleStartReading = (day) => {
     setCurrentDay(day)
@@ -283,6 +297,17 @@ export default function MicroLearningPage() {
   const handleBackToDashboard = () => {
     setView(VIEWS.DASHBOARD)
     refreshProgress()
+  }
+
+  const handleDownloadCertificate = (score) => {
+    const courseTitle = courseContent.find(c => c.day === 1)?.courseTitle || courseId
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    downloadCertificate({
+      userName: profile?.displayName || profile?.email?.split('@')[0] || 'Student',
+      courseTitle,
+      score,
+      date,
+    })
   }
 
   const handleBackToCatalog = () => {
@@ -506,12 +531,21 @@ export default function MicroLearningPage() {
             </div>
           </div>
 
-          <button
-            onClick={handleBackToDashboard}
-            className="w-full bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
-          >
-            Back to Course
-          </button>
+          <div className="flex flex-col gap-2">
+            {examResult.passed && (
+              <button onClick={() => handleDownloadCertificate(examResult.finalScore)}
+                className="w-full bg-success text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px]">download</span>
+                Download Certificate
+              </button>
+            )}
+            <button
+              onClick={handleBackToDashboard}
+              className="w-full bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
+            >
+              Back to Course
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -610,13 +644,13 @@ export default function MicroLearningPage() {
               cls = 'bg-primary text-white ring-2 ring-primary ring-offset-1'
             }
 
-            const TileTag = isModerator && !isLocked ? 'button' : 'div'
+            const TileTag = isModerator ? 'button' : (isLocked ? 'div' : 'button')
 
             return (
               <TileTag
                 key={day}
-                onClick={isModerator && !isLocked ? () => handleStartReading(day) : undefined}
-                className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold transition-all ${cls} ${isModerator && !isLocked ? 'hover:opacity-80 active:scale-[0.95] cursor-pointer' : ''}`}
+                onClick={isModerator ? () => handleModeratorDayClick(day) : (isLocked ? undefined : () => handleStartReading(day))}
+                className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold transition-all ${cls} ${TileTag === 'button' ? 'hover:opacity-80 active:scale-[0.95] cursor-pointer' : ''}`}
                 title={`Day ${day}${completed ? ' ✅' : isLocked ? ' 🔒' : ''}`}
               >
                 {icon}
@@ -625,6 +659,46 @@ export default function MicroLearningPage() {
           })}
         </div>
       </div>
+
+      {/* Scoring Breakdown */}
+      {courseContent.length > 1 && courseProgress?.courseStatus === 'LESSONS_IN_PROGRESS' && (
+        <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-4">
+          <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Scoring Breakdown</p>
+          <div className="space-y-2">
+            {(() => {
+              const maxDaily = 3 * (courseContent.length - 1)
+              const raw = courseProgress?.dailyRawScore || 0
+              const dailyPortion = maxDaily > 0 ? (raw / maxDaily) * 40 : 0
+              const examNeed = Math.max(0, Math.ceil(60 - dailyPortion))
+              const correctNeed = Math.ceil(examNeed / 2)
+              return (
+                <>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-on-surface-variant">Daily Reviews Score</span>
+                    <span className="font-semibold text-on-surface">{raw} / {maxDaily}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-on-surface-variant">Contribution to Final</span>
+                    <span className="font-semibold text-primary">{Math.round(dailyPortion * 100) / 100} / 40</span>
+                  </div>
+                  {raw > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-on-surface-variant">Need in Exam to Pass (60%)</span>
+                      <span className="font-semibold text-warning">{examNeed} marks ({correctNeed} correct)</span>
+                    </div>
+                  )}
+                  <div className="mt-2 pt-2 border-t border-outline-variant/50">
+                    <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                      Final = <span className="text-primary font-medium">(dailyRaw / {maxDaily}) × 40</span> + <span className="text-primary font-medium">examRaw</span>.
+                      Pass at <strong>60%</strong>.
+                    </p>
+                  </div>
+                </>
+              )
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* CTA based on phase */}
       {phase?.phase === 'READ_AND_COMPLETE' && phase.day && (
@@ -679,7 +753,8 @@ export default function MicroLearningPage() {
           <span className="material-symbols-outlined text-success text-[36px]">verified</span>
           <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-1">Course Passed!</h3>
           <p className="text-xs text-on-surface-variant mt-1">Final score: {courseProgress?.examResult?.finalScore}%</p>
-          <button className="mt-3 bg-success text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-2 mx-auto">
+          <button onClick={() => handleDownloadCertificate(courseProgress?.examResult?.finalScore)}
+            className="mt-3 bg-success text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-2 mx-auto">
             <span className="material-symbols-outlined text-[18px]">download</span>
             Download Certificate
           </button>

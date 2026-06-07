@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getQuizSettings, saveQuizSettings } from '../lib/quizSettings'
+import { getAllCourses } from '../lib/steakService'
 
 const FIELDS = [
   { key: 'chapterQuestionCount', label: 'Chapter Questions', desc: 'Default: 10' },
@@ -19,17 +20,30 @@ const ATTEMPT_FIELDS = [
   { key: 'finalAttemptLimit', label: 'Final Mock Attempt Limit', desc: '0 = unlimited' },
 ]
 
+const LINKED_FIELDS = [
+  { key: 'chapterLinkedCourse', label: 'Chapter', fieldKey: 'chapterLinkedCourse' },
+  { key: 'moduleLinkedCourse', label: 'Module', fieldKey: 'moduleLinkedCourse' },
+  { key: 'modeLinkedCourse', label: 'Mode', fieldKey: 'modeLinkedCourse' },
+  { key: 'finalLinkedCourse', label: 'Final Mock', fieldKey: 'finalLinkedCourse' },
+]
+
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [courses, setCourses] = useState([])
 
   useEffect(() => {
-    getQuizSettings().then((s) => { setSettings(s); setLoading(false) })
+    Promise.all([getQuizSettings(), getAllCourses()]).then(([s, c]) => {
+      setSettings(s)
+      setCourses(c)
+      setLoading(false)
+    })
   }, [])
 
   const update = (key, value) => setSettings((prev) => ({ ...prev, [key]: Number(value) }))
+  const updateStr = (key, value) => setSettings((prev) => ({ ...prev, [key]: value }))
 
   const handleSave = async () => {
     setSaving(true)
@@ -91,6 +105,28 @@ export default function AdminSettingsPage() {
                 className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
               />
               <p className="text-[10px] text-on-surface-variant mt-0.5">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-surface border border-outline-variant rounded-xl p-5 space-y-4">
+        <h2 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Course-Linked Quizzes</h2>
+        <p className="text-xs text-on-surface-variant -mt-2">Link a quiz type to a course. Quiz only visible to users who completed that course. Leave empty for public.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {LINKED_FIELDS.map((f) => (
+            <div key={f.key}>
+              <label className="block text-sm font-medium text-on-surface mb-1">{f.label}</label>
+              <select
+                value={settings[f.key] || ''}
+                onChange={(e) => updateStr(f.key, e.target.value)}
+                className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              >
+                <option value="">— None (visible to all) —</option>
+                {courses.map((c) => (
+                  <option key={c.courseId} value={c.courseId}>{c.courseTitle || c.courseId}</option>
+                ))}
+              </select>
             </div>
           ))}
         </div>

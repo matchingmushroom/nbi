@@ -198,11 +198,11 @@ export async function submitQuizResult(userId, courseId, day, answers, questions
   const today = getToday()
   const conceptId = `day_${String(day).padStart(2, '0')}`
 
-  // Calendar lock: only one review per day per course
-  const reviewedToday = Object.entries(course.dayStates || {})
-    .filter(([, s]) => s.state === 'REVIEWED' && s.completedDate === today)
-  if (reviewedToday.length > 0) {
-    return { error: 'You already completed a review today. Come back tomorrow!' }
+  // Calendar lock: only block if this specific day was already reviewed today
+  const alreadyReviewed = course.dayStates?.[conceptId]?.state === 'REVIEWED' &&
+    course.dayStates?.[conceptId]?.completedDate === today
+  if (alreadyReviewed) {
+    return { error: 'You already completed this review today.' }
   }
 
   // Take first 3 questions
@@ -408,25 +408,28 @@ export function getCoursePhase(progress, dayCount, isModerator = false) {
     return { phase: 'EXPIRED' }
   }
 
-  // Moderator: all days accessible, no locking
+  // Moderator: same flow as student but no LOCKED phase
   if (isModerator) {
-    const isDayComplete = (day) => {
-      const id = `day_${String(day).padStart(2, '0')}`
-      return completedDays.includes(id)
-    }
+    const makeDayId = (d) => `day_${String(d).padStart(2, '0')}`
     for (let day = 1; day <= dayCount; day++) {
-      if (!isDayComplete(day)) return { phase: 'READ_AND_COMPLETE', day }
+      const id = makeDayId(day)
+      const complete = completedDays.includes(id)
+      const reviewed = reviewedDays.includes(id)
+      if (!complete) {
+        if (day > 1) {
+          const prevId = makeDayId(day - 1)
+          if (completedDays.includes(prevId) && !reviewedDays.includes(prevId)) {
+            return { phase: 'REVIEW', day: day - 1 }
+          }
+        }
+        return { phase: 'READ_AND_COMPLETE', day }
+      }
     }
     return { phase: 'ALL_DONE' }
   }
 
-  // Check if a review was done today (calendar lock)
-  const today = new Date().toISOString().split('T')[0]
-  const reviewedToday = Object.values(progress.dayStates || {}).some(
-    s => s.state === 'REVIEWED' && s.completedDate === today
-  )
-
   // Find the first incomplete day
+  const today = new Date().toISOString().split('T')[0]
   const isDayComplete = (day) => {
     const id = `day_${String(day).padStart(2, '0')}`
     return completedDays.includes(id)
@@ -434,6 +437,11 @@ export function getCoursePhase(progress, dayCount, isModerator = false) {
   const isDayReviewed = (day) => {
     const id = `day_${String(day).padStart(2, '0')}`
     return reviewedDays.includes(id)
+  }
+  const isDayReviewedToday = (day) => {
+    const id = `day_${String(day).padStart(2, '0')}`
+    const state = progress.dayStates?.[id]
+    return state?.state === 'REVIEWED' && state.completedDate === today
   }
 
   for (let day = 1; day <= dayCount; day++) {
@@ -447,14 +455,14 @@ export function getCoursePhase(progress, dayCount, isModerator = false) {
       // Day is locked — need review of previous day
       const prevDay = day - 1
       if (prevDay >= 1 && isDayComplete(prevDay) && !isDayReviewed(prevDay)) {
-        return { phase: reviewedToday ? 'REVIEW_LOCKED' : 'REVIEW', day: prevDay }
+        return { phase: isDayReviewedToday(prevDay) ? 'REVIEW_LOCKED' : 'REVIEW', day: prevDay }
       }
       return { phase: 'LOCKED', day }
     }
 
     // Day is complete but needs review (for non-final days)
     if (day < dayCount && !reviewed) {
-      return { phase: reviewedToday ? 'REVIEW_LOCKED' : 'REVIEW', day }
+      return { phase: isDayReviewedToday(day) ? 'REVIEW_LOCKED' : 'REVIEW', day }
     }
   }
 

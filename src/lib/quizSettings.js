@@ -15,6 +15,10 @@ const DEFAULTS = {
   moduleAttemptLimit: 0,
   modeAttemptLimit: 0,
   finalAttemptLimit: 0,
+  chapterLinkedCourse: '',
+  moduleLinkedCourse: '',
+  modeLinkedCourse: '',
+  finalLinkedCourse: '',
 }
 
 export async function getQuizSettings() {
