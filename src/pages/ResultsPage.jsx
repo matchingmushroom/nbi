@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/utils'
 import { getUserResultsCached } from '../lib/cache'
+import { ensureLearningProfile } from '../lib/steakService'
 
 export default function ResultsPage() {
   const { profile } = useAuth()
@@ -11,6 +12,7 @@ export default function ResultsPage() {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [enrolledCourses, setEnrolledCourses] = useState([])
 
 
   useEffect(() => {
@@ -19,12 +21,26 @@ export default function ResultsPage() {
     setLoading(true)
     const fetch = async () => {
       try {
-        const data = await getUserResultsCached(profile.uid)
+        const [data, prof, { getAllCourses }] = await Promise.all([
+          getUserResultsCached(profile.uid),
+          ensureLearningProfile(profile.uid),
+          import('../lib/steakService'),
+        ])
+        const courses = await getAllCourses()
         if (cancelled) return
         data.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))
         setResults(data)
+        const enrolled = Object.keys(prof.learning?.enrolledCourses || {})
+          .map(cid => {
+            const info = courses.find(c => c.courseId === cid)
+            const prog = prof.learning?.enrolledCourses?.[cid]
+            if (!info || !prog) return null
+            return { ...info, progress: prog }
+          })
+          .filter(Boolean)
+        setEnrolledCourses(enrolled)
       } catch (e) {
-        console.error('Results fetch error:', e)
+        console.error('Fetch error:', e)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -61,6 +77,32 @@ export default function ResultsPage() {
         <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">My Results</h1>
         <p className="text-on-surface-variant text-sm mt-1">{results.length} total attempt{results.length !== 1 ? 's' : ''}</p>
       </div>
+
+      {/* Enrolled Courses */}
+      {enrolledCourses.length > 0 && (
+        <div className="mb-5 space-y-2">
+          <h3 className="font-['Hanken_Grotesk'] font-bold text-on-surface text-sm">My Courses</h3>
+          <div className="grid gap-2">
+            {enrolledCourses.map(c => {
+              const complete = c.progress?.completedDays?.length || 0
+              const total = c.dayCount || 1
+              return (
+                <button key={c.courseId} onClick={() => navigate('/learn')}
+                  className="bg-surface border border-outline-variant rounded-xl p-3 text-left cursor-pointer hover:shadow-sm transition-all active:scale-[0.98]">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-on-surface">{c.courseTitle}</span>
+                    <span className="text-[10px] text-on-surface-variant">{complete}/{total} days</span>
+                  </div>
+                  <div className="h-1 bg-outline-variant/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full transition-all"
+                      style={{ width: `${(complete / total) * 100}%` }} />
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-4 flex-wrap">
         {[

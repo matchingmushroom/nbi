@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, getDoc, setDoc, query, where, writeBatch } from 'firebase/firestore'
+import { collection, getDocs, doc, getDoc, setDoc, query, where, writeBatch, deleteField } from 'firebase/firestore'
 import { db } from './firebase'
 import { getCached, setCache, invalidateCache, invalidateCachePrefix } from './cache'
 
@@ -123,7 +123,7 @@ export async function resetCourseProgress(userId, courseId) {
   const learning = userData.learning || getDefaultLearningProfile()
   if (!learning.enrolledCourses?.[courseId]) return { error: 'User not enrolled in this course' }
 
-  learning.enrolledCourses[courseId] = getDefaultCourseProgress()
+  delete learning.enrolledCourses[courseId]
   await setDoc(ref, { learning }, { merge: true })
   invalidateCache('allUsers')
   return { success: true }
@@ -150,11 +150,45 @@ export async function resetDailyLimit(userId, courseId) {
 export async function deleteCourse(courseId) {
   const q = query(collection(db, 'micro_learning'), where('courseId', '==', courseId))
   const snap = await getDocs(q)
-  const batch = writeBatch(db)
-  snap.docs.forEach((d) => batch.delete(doc(db, 'micro_learning', d.id)))
-  batch.delete(doc(db, 'courses', courseId))
-  await batch.commit()
+  const userSnap = await getDocs(collection(db, 'users'))
+
+  const enrolledUsers = userSnap.docs.filter((d) =>
+    d.data().learning?.enrolledCourses?.[courseId]
+  )
+
+  const totalOps = snap.docs.length + 1 + enrolledUsers.length
+  if (totalOps > 450) {
+    // Delete micro_learning + course doc in first batch
+    const b1 = writeBatch(db)
+    snap.docs.forEach((d) => b1.delete(doc(db, 'micro_learning', d.id)))
+    b1.delete(doc(db, 'courses', courseId))
+    await b1.commit()
+
+    // Remove user enrollments in chunks of 400
+    for (let i = 0; i < enrolledUsers.length; i += 400) {
+      const chunk = enrolledUsers.slice(i, i + 400)
+      const b = writeBatch(db)
+      chunk.forEach((d) => {
+        b.update(doc(db, 'users', d.id), {
+          [`learning.enrolledCourses.${courseId}`]: deleteField(),
+        })
+      })
+      await b.commit()
+    }
+  } else {
+    const batch = writeBatch(db)
+    snap.docs.forEach((d) => batch.delete(doc(db, 'micro_learning', d.id)))
+    batch.delete(doc(db, 'courses', courseId))
+    enrolledUsers.forEach((d) => {
+      batch.update(doc(db, 'users', d.id), {
+        [`learning.enrolledCourses.${courseId}`]: deleteField(),
+      })
+    })
+    await batch.commit()
+  }
+
   invalidateCachePrefix('allCourses')
+  invalidateCache('allUsers')
 }
 
 export async function getCourseContent(courseId) {

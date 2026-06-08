@@ -7,6 +7,7 @@ import { BADGES, getLevelProgress } from '../lib/gamification'
 import { DAILY_MISSIONS, checkDailyMission } from '../lib/missions'
 import { FiUsers, FiFileText, FiBookOpen } from 'react-icons/fi'
 import { getAllUsersCached, getAllResultsCached, getUserResultsCached } from '../lib/cache'
+import { ensureLearningProfile, getLocalLearningProfile, getCourseProgress } from '../lib/steakService'
 
 export default function DashboardPage() {
   const { profile } = useAuth()
@@ -18,7 +19,35 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ total: 0, avgScore: 0, bestScore: 0 })
   const [completedMissions, setCompletedMissions] = useState([])
   const [quizToast, setQuizToast] = useState(null)
+  const [enrolledCourses, setEnrolledCourses] = useState([])
+  const [allCourseInfo, setAllCourseInfo] = useState([])
 
+
+  useEffect(() => {
+    if (!profile?.uid || isAdmin) return
+    loadCourses()
+  }, [profile?.uid, isAdmin])
+
+  async function loadCourses() {
+    if (!profile?.uid) return
+    try {
+      const { getAllCourses } = await import('../lib/steakService')
+      const prof = await ensureLearningProfile(profile.uid)
+      const courses = await getAllCourses()
+      const enrolled = Object.keys(prof.learning?.enrolledCourses || {})
+        .map(cid => {
+          const info = courses.find(c => c.courseId === cid)
+          const prog = prof.learning?.enrolledCourses?.[cid]
+          if (!info || !prog) return null
+          return { ...info, progress: prog }
+        })
+        .filter(Boolean)
+      setEnrolledCourses(enrolled)
+      setAllCourseInfo(courses)
+    } catch (e) {
+      console.error('Courses load error:', e)
+    }
+  }
 
   useEffect(() => {
     try {
@@ -254,7 +283,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <div className="bg-surface border border-outline-variant rounded-xl p-4">
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Tests</span>
           <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{stats.total}</p>
@@ -267,10 +296,70 @@ export default function DashboardPage() {
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Best</span>
           <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{stats.bestScore}%</p>
         </div>
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+          <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Courses</span>
+          <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{enrolledCourses.length}</p>
+        </div>
       </div>
+
+      {/* Enrolled Courses */}
+      {enrolledCourses.length > 0 && (
+        <div className="mb-6 space-y-3">
+          <h3 className="font-['Hanken_Grotesk'] font-bold text-on-surface">My Courses</h3>
+          {enrolledCourses.map(c => {
+            const complete = c.progress?.completedDays?.length || 0
+            const total = c.dayCount || 1
+            const streak = c.progress?.currentSteak || 0
+            const hasReview = c.progress?.completedDays?.length > 0 &&
+              c.progress?.reviewedDays?.length < c.progress?.completedDays?.length
+            return (
+              <div key={c.courseId} onClick={() => navigate('/learn')}
+                className="bg-surface border border-outline-variant rounded-xl p-4 cursor-pointer hover:shadow-sm transition-all active:scale-[0.98]">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold text-sm text-on-surface">{c.courseTitle}</h4>
+                  {streak > 0 && (
+                    <div className="flex items-center gap-0.5 text-xs text-orange-500">
+                      <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings:"'FILL' 1"}}>local_fire_department</span>
+                      {streak}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-xs text-on-surface-variant mb-1.5">
+                  <span>{complete}/{total} days</span>
+                  {hasReview && <span className="text-warning font-medium">Review pending</span>}
+                  {c.progress?.courseStatus === 'LESSONS_COMPLETED' && <span className="text-success font-medium">Exam ready</span>}
+                  {c.progress?.courseStatus === 'PASSED' && <span className="text-success font-medium">Passed ✓</span>}
+                  {c.progress?.courseStatus === 'FAILED' && <span className="text-error font-medium">Failed</span>}
+                </div>
+                <div className="h-1.5 bg-outline-variant/30 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full transition-all duration-500"
+                    style={{ width: `${(complete / total) * 100}%` }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* CTA Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {enrolledCourses.length > 0 && (() => {
+          const latest = enrolledCourses.sort((a, b) => (b.progress?.enrolledAt || '').localeCompare(a.progress?.enrolledAt || ''))[0]
+          const readyForReview = latest?.progress?.completedDays?.length > 0 &&
+            latest?.progress?.reviewedDays?.length < latest?.progress?.completedDays?.length
+          return (
+            <button onClick={() => navigate('/learn')} className="bg-primary text-on-primary p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm md:col-span-1">
+              <span className="material-symbols-outlined text-[32px] mb-3">school</span>
+              <h3 className="font-['Hanken_Grotesk'] text-lg font-bold">Continue Learning</h3>
+              <p className="text-sm text-white/80 mt-1">
+                {latest?.progress?.courseStatus === 'LESSONS_COMPLETED' ? 'Take certification exam'
+                  : readyForReview ? `${latest?.courseTitle} — review pending`
+                  : `${latest?.courseTitle} — day ${(latest?.progress?.completedDays?.length || 0) + 1}`
+                }
+              </p>
+            </button>
+          )
+        })()}
         <button onClick={() => navigate('/quiz/select')} className="bg-primary text-on-primary p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm">
           <span className="material-symbols-outlined text-[32px] mb-3">play_arrow</span>
           <h3 className="font-['Hanken_Grotesk'] text-lg font-bold">Take a Quiz</h3>
@@ -280,11 +369,6 @@ export default function DashboardPage() {
           <span className="material-symbols-outlined text-[32px] mb-3">insights</span>
           <h3 className="font-['Hanken_Grotesk'] text-lg font-bold">View Results</h3>
           <p className="text-sm text-white/80 mt-1">Track your progress and scores</p>
-        </button>
-        <button onClick={() => navigate('/leaderboard')} className="bg-surface border border-outline-variant p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm">
-          <span className="material-symbols-outlined text-[32px] mb-3 text-warning">leaderboard</span>
-          <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface">Leaderboard</h3>
-          <p className="text-sm text-on-surface-variant mt-1">See how you rank against others</p>
         </button>
       </div>
 

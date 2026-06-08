@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 
 const studentLinks = [
   { to: '/dashboard', icon: 'dashboard', label: 'Home' },
+  { to: '/learn', icon: 'school', label: 'Learn' },
   { to: '/quiz/select', icon: 'list_alt', label: 'Exam' },
   { to: '/results', icon: 'insights', label: 'Stats' },
   { to: '/leaderboard', icon: 'leaderboard', label: 'Rank' },
@@ -20,6 +21,7 @@ const adminLinks = [
 
 const moderatorLinks = [
   { to: '/dashboard', icon: 'dashboard', label: 'Home' },
+  { to: '/learn', icon: 'school', label: 'Learn' },
   { to: '/quiz/select', icon: 'list_alt', label: 'Exam' },
   { to: '/results', icon: 'insights', label: 'Stats' },
   { to: '/admin/questions', icon: 'quiz', label: 'Questions' },

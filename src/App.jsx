@@ -20,6 +20,8 @@ import AdminQuestionsPage from './pages/AdminQuestionsPage'
 import AdminAnalyticsPage from './pages/AdminAnalyticsPage'
 import AdminCoursesPage from './pages/AdminCoursesPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
+import MicroLearningPage from './pages/MicroLearningPage'
+import CertificationQuizPage from './pages/CertificationQuizPage'
 
 function App() {
   return (
@@ -45,6 +47,8 @@ function App() {
                       <Route path="/results/:id" element={<ResultDetailPage />} />
                       <Route path="/leaderboard" element={<LeaderboardPage />} />
                       <Route path="/profile" element={<ProfilePage />} />
+                      <Route path="/learn" element={<MicroLearningPage />} />
+                      <Route path="/quiz/certification/:courseId" element={<CertificationQuizPage />} />
                       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
                       <Route path="/admin/questions" element={<ModeratorRoute><AdminQuestionsPage /></ModeratorRoute>} />
                       <Route path="/admin/courses" element={<ModeratorRoute><AdminCoursesPage /></ModeratorRoute>} />
