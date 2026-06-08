@@ -216,9 +216,10 @@ export async function backfillUserXP(userId) {
 }
 
 export const LEARNING_XP = {
-  lesson_read: 5,
-  review_correct: 3,
-  review_complete: 10,
+  lesson_read: 2,
+  review_correct: 1,
+  review_complete: 3,
+  cert_quiz: 1,
 }
 
 export async function awardLearningXP(userId, action, count = 1) {

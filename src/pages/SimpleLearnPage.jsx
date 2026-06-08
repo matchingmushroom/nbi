@@ -191,10 +191,12 @@ export default function SimpleLearnPage() {
         if (learning.enrolledCourses?.[courseId]) {
           const course = learning.enrolledCourses[courseId]
           course.courseStatus = 'CERTIFIED'
-          course.finalExamRaw = rawScore * 2
+          course.finalExamRaw = Math.min(80, Math.round((rawScore / totalQ) * 80))
           await setDoc(ref, { learning }, { merge: true })
         }
       }
+      const certCount = Math.max(1, Math.round((rawScore / totalQ) * 10))
+      await awardLearningXP(profile.uid, 'cert_quiz', certCount)
     }
     setCertQuestions(null)
     await fetchLearning(courseId)
@@ -355,7 +357,7 @@ export default function SimpleLearnPage() {
             <span className="material-symbols-outlined text-primary text-[36px]">verified</span>
             <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-1">Certified!</h3>
             <p className="text-xs text-on-surface-variant mt-1">Final score: {scoreData.overall}/{scoreData.overallMax} ({scoreData.overall}%)</p>
-            {scoreData.overall >= 60 && (
+            {scoreData.overall >= 70 && (
               <button onClick={() => setShowCert(true)}
                 className="mt-3 bg-primary text-white px-5 py-2 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer">
                 <span className="material-symbols-outlined text-[18px] align-middle mr-1">reward</span>

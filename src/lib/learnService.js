@@ -170,20 +170,21 @@ export function getLearningProgress(learning, courseId) {
 }
 
 export function getCourseScore(progress, totalDays) {
-  if (!progress) return { dailyRaw: 0, dailyMax: 0, dailyPct: 0, finalRaw: 0, finalMax: 60, finalPct: 0, overall: 0, overallMax: 100 }
+  if (!progress) return { dailyRaw: 0, dailyMax: 0, dailyPct: 0, finalRaw: 0, finalMax: 80, finalPct: 0, overall: 0, overallMax: 100 }
   const dailyMax = 3 * Math.max(0, totalDays - 1)
-  const dailyRaw = progress.dailyReviewRaw || 0
+  const dailyRaw = Math.min(progress.dailyReviewRaw || 0, dailyMax)
   const dailyPct = dailyMax > 0 ? Math.round((dailyRaw / dailyMax) * 100) : 0
-  const finalRaw = progress.finalExamRaw || 0
-  const overall = dailyMax > 0 ? Math.round((dailyRaw / dailyMax) * 40 + finalRaw) : finalRaw
-  return { dailyRaw, dailyMax, dailyPct, finalRaw, finalMax: 60, finalPct: Math.round((finalRaw / 60) * 100), overall, overallMax: 100 }
+  const finalRaw = Math.min(progress.finalExamRaw || 0, 80)
+  const finalPct = Math.round((finalRaw / 80) * 100)
+  const overall = dailyMax > 0 ? Math.round((dailyRaw / dailyMax) * 20 + finalRaw) : finalRaw
+  return { dailyRaw, dailyMax, dailyPct, finalRaw, finalMax: 80, finalPct, overall, overallMax: 100 }
 }
 
 export function isFullyComplete(day, readDays, reviewedDays, totalDays, courseStatus) {
   const conceptId = `day_${String(day).padStart(2, '0')}`
   if (!readDays?.includes(conceptId)) return false
   if (day === totalDays) return courseStatus === 'LESSONS_COMPLETED' || courseStatus === 'CERTIFIED'
-  if (day === 1) return reviewedDays?.includes(conceptId)
+  if (day === 1) return true
   const prevConceptId = `day_${String(day - 1).padStart(2, '0')}`
   return reviewedDays?.includes(prevConceptId)
 }
