@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [enrolledCourses, setEnrolledCourses] = useState([])
   const [allCourseInfo, setAllCourseInfo] = useState([])
 
+  console.log('[Dashboard] profile role:', profile?.role, 'uid:', profile?.uid)
 
   useEffect(() => {
     if (!profile?.uid || isAdmin) return
