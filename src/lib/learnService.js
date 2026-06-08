@@ -46,44 +46,32 @@ export async function getCertificationQuestions(courseId, courseTitle) {
   let data = []
   const qCol = collection(db, 'questions')
 
-  // 1. mode=Certification + chapter=courseId
   try {
-    const snap = await getDocs(query(qCol, where('mode', '==', 'Certification'), where('chapter', '==', courseId)))
-    data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-  } catch (_) {}
-
-  // 2. mode=Certification + chapter=courseTitle
-  if (data.length === 0 && courseTitle) {
-    try {
-      const snap = await getDocs(query(qCol, where('mode', '==', 'Certification'), where('chapter', '==', courseTitle)))
-      data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-    } catch (_) {}
-  }
-
-  // 3. course-linked quizzes from settings
-  if (data.length === 0) {
-    try {
-      const settingsSnap = await getDoc(doc(db, 'config', 'quizSettings'))
-      if (settingsSnap.exists()) {
-        const linked = settingsSnap.data().courseLinkedQuizzes?.[courseId] || []
-        for (const link of linked) {
-          const snap = await getDocs(query(qCol, where('module', '==', link.mode), where('chapter', '==', link.chapter)))
-          if (snap.empty) {
-            const snap2 = await getDocs(query(qCol, where('mode', '==', link.mode), where('chapter', '==', link.chapter)))
-            snap2.docs.forEach((d) => data.push({ id: d.id, ...d.data() }))
-          } else {
-            snap.docs.forEach((d) => data.push({ id: d.id, ...d.data() }))
-          }
+    const settingsSnap = await getDoc(doc(db, 'config', 'quizSettings'))
+    if (settingsSnap.exists()) {
+      const linked = settingsSnap.data().courseLinkedQuizzes?.[courseId] || []
+      for (const link of linked) {
+        // try mode field first (most common), then module field
+        let found = false
+        try {
+          const snap = await getDocs(query(qCol, where('mode', '==', link.mode), where('chapter', '==', link.chapter)))
+          if (!snap.empty) { snap.docs.forEach((d) => data.push({ id: d.id, ...d.data() })); found = true }
+        } catch (_) {}
+        if (!found) {
+          try {
+            const snap = await getDocs(query(qCol, where('module', '==', link.mode), where('chapter', '==', link.chapter)))
+            if (!snap.empty) { snap.docs.forEach((d) => data.push({ id: d.id, ...d.data() })); found = true }
+          } catch (_) {}
         }
       }
-    } catch (_) {}
-  }
+    }
+  } catch (_) {}
 
-  // 4. chapter=courseId (any module/mode)
   if (data.length === 0) {
     try {
-      const snap = await getDocs(query(qCol, where('chapter', '==', courseId)))
-      data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      const snap = await getDocs(query(qCol, where('mode', '==', 'Certification')))
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      data = all.filter((q) => q.chapter === courseId || q.chapter === courseTitle)
     } catch (_) {}
   }
 
