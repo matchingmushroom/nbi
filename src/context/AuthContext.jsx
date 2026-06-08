@@ -23,8 +23,8 @@ export function AuthProvider({ children }) {
       if (firebaseUser) {
         const ref = doc(db, 'users', firebaseUser.uid)
         let snap
-        try { snap = await getDoc(ref, { source: 'server' }) } catch { snap = await getDoc(ref, { source: 'cache' }) }
-        const data = snap.exists() ? { uid: firebaseUser.uid, ...snap.data() } : null
+        try { snap = await getDoc(ref) } catch { snap = null }
+        const data = snap?.exists() ? { uid: firebaseUser.uid, ...snap.data() } : null
         if (data && data.xp === undefined) {
           const backfill = await backfillUserXP(firebaseUser.uid)
           if (backfill) {
@@ -108,8 +108,8 @@ export function AuthProvider({ children }) {
     if (!user) return
     const ref = doc(db, 'users', user.uid)
     let snap
-    try { snap = await getDoc(ref, { source: 'server' }) } catch { snap = await getDoc(ref, { source: 'cache' }) }
-    setProfile(snap.exists() ? { uid: user.uid, ...snap.data() } : null)
+    try { snap = await getDoc(ref) } catch { snap = null }
+    setProfile(snap?.exists() ? { uid: user.uid, ...snap.data() } : null)
   }
 
   return (

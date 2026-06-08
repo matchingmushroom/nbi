@@ -42,8 +42,8 @@ function getDefaultLearningProfile() {
 export async function ensureLearningProfile(userId) {
   const ref = doc(db, 'users', userId)
   let snap
-  try { snap = await getDoc(ref, { source: 'server' }) } catch { snap = await getDoc(ref, { source: 'cache' }) }
-  if (!snap.exists()) return getDefaultLearningProfile()
+  try { snap = await getDoc(ref) } catch { return getDefaultLearningProfile() }
+  if (!snap?.exists()) return getDefaultLearningProfile()
   const data = snap.data()
   if (!data.learning) {
     await setDoc(ref, { learning: getDefaultLearningProfile() }, { merge: true })
