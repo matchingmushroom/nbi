@@ -23,6 +23,7 @@ const DEFAULTS = {
   certificationTimerMinutes: 30,
   certificationAttemptLimit: 0,
   courseLinkedQuizzes: {},
+  bypassDailyLearningLock: false,
 }
 
 export async function getQuizSettings() {

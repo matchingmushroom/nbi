@@ -15,10 +15,12 @@ import ResultsPage from './pages/ResultsPage'
 import ResultDetailPage from './pages/ResultDetailPage'
 import LeaderboardPage from './pages/LeaderboardPage'
 import ProfilePage from './pages/ProfilePage'
+import SimpleLearnPage from './pages/SimpleLearnPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminQuestionsPage from './pages/AdminQuestionsPage'
 import AdminAnalyticsPage from './pages/AdminAnalyticsPage'
 import AdminCoursesPage from './pages/AdminCoursesPage'
+import AdminCourseUploadPage from './pages/AdminCourseUploadPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
 
 function App() {
@@ -43,11 +45,13 @@ function App() {
                       <Route path="/quiz/final" element={<FinalQuizPage />} />
                       <Route path="/results" element={<ResultsPage />} />
                       <Route path="/results/:id" element={<ResultDetailPage />} />
+                      <Route path="/mylearn" element={<SimpleLearnPage />} />
                       <Route path="/leaderboard" element={<LeaderboardPage />} />
                       <Route path="/profile" element={<ProfilePage />} />
                       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
                       <Route path="/admin/questions" element={<ModeratorRoute><AdminQuestionsPage /></ModeratorRoute>} />
                       <Route path="/admin/courses" element={<ModeratorRoute><AdminCoursesPage /></ModeratorRoute>} />
+                      <Route path="/admin/upload-course" element={<AdminRoute><AdminCourseUploadPage /></AdminRoute>} />
                       <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
                       <Route path="/admin/analytics" element={<AdminRoute><AdminAnalyticsPage /></AdminRoute>} />
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />

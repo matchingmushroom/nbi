@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getQuizSettings, saveQuizSettings } from '../lib/quizSettings'
-import { getAllCourses } from '../lib/steakService'
+import { getAllCourses, cleanupOrphanedCourses } from '../lib/steakService'
 import { getAllQuestionsCached } from '../lib/cache'
 
 const FIELDS = [
@@ -34,6 +34,8 @@ export default function AdminSettingsPage() {
   const [selectedCourse, setSelectedCourse] = useState('')
   const [linkMode, setLinkMode] = useState('')
   const [linkChapter, setLinkChapter] = useState('')
+  const [cleaning, setCleaning] = useState(false)
+  const [cleanResult, setCleanResult] = useState(null)
 
   useEffect(() => {
     Promise.all([getQuizSettings(), getAllCourses(), getAllQuestionsCached()]).then(([s, c, q]) => {
@@ -78,6 +80,20 @@ export default function AdminSettingsPage() {
     setLinkMode('')
     setLinkChapter('')
   }
+
+  const handleCleanup = useCallback(async () => {
+    if (!confirm('This will remove all course enrollment data from users for courses that no longer exist. Continue?')) return
+    setCleaning(true)
+    setCleanResult(null)
+    try {
+      const res = await cleanupOrphanedCourses()
+      setCleanResult(res)
+    } catch (err) {
+      alert('Cleanup failed: ' + err.message)
+    } finally {
+      setCleaning(false)
+    }
+  }, [])
 
   const removeLink = (idx) => {
     if (!selectedCourse) return
@@ -145,6 +161,21 @@ export default function AdminSettingsPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="bg-surface border border-outline-variant rounded-xl p-5 space-y-4">
+        <h2 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Learning Lock</h2>
+        <p className="text-xs text-on-surface-variant -mt-2">When enabled, students can access any day of any course without daily progression limits.</p>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div className="relative">
+            <input type="checkbox" checked={settings.bypassDailyLearningLock}
+              onChange={(e) => setSettings((prev) => ({ ...prev, bypassDailyLearningLock: e.target.checked }))} className="sr-only" />
+            <div className={`w-9 h-5 rounded-full transition-colors ${settings.bypassDailyLearningLock ? 'bg-primary' : 'bg-gray-300'}`}>
+              <div className="w-4 h-4 bg-white rounded-full shadow-sm absolute top-0.5 transition-all" style={{ left: settings.bypassDailyLearningLock ? '18px' : '2px' }} />
+            </div>
+          </div>
+          <span className="text-sm font-medium text-on-surface">{settings.bypassDailyLearningLock ? 'Bypass Active — All Days Unlocked' : 'Daily Limit Enforced'}</span>
+        </label>
       </div>
 
       <div className="bg-surface border border-outline-variant rounded-xl p-5 space-y-4">
@@ -239,6 +270,30 @@ export default function AdminSettingsPage() {
             </div>
           </>
         )}
+      </div>
+
+      <div className="bg-surface border border-outline-variant rounded-xl p-5 space-y-4">
+        <h2 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Database Maintenance</h2>
+        <p className="text-xs text-on-surface-variant -mt-2">
+          Remove orphaned course enrollment data from users whose courses no longer exist — e.g. after deleting a course that users were enrolled in.
+        </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleCleanup}
+            disabled={cleaning}
+            className="px-4 py-2 bg-warning text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
+          >
+            {cleaning ? 'Cleaning...' : 'Run Cleanup'}
+          </button>
+          {cleanResult && (
+            <span className="text-sm text-on-surface-variant">
+              Removed {cleanResult.totalEntriesRemoved} orphaned course entr{cleanResult.totalEntriesRemoved === 1 ? 'y' : 'ies'} across {cleanResult.totalUsersAffected} user{cleanResult.totalUsersAffected === 1 ? '' : 's'}.
+            </span>
+          )}
+          {cleanResult?.totalEntriesRemoved === 0 && (
+            <span className="text-sm text-success">No orphaned data found.</span>
+          )}
+        </div>
       </div>
     </div>
   )

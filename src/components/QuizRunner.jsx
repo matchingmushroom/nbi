@@ -62,7 +62,7 @@ export default function QuizRunner({ questions, config, onFinish }) {
     } catch (e) {
       console.error('Failed to save result:', e)
     }
-    onFinish?.()
+    onFinish?.(finalScore, questions.length)
   }, [profile, user, config, questions, onFinish, refreshProfile])
 
   const handleTimeUp = useCallback(() => {

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getAllCourses, setCourseVisibility, deleteCourse, updateCourseTitle, resetCourseProgress } from '../lib/steakService'
 import { useAuth } from '../context/AuthContext'
 
 export default function AdminCoursesPage() {
   const { profile, getAllUsers } = useAuth()
+  const navigate = useNavigate()
   const isModerator = profile?.role === 'moderator'
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
@@ -105,6 +107,13 @@ export default function AdminCoursesPage() {
             <p className="text-sm text-on-surface-variant">Show or hide courses from students</p>
           </div>
           <div className="flex items-center gap-2">
+            {!isModerator && (
+              <button onClick={() => navigate('/admin/upload-course')}
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium bg-primary text-on-primary rounded-xl hover:opacity-90 transition-all cursor-pointer">
+                <span className="material-symbols-outlined text-[18px]">upload</span>
+                Upload CSV
+              </button>
+            )}
             <button onClick={load} className="px-3 py-2 text-sm font-medium text-primary hover:bg-[#f0f3ff] rounded-lg transition-colors cursor-pointer">
               <span className="material-symbols-outlined text-[20px] align-middle">refresh</span>
             </button>

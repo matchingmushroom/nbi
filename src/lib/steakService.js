@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, getDoc, setDoc, query, where, writeBatch } from 'firebase/firestore'
+import { collection, getDocs, doc, getDoc, setDoc, query, where, writeBatch, deleteField } from 'firebase/firestore'
 import { db } from './firebase'
 import { getCached, setCache, invalidateCache, invalidateCachePrefix } from './cache'
 
@@ -63,22 +63,19 @@ export async function resetCourseProgress(userId, courseId) {
   const learning = userData.learning || { enrolledCourses: {}, learningXp: 0 }
   if (!learning.enrolledCourses?.[courseId]) return { error: 'User not enrolled in this course' }
 
-  learning.enrolledCourses[courseId] = {
-    enrolledAt: new Date().toISOString().split('T')[0],
-    currentSteak: 0,
-    highestSteak: 0,
-    lastCompletedDate: '',
-    unlockedDay: 1,
-    completedDays: [],
-    dayStates: {},
-    reviewedDays: [],
-    dailyRawScore: 0,
-    courseStatus: 'LESSONS_IN_PROGRESS',
-    lessonsCompletedAt: null,
-    finalExamWindowEndsAt: null,
-    examResult: null,
-  }
-  await setDoc(ref, { learning }, { merge: true })
+  const batch = writeBatch(db)
+  batch.update(ref, { [`learning.enrolledCourses.${courseId}`]: deleteField() })
+
+  const resultsQ = query(
+    collection(db, 'results'),
+    where('userId', '==', userId),
+    where('quizType', '==', 'Certification'),
+    where('chapter', '==', courseId),
+  )
+  const resultsSnap = await getDocs(resultsQ)
+  resultsSnap.docs.forEach((d) => batch.delete(doc(db, 'results', d.id)))
+
+  await batch.commit()
   invalidateCache('allUsers')
   return { success: true }
 }
@@ -91,4 +88,41 @@ export async function deleteCourse(courseId) {
   batch.delete(doc(db, 'courses', courseId))
   await batch.commit()
   invalidateCachePrefix('allCourses')
+}
+
+export async function cleanupOrphanedCourses() {
+  const [allCourses, usersSnap] = await Promise.all([
+    getAllCourses(),
+    getDocs(collection(db, 'users')),
+  ])
+  const activeIds = new Set(allCourses.map((c) => c.courseId))
+  let affected = 0
+  let removed = 0
+  const BATCH_SIZE = 500
+  let batches = []
+  let currentBatch = writeBatch(db)
+  let count = 0
+
+  for (const userDoc of usersSnap.docs) {
+    const data = userDoc.data()
+    const enrolled = data.learning?.enrolledCourses
+    if (!enrolled) continue
+    const orphaned = Object.keys(enrolled).filter((cid) => !activeIds.has(cid))
+    if (orphaned.length === 0) continue
+    affected++
+    removed += orphaned.length
+    for (const cid of orphaned) {
+      if (count >= BATCH_SIZE) {
+        batches.push(currentBatch.commit())
+        currentBatch = writeBatch(db)
+        count = 0
+      }
+      currentBatch.update(doc(db, 'users', userDoc.id), { [`learning.enrolledCourses.${cid}`]: deleteField() })
+      count++
+    }
+  }
+  if (count > 0) batches.push(currentBatch.commit())
+  await Promise.all(batches)
+  invalidateCache('allUsers')
+  return { totalUsersAffected: affected, totalEntriesRemoved: removed }
 }
