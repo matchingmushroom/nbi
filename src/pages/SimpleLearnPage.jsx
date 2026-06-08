@@ -224,15 +224,35 @@ export default function SimpleLearnPage() {
             <span className="material-symbols-outlined text-[14px]">arrow_back</span>All courses
           </button>
         </div>
-        <div className="glass rounded-xl p-4 mb-4">
-          <h3 className="font-semibold text-on-surface">{days[0]?.courseTitle || courseId}</h3>
-          <p className="text-xs text-on-surface-variant mt-0.5">{fullyCompleted}/{days.length} days completed</p>
+        <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-on-surface text-lg">{days[0]?.courseTitle || courseId}</h3>
+              <p className="text-xs text-on-surface-variant mt-0.5 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                {fullyCompleted}/{days.length} days completed
+              </p>
+            </div>
+            <div className="relative w-14 h-14">
+              <svg className="w-14 h-14 -rotate-90" viewBox="0 0 48 48">
+                <circle cx="24" cy="24" r="20" fill="none" stroke="var(--color-outline-variant)" strokeWidth="4" />
+                <circle cx="24" cy="24" r="20" fill="none" stroke="#00288e" strokeWidth="4"
+                  strokeDasharray={`${2 * Math.PI * 20}`}
+                  strokeDashoffset={`${2 * Math.PI * 20 * (1 - fullyCompleted / Math.max(days.length, 1))}`}
+                  className="progress-ring__circle" />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-primary">{fullyCompleted}/{days.length}</span>
+            </div>
+          </div>
         </div>
 
-        <div className="glass rounded-xl p-4 mb-4">
-          <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Progress</p>
-          <div className="grid grid-cols-6 sm:grid-cols-10 gap-1.5">
-            {Array.from({ length: days.length }, (_, i) => i + 1).map((day) => {
+        <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in">
+          <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-3 flex items-center gap-1">
+            <span className="material-symbols-outlined text-[14px]">grid_view</span>
+            Course Progress
+          </p>
+          <div className="grid grid-cols-6 sm:grid-cols-10 gap-2">
+            {Array.from({ length: days.length }, (_, i) => i + 1).map((day, idx) => {
               const conceptId = `day_${String(day).padStart(2, '0')}`
               const done = isFullyComplete(day, readDays, reviewedDays, days.length, progress?.courseStatus)
               const readOnly = !done && readDays.includes(conceptId)
@@ -244,53 +264,57 @@ export default function SimpleLearnPage() {
               if (done) { cls = 'bg-success/70 text-white cursor-default'; icon = '✓' }
               else if (readOnly) { cls = 'bg-[#00288e] text-white cursor-default'; icon = '✓' }
               else if (locked) { cls = 'bg-outline-variant/30 text-on-surface-variant/40 cursor-default'; icon = '🔒' }
-              else if (isNext) { cls = 'bg-primary text-white ring-2 ring-primary ring-offset-1 cursor-pointer hover:opacity-90 active:scale-[0.97]'; clickable = true }
-              else if (!locked) { cls = 'bg-primary text-white cursor-pointer hover:opacity-90 active:scale-[0.97]'; clickable = true }
+              else if (isNext) { cls = 'bg-primary text-white ring-2 ring-primary ring-offset-2 cursor-pointer hover:opacity-90 active:scale-[0.92] animate-glow-pulse'; clickable = true }
+              else if (!locked) { cls = 'bg-primary text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'; clickable = true }
               return clickable ? (
                 <button key={day} onClick={() => handleTileClick(day)}
-                  className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold transition-all ${cls}`}>{icon}</button>
+                  className={`aspect-square rounded-xl flex items-center justify-center text-xs font-bold ${cls}`} style={{ animationDelay: `${idx * 0.03}s` }}>{icon}</button>
               ) : (
-                <div key={day} className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold transition-all ${cls}`}>{icon}</div>
+                <div key={day} className={`aspect-square rounded-xl flex items-center justify-center text-xs font-bold ${cls}`}>{icon}</div>
               )
             })}
           </div>
         </div>
 
         {certWindowEnd && progress?.courseStatus === 'LESSONS_COMPLETED' && progress?.courseStatus !== 'CERTIFIED' && (
-          <div className="glass rounded-xl p-4 mb-4">
+          <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in">
             <div className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-primary text-[24px]">timer</span>
+              <span className="material-symbols-outlined text-primary text-[28px] animate-timer-pulse">timer</span>
               <div className="min-w-0">
                 <h3 className="font-semibold text-sm text-on-surface">Certification Exam Available</h3>
                 {certRemainingDays !== null && certRemainingDays > 0 ? (
-                  <p className="text-xs text-on-surface-variant mt-0.5">Complete within {certRemainingDays} day{certRemainingDays !== 1 ? 's' : ''} (until {certWindowEnd.toLocaleDateString()})</p>
+                  <p className="text-xs text-on-surface-variant mt-0.5">Complete within <strong className="text-primary">{certRemainingDays}</strong> day{certRemainingDays !== 1 ? 's' : ''} (until {certWindowEnd.toLocaleDateString()})</p>
                 ) : (
                   <p className="text-xs text-error mt-0.5">Window expired — contact admin to reset.</p>
                 )}
+                <button onClick={startCertQuiz}
+                  className="mt-3 bg-primary text-white px-5 py-2 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer">
+                  Start Certification
+                </button>
               </div>
             </div>
           </div>
         )}
 
         {days.length > 0 && fullyCompleted === days.length && progress?.courseStatus !== 'CERTIFIED' && (
-          <div className="glass-dark rounded-xl p-5 text-center">
-            <span className="material-symbols-outlined text-primary text-[36px]">celebration</span>
-            <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-1">Course Complete!</h3>
-            <p className="text-xs text-on-surface-variant mt-1">All {days.length} days completed.</p>
+          <div className="glass-dark rounded-xl p-5 text-center animate-fade-scale-in">
+            <span className="material-symbols-outlined text-primary text-[42px] animate-combo-bounce">celebration</span>
+            <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-2 gradient-text">Course Complete!</h3>
+            <p className="text-xs text-on-surface-variant mt-1">All {days.length} days completed. Great work!</p>
             <button onClick={startCertQuiz}
-              className="mt-4 bg-primary text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer">
+              className="mt-4 bg-primary text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer">
               Take Certification Quiz
             </button>
           </div>
         )}
         {progress?.courseStatus === 'CERTIFIED' && (
-          <div className="glass-dark rounded-xl p-5 text-center">
-            <span className="material-symbols-outlined text-primary text-[36px]">verified</span>
-            <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-1">Certified!</h3>
+          <div className="glass-dark rounded-xl p-5 text-center animate-fade-scale-in">
+            <span className="material-symbols-outlined text-primary text-[42px] animate-combo-bounce">verified</span>
+            <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-2 gradient-text">Certified!</h3>
             <p className="text-xs text-on-surface-variant mt-1">Final score: {scoreData.overall}/{scoreData.overallMax} ({scoreData.overall}%)</p>
             {scoreData.overall >= 70 && (
               <button onClick={() => setShowCert(true)}
-                className="mt-3 bg-primary text-white px-5 py-2 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer">
+                className="mt-3 bg-primary text-white px-5 py-2 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer">
                 <span className="material-symbols-outlined text-[18px] align-middle mr-1">reward</span>
                 View Certificate
               </button>
@@ -325,21 +349,29 @@ export default function SimpleLearnPage() {
       }
     }
     return (
-      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto flex flex-col">
-        <div className="mb-4">
+      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto flex flex-col animate-fade-scale-in">
+        <div className="mb-4 flex items-center justify-between">
           <button onClick={() => { setView(VIEWS.DASHBOARD); fetchLearning(courseId) }}
             className="text-xs text-primary font-medium hover:underline cursor-pointer flex items-center gap-1">
             <span className="material-symbols-outlined text-[14px]">arrow_back</span>Back to course
           </button>
+          {totalSlides > 1 && (
+            <span className="text-xs text-on-surface-variant font-medium">{slideIndex + 1}/{totalSlides}</span>
+          )}
         </div>
-        <div className="glass-strong rounded-xl p-5 md:p-6 mb-4 flex-1 flex flex-col min-h-0"
-          onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        {totalSlides > 1 && (
+          <div className="h-1 bg-outline-variant/30 rounded-full mb-4 overflow-hidden">
+            <div className="h-full bg-primary rounded-full transition-all duration-400" style={{ width: `${((slideIndex + 1) / totalSlides) * 100}%` }} />
+          </div>
+        )}
+        <div className="glass-strong rounded-xl p-5 md:p-6 mb-4 flex-1 flex flex-col min-h-0 reading-slide"
+          key={slideIndex} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-semibold text-primary uppercase tracking-widest bg-primary-fixed px-1.5 py-0.5 rounded">{dayData.category || 'Lesson'}</span>
             <span className="text-[10px] text-on-surface-variant">{dayData.estimatedReadingTime || ''}</span>
           </div>
           <h1 className="font-['Hanken_Grotesk'] text-xl md:text-2xl font-bold text-on-surface mt-2 mb-1">{curr.title || dayData.title}</h1>
-          <p className="text-[11px] text-on-surface-variant mb-4">Day {dayData.day}{totalSlides > 1 ? ` \u00b7 ${slideIndex + 1}/${totalSlides}` : ''}</p>
+          <p className="text-[11px] text-on-surface-variant mb-4">Day {dayData.day}</p>
           <div className="overflow-y-auto flex-1 min-h-0 text-sm text-on-surface leading-relaxed">
             <div className="markdown-content">
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
@@ -351,25 +383,30 @@ export default function SimpleLearnPage() {
         {totalSlides > 1 && (
           <div className="flex items-center justify-between mb-3">
             <button onClick={() => setSlideIndex((i) => Math.max(0, i - 1))} disabled={slideIndex === 0}
-              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-primary hover:bg-primary-fixed rounded-xl transition-all cursor-pointer disabled:opacity-30 disabled:cursor-default">
+              className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-primary hover:bg-primary-fixed rounded-xl transition-all cursor-pointer disabled:opacity-30 disabled:cursor-default">
               <span className="material-symbols-outlined text-[18px]">chevron_left</span>Previous
             </button>
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
               {posts.map((_, i) => (
                 <button key={i} onClick={() => setSlideIndex(i)}
-                  className={`w-2 h-2 rounded-full transition-all cursor-pointer ${i === slideIndex ? 'bg-primary scale-125' : 'bg-outline-variant'}`} />
+                  className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${i === slideIndex ? 'bg-primary scale-125' : 'bg-outline-variant hover:bg-outline'}`} />
               ))}
             </div>
             <button onClick={() => setSlideIndex((i) => Math.min(totalSlides - 1, i + 1))} disabled={slideIndex === totalSlides - 1}
-              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-primary hover:bg-primary-fixed rounded-xl transition-all cursor-pointer disabled:opacity-30 disabled:cursor-default">
+              className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-primary hover:bg-primary-fixed rounded-xl transition-all cursor-pointer disabled:opacity-30 disabled:cursor-default">
               Next<span className="material-symbols-outlined text-[18px]">chevron_right</span>
             </button>
           </div>
         )}
-        <button onClick={handleMarkRead}
-          className="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shadow-sm">
-          Mark Lesson as Completed Reading
-        </button>
+        {slideIndex === totalSlides - 1 && (
+          <button onClick={handleMarkRead}
+            className="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer animate-glow-pulse">
+            <span className="flex items-center justify-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+              Mark Lesson as Completed
+            </span>
+          </button>
+        )}
       </div>
     )
   }
@@ -380,26 +417,30 @@ export default function SimpleLearnPage() {
     const q = qs[qIndex]
     const letters = ['A', 'B', 'C', 'D']
     return (
-      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto">
+      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto animate-fade-scale-in">
         <div className="mb-4">
           <button onClick={() => { setView(VIEWS.DASHBOARD); fetchLearning(courseId); setPendingReadDay(null) }}
             className="text-xs text-primary font-medium hover:underline cursor-pointer flex items-center gap-1">
             <span className="material-symbols-outlined text-[14px]">arrow_back</span>Back to course
           </button>
         </div>
-        <div className="glass-strong rounded-xl p-5 mb-4">
+        <div className="glass-strong rounded-xl p-5 mb-4" key={qIndex}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">Review Day {currentDay} &middot; Question {qIndex + 1} of {qs.length}</span>
-            <div className="flex gap-1">{qs.map((_, i) => (<div key={i} className={`w-2 h-2 rounded-full ${i < qIndex ? 'bg-primary' : i === qIndex ? 'bg-primary ring-2 ring-primary/30' : 'bg-outline-variant'}`} />))}</div>
+            <div className="flex gap-1.5">
+              {qs.map((_, i) => (
+                <div key={i} className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${i < qIndex ? 'bg-primary' : i === qIndex ? 'bg-primary scale-125' : i > qIndex ? 'bg-outline-variant' : 'bg-outline-variant'}`} />
+              ))}
+            </div>
           </div>
-          <div className="text-sm md:text-base text-on-surface font-medium mb-4">
+          <div className="text-sm md:text-base text-on-surface font-medium mb-4 animate-slide-in-right">
             <div className="markdown-content">
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{q?.text || ''}</ReactMarkdown>
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {q?.options.map((opt, i) => {
-              let cls = 'border-outline-variant bg-surface hover:bg-surface-container-low'
+              let cls = 'border-outline-variant bg-surface'
               if (revealed) {
                 if (i === q.correctAnswer) cls = 'border-success bg-green-50'
                 else if (i === selected) cls = 'border-error bg-red-50'
@@ -407,8 +448,8 @@ export default function SimpleLearnPage() {
               } else if (selected === i) cls = 'border-primary bg-primary-fixed'
               return (
                 <button key={i} onClick={() => handleSelect(i)} disabled={revealed}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm text-left transition-all cursor-pointer disabled:cursor-default ${cls}`}>
-                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${revealed && i === q.correctAnswer ? 'bg-success text-white' : revealed && i === selected ? 'bg-error text-white' : selected === i ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface-variant'}`}>
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-sm text-left transition-all cursor-pointer disabled:cursor-default option-hover ${cls}`}>
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${revealed && i === q.correctAnswer ? 'bg-success text-white scale-110' : revealed && i === selected ? 'bg-error text-white scale-110' : selected === i ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface-variant'}`}>
                     {revealed && i === q.correctAnswer ? '✓' : revealed && i === selected ? '✗' : letters[i]}
                   </span>
                   <span className="flex-1"><div className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{opt || ''}</ReactMarkdown></div></span>
@@ -418,17 +459,21 @@ export default function SimpleLearnPage() {
           </div>
         </div>
         {revealed && (
-          <div className="glass rounded-xl p-4">
-            <div className={`p-3 rounded-lg border mb-3 ${selected === q.correctAnswer ? 'bg-green-50 border-success' : 'bg-red-50 border-error'}`}>
-              <p className="font-bold text-xs flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">{selected === q.correctAnswer ? 'check_circle' : 'cancel'}</span>
+          <div className="glass rounded-xl p-4 animate-slide-up-in">
+            <div className={`p-3 rounded-xl border mb-3 ${selected === q.correctAnswer ? 'bg-green-50 border-success' : 'bg-red-50 border-error'}`}>
+              <p className="font-bold text-xs flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px]">{selected === q.correctAnswer ? 'check_circle' : 'cancel'}</span>
                 {selected === q.correctAnswer ? 'Correct!' : 'Wrong!'}
               </p>
               <div className="text-xs text-on-surface-variant mt-1"><div className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{q?.explanation || ''}</ReactMarkdown></div></div>
             </div>
             <button onClick={handleNext}
-              className="w-full bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer">
-              {qIndex < qs.length - 1 ? 'Next Question' : 'Finish Review'}
+              className="w-full bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer flex items-center justify-center gap-1">
+              {qIndex < qs.length - 1 ? (
+                <><span>Next Question</span><span className="material-symbols-outlined text-[16px]">arrow_forward</span></>
+              ) : (
+                <><span className="material-symbols-outlined text-[16px]">done_all</span><span>Finish Review</span></>
+              )}
             </button>
           </div>
         )}
@@ -438,31 +483,60 @@ export default function SimpleLearnPage() {
 
   const REWARD = () => {
     const targetDay = pendingReadDay || (currentDay ? currentDay + 1 : null)
+    const colors = ['#00288e', '#059669', '#D97706', '#DC2626', '#7C3AED', '#EC4899']
     return (
-      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="glass-strong rounded-xl p-6 md:p-8 text-center max-w-md w-full">
-          <div className="text-5xl mb-3">📝</div>
-          <h2 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface mb-1">Review Complete!</h2>
-          <p className="text-sm text-on-surface-variant mb-2">Day {reviewResult.reviewedDay} review &middot; You scored {reviewResult.score}/{reviewResult.total}</p>
-          <div className="bg-primary-fixed/30 rounded-lg p-3 mb-4">
-            <p className="text-xs text-on-surface-variant">Accumulated review score: <strong className="text-primary">{scoreData.dailyRaw}/{scoreData.dailyMax}</strong> ({scoreData.dailyPct}%)</p>
+      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[60vh] relative">
+        {reviewResult.score > 0 && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i}
+                className="absolute text-lg animate-confetti-particle"
+                style={{
+                  left: `${10 + Math.random() * 80}%`,
+                  top: `${20 + Math.random() * 30}%`,
+                  animationDelay: `${i * 0.08}s`,
+                  color: colors[i % colors.length],
+                }}>
+                {['✨', '⭐', '🎉', '🌟', '💫', '🏆'][i % 6]}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="glass-strong rounded-xl p-6 md:p-8 text-center max-w-md w-full animate-fade-scale-in relative z-10">
+          <div className="text-5xl mb-3 animate-combo-bounce">{reviewResult.score === reviewResult.total ? '🏆' : '📝'}</div>
+          <h2 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface mb-1">
+            {reviewResult.score === reviewResult.total ? 'Perfect Review!' : 'Review Complete!'}
+          </h2>
+          <p className="text-sm text-on-surface-variant mb-3">Day {reviewResult.reviewedDay} review &middot; You scored <strong className={`${reviewResult.score === reviewResult.total ? 'text-success' : 'text-primary'}`}>{reviewResult.score}/{reviewResult.total}</strong></p>
+          {xpToast && (
+            <div className="inline-flex items-center gap-2 bg-primary-fixed/50 rounded-full px-4 py-1.5 mb-3 animate-slide-up-in">
+              <span className="material-symbols-outlined text-[16px] text-primary">stars</span>
+              <span className="text-xs font-semibold text-primary">+{xpToast.xpEarned} XP earned</span>
+            </div>
+          )}
+          <div className="glass rounded-lg p-3 mb-4">
+            <p className="text-xs text-on-surface-variant">Accumulated review score: <strong className="text-primary">{scoreData.dailyRaw}/{scoreData.dailyMax}</strong></p>
           </div>
           <div className="space-y-2 mb-4 text-left max-h-32 overflow-y-auto">
             {reviewResult.details?.map((d, i) => (
-              <div key={i} className={`p-2 rounded-lg border text-xs ${d.isCorrect ? 'bg-green-50 border-success/30' : 'bg-red-50 border-error/30'}`}>
-                <p className="font-medium mb-0.5">Q{i + 1}: {d.isCorrect ? '✅' : '❌'} Correct: {d.options[d.correct]}</p>
+              <div key={i} className={`p-2.5 rounded-xl border text-xs transition-all ${d.isCorrect ? 'bg-green-50 border-success/30' : 'bg-red-50 border-error/30'}`}>
+                <p className="font-medium mb-0.5 flex items-center gap-1.5">
+                  <span>{d.isCorrect ? '✅' : '❌'}</span>
+                  <span>Q{i + 1}: <strong>{d.options[d.correct]}</strong></span>
+                </p>
                 <div className="text-on-surface-variant"><div className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{d.explanation || ''}</ReactMarkdown></div></div>
               </div>
             ))}
           </div>
           {targetDay && targetDay <= days.length ? (
             <button onClick={continueToReading}
-              className="w-full bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer">
-              Continue to Day {targetDay} Lesson
+              className="w-full bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer flex items-center justify-center gap-1.5">
+              <span>Continue to Day {targetDay}</span>
+              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </button>
           ) : (
             <button onClick={backToDashboard}
-              className="w-full bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer">
+              className="w-full bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer">
               Back to Course
             </button>
           )}
@@ -476,27 +550,30 @@ export default function SimpleLearnPage() {
     content = <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading...</p></div>
   } else if (view === VIEWS.CATALOG) {
     content = (
-      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
+      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto animate-fade-scale-in">
         <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface mb-1">My Learning</h1>
         <p className="text-sm text-on-surface-variant mb-6">Choose a course to start learning</p>
         {courses.length === 0 && <p className="text-center py-12 text-on-surface-variant text-sm">No courses available yet.</p>}
         <div className="space-y-3">
-          {courses.map((c) => {
+          {courses.map((c, idx) => {
             const enrolled = learning?.enrolledCourses?.[c.courseId]
+            const stagger = `animate-slide-up-in animate-stagger-${Math.min(idx + 1, 5)}`
             return (
-              <div key={c.courseId} className="glass rounded-xl p-5">
+              <div key={c.courseId} className={`glass rounded-xl p-5 card-hover ${stagger}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h3 className="font-semibold text-on-surface">{c.courseTitle}</h3>
-                    <p className="text-xs text-on-surface-variant mt-1">{c.dayCount} day{c.dayCount !== 1 ? 's' : ''}</p>
+                    <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[14px]">calendar_month</span>
+                      {c.dayCount} day{c.dayCount !== 1 ? 's' : ''}
+                    </p>
                   </div>
-                  {enrolled ? (
-                    <button onClick={() => enterCourse(c.courseId)}
-                      className="shrink-0 px-4 py-2 bg-primary text-on-primary rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer">Enter</button>
-                  ) : (
-                    <button onClick={() => handleEnroll(c.courseId)}
-                      className="shrink-0 px-4 py-2 border border-primary text-primary rounded-xl text-sm font-semibold hover:bg-primary-fixed active:scale-[0.98] transition-all cursor-pointer">Enroll</button>
-                  )}
+                  <button onClick={() => enrolled ? enterCourse(c.courseId) : handleEnroll(c.courseId)}
+                    className={`shrink-0 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer active:scale-[0.95] ${enrolled ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30'}`}>
+                    {enrolled ? (
+                      <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-[16px]">arrow_forward</span>Continue</span>
+                    ) : 'Enroll'}
+                  </button>
                 </div>
               </div>
             )
@@ -516,7 +593,7 @@ export default function SimpleLearnPage() {
     if (!certQuestions || certQuestions.length === 0) {
       content = (
         <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[60vh]">
-          <div className="glass-strong rounded-xl p-6 text-center max-w-md w-full">
+          <div className="glass-strong rounded-xl p-6 text-center max-w-md w-full animate-fade-scale-in">
             <span className="material-symbols-outlined text-[48px] text-on-surface-variant">quiz</span>
             <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-2">No Certification Questions</h3>
             <p className="text-sm text-on-surface-variant mt-2">Certification questions are not available yet for this course. Please check back later.</p>

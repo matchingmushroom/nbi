@@ -216,3 +216,100 @@
   font-size: 0.8125rem;
 }
 .markdown-content th { background: var(--color-surface-container-low); font-weight: 600; }
+
+/* Page transition animations */
+@keyframes fade-scale-in {
+  0% { opacity: 0; transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-fade-scale-in {
+  animation: fade-scale-in 0.35s ease-out;
+}
+
+@keyframes slide-up-in {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up-in {
+  animation: slide-up-in 0.4s ease-out forwards;
+}
+
+/* Staggered card entry */
+.animate-stagger-1 { animation-delay: 0.05s; }
+.animate-stagger-2 { animation-delay: 0.1s; }
+.animate-stagger-3 { animation-delay: 0.15s; }
+.animate-stagger-4 { animation-delay: 0.2s; }
+.animate-stagger-5 { animation-delay: 0.25s; }
+
+/* Tile completion bounce */
+@keyframes tile-bounce {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.2); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+.animate-tile-bounce {
+  animation: tile-bounce 0.45s ease-out;
+}
+
+/* Slide in from right for review questions */
+@keyframes slide-in-right {
+  0% { opacity: 0; transform: translateX(24px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+/* Option hover lift */
+.option-hover {
+  transition: all 0.15s ease;
+}
+.option-hover:hover {
+  transform: translateX(4px);
+  box-shadow: 0 2px 12px rgba(0, 40, 142, 0.1);
+}
+
+/* Card hover lift */
+.card-hover {
+  transition: all 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 40, 142, 0.12);
+}
+.card-hover:active {
+  transform: translateY(0);
+}
+
+/* Reading slide transition */
+.reading-slide {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Reward celebration floating particles */
+@keyframes float-up {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.5); }
+}
+.animate-float-up {
+  animation: float-up 1.2s ease-out forwards;
+}
+
+/* Progress glow pulse */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 40, 142, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(0, 40, 142, 0.4); }
+}
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Confetti particle */
+@keyframes confetti-particle {
+  0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translateY(80px) rotate(360deg) scale(0); opacity: 0; }
+}
+.animate-confetti-particle {
+  animation: confetti-particle 1s ease-out forwards;
+}
