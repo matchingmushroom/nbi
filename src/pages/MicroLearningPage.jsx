@@ -426,12 +426,19 @@ export default function MicroLearningPage() {
           </div>
         )}
 
-        <button
-          onClick={handleMarkComplete}
-          className="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
-        >
-          Mark as Complete
-        </button>
+        {courseProgress?.completedDays?.includes(`day_${String(dayData.day).padStart(2, '0')}`) ? (
+          <div className="w-full bg-success/10 border border-success/20 text-success py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">check_circle</span>
+            Lesson Completed
+          </div>
+        ) : (
+          <button
+            onClick={handleMarkComplete}
+            className="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
+          >
+            Mark as Complete
+          </button>
+        )}
       </div>
     )
   }
