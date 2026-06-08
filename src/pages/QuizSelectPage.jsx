@@ -92,7 +92,7 @@ export default function QuizSelectPage() {
     if (!courseId) return true
     if (!profile?.learning?.enrolledCourses) return false
     const prog = profile.learning.enrolledCourses[courseId]
-    return prog?.courseStatus === 'PASSED'
+    return ['LESSONS_COMPLETED', 'PASSED'].includes(prog?.courseStatus)
   }
 
   const handleTypeSelect = (type) => {
