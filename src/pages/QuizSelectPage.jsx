@@ -89,7 +89,8 @@ export default function QuizSelectPage() {
   }, [])
 
   const isCourseCompleted = (courseId) => {
-    if (!courseId || !profile?.learning?.enrolledCourses) return true
+    if (!courseId) return true
+    if (!profile?.learning?.enrolledCourses) return false
     const prog = profile.learning.enrolledCourses[courseId]
     return prog?.courseStatus === 'PASSED'
   }
