@@ -44,57 +44,45 @@ export async function getCourseDays(courseId) {
 
 export async function getCertificationQuestions(courseId, courseTitle) {
   let data = []
+  const qCol = collection(db, 'questions')
 
-  // 1. Try direct query: module=Course, mode=Certification, chapter=courseId
+  // 1. mode=Certification + chapter=courseId
   try {
-    const snap = await getDocs(query(
-      collection(db, 'questions'),
-      where('module', '==', 'Course'),
-      where('mode', '==', 'Certification'),
-      where('chapter', '==', courseId),
-    ))
+    const snap = await getDocs(query(qCol, where('mode', '==', 'Certification'), where('chapter', '==', courseId)))
     data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
   } catch (_) {}
 
-  // 2. Fallback: chapter=courseTitle
+  // 2. mode=Certification + chapter=courseTitle
   if (data.length === 0 && courseTitle) {
     try {
-      const snap = await getDocs(query(
-        collection(db, 'questions'),
-        where('module', '==', 'Course'),
-        where('mode', '==', 'Certification'),
-        where('chapter', '==', courseTitle),
-      ))
+      const snap = await getDocs(query(qCol, where('mode', '==', 'Certification'), where('chapter', '==', courseTitle)))
       data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
     } catch (_) {}
   }
 
-  // 3. Fallback: use course-linked quizzes from settings
+  // 3. course-linked quizzes from settings
   if (data.length === 0) {
     try {
       const settingsSnap = await getDoc(doc(db, 'config', 'quizSettings'))
       if (settingsSnap.exists()) {
         const linked = settingsSnap.data().courseLinkedQuizzes?.[courseId] || []
         for (const link of linked) {
-          const snap = await getDocs(query(
-            collection(db, 'questions'),
-            where('module', '==', link.mode),
-            where('chapter', '==', link.chapter),
-          ))
-          snap.docs.forEach((d) => data.push({ id: d.id, ...d.data() }))
+          const snap = await getDocs(query(qCol, where('module', '==', link.mode), where('chapter', '==', link.chapter)))
+          if (snap.empty) {
+            const snap2 = await getDocs(query(qCol, where('mode', '==', link.mode), where('chapter', '==', link.chapter)))
+            snap2.docs.forEach((d) => data.push({ id: d.id, ...d.data() }))
+          } else {
+            snap.docs.forEach((d) => data.push({ id: d.id, ...d.data() }))
+          }
         }
       }
     } catch (_) {}
   }
 
-  // 4. Last resort: mode=Certification, any chapter matching courseId
+  // 4. chapter=courseId (any module/mode)
   if (data.length === 0) {
     try {
-      const snap = await getDocs(query(
-        collection(db, 'questions'),
-        where('mode', '==', 'Certification'),
-        where('chapter', '==', courseId),
-      ))
+      const snap = await getDocs(query(qCol, where('chapter', '==', courseId)))
       data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
     } catch (_) {}
   }
