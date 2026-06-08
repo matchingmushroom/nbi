@@ -11,6 +11,9 @@ import {
 import { getQuizSettings } from '../lib/quizSettings'
 import QuizRunner from '../components/QuizRunner'
 import Certificate from '../components/Certificate'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 
 const VIEWS = { CATALOG: 'catalog', DASHBOARD: 'dashboard', READING: 'reading', REVIEW: 'review', REWARD: 'reward', CERT_QUIZ: 'cert_quiz' }
 
@@ -397,7 +400,13 @@ export default function SimpleLearnPage() {
           </div>
           <h1 className="font-['Hanken_Grotesk'] text-xl md:text-2xl font-bold text-on-surface mt-2 mb-1">{curr.title || dayData.title}</h1>
           <p className="text-[11px] text-on-surface-variant mb-4">Day {dayData.day}{totalSlides > 1 ? ` \u00b7 ${slideIndex + 1}/${totalSlides}` : ''}</p>
-          <div className="text-sm text-on-surface leading-relaxed whitespace-pre-line overflow-y-auto flex-1 min-h-0">{curr.content || 'No content available.'}</div>
+          <div className="overflow-y-auto flex-1 min-h-0 text-sm text-on-surface leading-relaxed">
+            <div className="markdown-content">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                {curr.content || 'No content available.'}
+              </ReactMarkdown>
+            </div>
+          </div>
         </div>
         {totalSlides > 1 && (
           <div className="flex items-center justify-between mb-3">
@@ -444,7 +453,11 @@ export default function SimpleLearnPage() {
             <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">Review Day {currentDay} &middot; Question {qIndex + 1} of {qs.length}</span>
             <div className="flex gap-1">{qs.map((_, i) => (<div key={i} className={`w-2 h-2 rounded-full ${i < qIndex ? 'bg-primary' : i === qIndex ? 'bg-primary ring-2 ring-primary/30' : 'bg-outline-variant'}`} />))}</div>
           </div>
-          <p className="text-sm md:text-base text-on-surface font-medium mb-4">{q?.text}</p>
+          <div className="text-sm md:text-base text-on-surface font-medium mb-4">
+            <div className="markdown-content">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{q?.text || ''}</ReactMarkdown>
+            </div>
+          </div>
           <div className="space-y-2">
             {q?.options.map((opt, i) => {
               let cls = 'border-outline-variant bg-surface hover:bg-surface-container-low'
@@ -459,7 +472,7 @@ export default function SimpleLearnPage() {
                   <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${revealed && i === q.correctAnswer ? 'bg-success text-white' : revealed && i === selected ? 'bg-error text-white' : selected === i ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface-variant'}`}>
                     {revealed && i === q.correctAnswer ? '✓' : revealed && i === selected ? '✗' : letters[i]}
                   </span>
-                  <span className="flex-1">{opt}</span>
+                  <span className="flex-1"><div className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{opt || ''}</ReactMarkdown></div></span>
                 </button>
               )
             })}
@@ -472,7 +485,7 @@ export default function SimpleLearnPage() {
                 <span className="material-symbols-outlined text-[16px]">{selected === q.correctAnswer ? 'check_circle' : 'cancel'}</span>
                 {selected === q.correctAnswer ? 'Correct!' : 'Wrong!'}
               </p>
-              <p className="text-xs text-on-surface-variant mt-1">{q?.explanation}</p>
+              <div className="text-xs text-on-surface-variant mt-1"><div className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{q?.explanation || ''}</ReactMarkdown></div></div>
             </div>
             <button onClick={handleNext}
               className="w-full bg-primary text-white py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer">
@@ -500,7 +513,7 @@ export default function SimpleLearnPage() {
             {reviewResult.details?.map((d, i) => (
               <div key={i} className={`p-2 rounded-lg border text-xs ${d.isCorrect ? 'bg-green-50 border-success/30' : 'bg-red-50 border-error/30'}`}>
                 <p className="font-medium mb-0.5">Q{i + 1}: {d.isCorrect ? '✅' : '❌'} Correct: {d.options[d.correct]}</p>
-                <p className="text-on-surface-variant">{d.explanation}</p>
+                <div className="text-on-surface-variant"><div className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{d.explanation || ''}</ReactMarkdown></div></div>
               </div>
             ))}
           </div>
