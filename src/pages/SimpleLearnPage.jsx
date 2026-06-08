@@ -371,6 +371,7 @@ export default function SimpleLearnPage() {
             score={scoreData.overall}
             overallMax={scoreData.overallMax}
             date={new Date().toLocaleDateString()}
+            courseDuration={`${days.length} day${days.length !== 1 ? 's' : ''}`}
             onClose={() => setShowCert(false)}
           />
         )}
