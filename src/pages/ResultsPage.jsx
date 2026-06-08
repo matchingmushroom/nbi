@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/utils'
+import { getAllCourses } from '../lib/steakService'
 import { getUserResultsCached } from '../lib/cache'
-import { ensureLearningProfile } from '../lib/steakService'
 
 export default function ResultsPage() {
   const { profile } = useAuth()
@@ -14,33 +14,32 @@ export default function ResultsPage() {
   const [filter, setFilter] = useState('all')
   const [enrolledCourses, setEnrolledCourses] = useState([])
 
-
   useEffect(() => {
     if (!profile?.uid) return
     let cancelled = false
     setLoading(true)
     const fetch = async () => {
       try {
-        const [data, prof, { getAllCourses }] = await Promise.all([
-          getUserResultsCached(profile.uid),
-          ensureLearningProfile(profile.uid),
-          import('../lib/steakService'),
-        ])
-        const courses = await getAllCourses()
+        const data = await getUserResultsCached(profile.uid)
         if (cancelled) return
         data.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))
         setResults(data)
-        const enrolled = Object.keys(prof.learning?.enrolledCourses || {})
-          .map(cid => {
-            const info = courses.find(c => c.courseId === cid)
-            const prog = prof.learning?.enrolledCourses?.[cid]
-            if (!info || !prog) return null
-            return { ...info, progress: prog }
-          })
-          .filter(Boolean)
-        setEnrolledCourses(enrolled)
+
+        const learning = profile.learning || {}
+        const enrolledIds = Object.keys(learning.enrolledCourses || {})
+        if (enrolledIds.length) {
+          const allCourses = await getAllCourses()
+          const enrolled = enrolledIds
+            .map((cid) => {
+              const meta = allCourses.find((c) => c.courseId === cid)
+              const prog = learning.enrolledCourses[cid]
+              return { courseId: cid, courseTitle: meta?.courseTitle || cid, dayCount: meta?.dayCount || 0, progress: prog }
+            })
+            .filter((c) => c.dayCount > 0)
+          if (!cancelled) setEnrolledCourses(enrolled)
+        }
       } catch (e) {
-        console.error('Fetch error:', e)
+        console.error('Results fetch error:', e)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -78,24 +77,39 @@ export default function ResultsPage() {
         <p className="text-on-surface-variant text-sm mt-1">{results.length} total attempt{results.length !== 1 ? 's' : ''}</p>
       </div>
 
-      {/* Enrolled Courses */}
+      {/* Enrolled Courses Section */}
       {enrolledCourses.length > 0 && (
-        <div className="mb-5 space-y-2">
-          <h3 className="font-['Hanken_Grotesk'] font-bold text-on-surface text-sm">My Courses</h3>
-          <div className="grid gap-2">
-            {enrolledCourses.map(c => {
-              const complete = c.progress?.completedDays?.length || 0
-              const total = c.dayCount || 1
+        <div className="mb-6 bg-surface border border-outline-variant rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">My Courses</h3>
+            <button onClick={() => navigate('/learn')} className="text-xs text-primary font-semibold hover:underline cursor-pointer">View All</button>
+          </div>
+          <div className="space-y-2">
+            {enrolledCourses.map((c) => {
+              const completed = c.progress.completedDays?.length || 0
+              const total = c.dayCount
+              const pct = total > 0 ? Math.round((completed / total) * 100) : 0
+              const steak = c.progress.currentSteak || 0
+              const isComplete = completed >= total
               return (
-                <button key={c.courseId} onClick={() => navigate('/learn')}
-                  className="bg-surface border border-outline-variant rounded-xl p-3 text-left cursor-pointer hover:shadow-sm transition-all active:scale-[0.98]">
+                <button key={c.courseId} onClick={() => navigate('/learn')} className="w-full text-left transition-all active:scale-[0.98] cursor-pointer">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold text-on-surface">{c.courseTitle}</span>
-                    <span className="text-[10px] text-on-surface-variant">{complete}/{total} days</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {isComplete && <span className="material-symbols-outlined text-[14px] text-success shrink-0" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>}
+                      <p className="text-sm font-semibold text-on-surface truncate">{c.courseTitle}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      {steak > 0 && (
+                        <span className="flex items-center gap-0.5 text-orange-500 text-[10px] font-bold">
+                          <span className="material-symbols-outlined text-[12px]" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
+                          {steak}
+                        </span>
+                      )}
+                      <span className={`text-[10px] font-medium ${isComplete ? 'text-success' : 'text-on-surface-variant'}`}>{completed}/{total}</span>
+                    </div>
                   </div>
-                  <div className="h-1 bg-outline-variant/30 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full transition-all"
-                      style={{ width: `${(complete / total) * 100}%` }} />
+                  <div className="w-full h-1.5 bg-surface-container-low rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${isComplete ? 'bg-success' : 'bg-secondary'}`} style={{ width: `${pct}%` }} />
                   </div>
                 </button>
               )

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getAllCourses, setCourseVisibility, deleteCourse, updateCourseTitle, resetCourseProgress, resetDailyLimit } from '../lib/steakService'
+import { getAllCourses, setCourseVisibility, deleteCourse, updateCourseTitle, resetCourseProgress } from '../lib/steakService'
 import { useAuth } from '../context/AuthContext'
-import MicroLearningUploader from '../components/MicroLearningUploader'
 
 export default function AdminCoursesPage() {
   const { profile, getAllUsers } = useAuth()
@@ -17,11 +16,6 @@ export default function AdminCoursesPage() {
   const [resetUserId, setResetUserId] = useState('')
   const [showResetModal, setShowResetModal] = useState(false)
   const [resetting, setResetting] = useState(false)
-  const [dailyResetCourseId, setDailyResetCourseId] = useState(null)
-  const [dailyResetUserId, setDailyResetUserId] = useState('')
-  const [showDailyResetModal, setShowDailyResetModal] = useState(false)
-  const [dailyResetting, setDailyResetting] = useState(false)
-  const [showUploadModal, setShowUploadModal] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -81,30 +75,6 @@ export default function AdminCoursesPage() {
     }
   }
 
-  const openDailyReset = (courseId) => {
-    setDailyResetCourseId(courseId)
-    setDailyResetUserId('')
-    setShowDailyResetModal(true)
-  }
-
-  const handleDailyReset = async () => {
-    if (!dailyResetCourseId || !dailyResetUserId) return
-    const user = users.find((u) => u.uid === dailyResetUserId)
-    const course = courses.find((c) => c.courseId === dailyResetCourseId)
-    if (!confirm(`Reset daily limit for "${course?.courseTitle || dailyResetCourseId}" for ${user?.displayName || user?.email}? This clears all dayStates and reviewedDays for that day.`)) return
-    setDailyResetting(true)
-    try {
-      await resetDailyLimit(dailyResetUserId, dailyResetCourseId)
-      setShowDailyResetModal(false)
-      setDailyResetCourseId(null)
-      setDailyResetUserId('')
-    } catch (err) {
-      alert('Failed: ' + err.message)
-    } finally {
-      setDailyResetting(false)
-    }
-  }
-
   const saveEdit = async () => {
     const id = editingId
     if (!id || !editValue.trim()) { setEditingId(null); return }
@@ -132,32 +102,14 @@ export default function AdminCoursesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Manage Courses</h1>
-            <p className="text-sm text-on-surface-variant">Upload, show, or hide micro-learning courses</p>
+            <p className="text-sm text-on-surface-variant">Show or hide courses from students</p>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => setShowUploadModal(true)} className="px-3 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:opacity-90 transition-all cursor-pointer">
-              <span className="material-symbols-outlined text-[18px] align-middle mr-1">upload</span>
-              Upload CSV
-            </button>
+          <div className="flex items-center gap-2">
             <button onClick={load} className="px-3 py-2 text-sm font-medium text-primary hover:bg-[#f0f3ff] rounded-lg transition-colors cursor-pointer">
               <span className="material-symbols-outlined text-[20px] align-middle">refresh</span>
             </button>
           </div>
         </div>
-
-      {showUploadModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => !showUploadModal && setShowUploadModal(false)}>
-          <div className="bg-surface rounded-xl p-6 w-full max-w-md mx-auto shadow-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-on-surface">Upload Micro-Learning CSV</h3>
-              <button onClick={() => setShowUploadModal(false)} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-            <MicroLearningUploader onComplete={() => { setShowUploadModal(false); load() }} />
-          </div>
-        </div>
-      )}
 
       {showResetModal && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => !resetting && setShowResetModal(false)}>
@@ -185,38 +137,6 @@ export default function AdminCoursesPage() {
               <button onClick={() => setShowResetModal(false)} disabled={resetting} className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-gray-100 rounded-xl cursor-pointer disabled:opacity-50">Cancel</button>
               <button onClick={handleResetCourse} disabled={!resetUserId || resetting} className="px-4 py-2 text-sm font-semibold text-on-primary bg-warning rounded-xl hover:opacity-90 transition-all cursor-pointer disabled:opacity-50">
                 {resetting ? 'Resetting...' : 'Reset All'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDailyResetModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => !dailyResetting && setShowDailyResetModal(false)}>
-          <div className="bg-surface rounded-xl p-6 w-full max-w-sm mx-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-on-surface mb-1">Reset Daily Limit</h3>
-            <p className="text-xs text-on-surface-variant mb-4">
-              Clear dayStates and reviewedDays for <strong>{courses.find((c) => c.courseId === dailyResetCourseId)?.courseTitle || dailyResetCourseId}</strong> — allows the student to re-review days.
-            </p>
-            <select
-              value={dailyResetUserId}
-              onChange={(e) => setDailyResetUserId(e.target.value)}
-              className="w-full px-3 py-2.5 border border-outline-variant rounded-xl text-sm bg-surface outline-none focus:ring-2 focus:ring-primary/30 mb-4"
-            >
-              <option value="">— Select student —</option>
-              {users.map((u) => {
-                const enrolled = u.learning?.enrolledCourses?.[dailyResetCourseId]
-                return (
-                  <option key={u.uid} value={u.uid}>
-                    {u.displayName || u.email}{enrolled ? ` (Day ${enrolled.completedDays?.length || 0}/${courses.find((c) => c.courseId === dailyResetCourseId)?.dayCount || '?'})` : ' (not enrolled)'}
-                  </option>
-                )
-              })}
-            </select>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowDailyResetModal(false)} disabled={dailyResetting} className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-gray-100 rounded-xl cursor-pointer disabled:opacity-50">Cancel</button>
-              <button onClick={handleDailyReset} disabled={!dailyResetUserId || dailyResetting} className="px-4 py-2 text-sm font-semibold text-on-primary bg-secondary rounded-xl hover:opacity-90 transition-all cursor-pointer disabled:opacity-50">
-                {dailyResetting ? 'Resetting...' : 'Reset Daily Limit'}
               </button>
             </div>
           </div>
@@ -271,20 +191,12 @@ export default function AdminCoursesPage() {
                 {!isModerator && (
                   <>
                     <button
-                      onClick={() => openDailyReset(course.courseId)}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-secondary hover:bg-[#e7eefe] rounded-lg transition-colors cursor-pointer"
-                      title="Reset daily limit"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">lock_reset</span>
-                      Reset Daily
-                    </button>
-                    <button
                       onClick={() => openReset(course.courseId)}
                       className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-warning hover:bg-warning/5 rounded-lg transition-colors cursor-pointer"
                       title="Reset all progress"
                     >
                       <span className="material-symbols-outlined text-[16px]">refresh</span>
-                      Reset All
+                      Reset
                     </button>
                     <button
                       onClick={() => handleDelete(course.courseId)}

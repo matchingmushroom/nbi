@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getQuizSettings } from '../lib/quizSettings'
 import { getAllQuestionsCached } from '../lib/cache'
-import { getAllCourses } from '../lib/steakService'
+
 
 function getTestTypes(settings) {
   return [
@@ -23,7 +23,7 @@ export default function QuizSelectPage() {
   const [loading, setLoading] = useState(true)
   const [settings, setSettings] = useState(null)
   const [limitError, setLimitError] = useState(null)
-  const [courseMap, setCourseMap] = useState({})
+
 
   useEffect(() => {
     const data = sessionStorage.getItem('nbi_attempt_limit')
@@ -37,16 +37,11 @@ export default function QuizSelectPage() {
 
   useEffect(() => {
     const fetch = async () => {
-      const [qs, s, courses] = await Promise.all([
+      const [qs, s] = await Promise.all([
         getAllQuestionsCached(),
         getQuizSettings(),
-        getAllCourses(),
       ])
       setSettings(s)
-
-      const cmap = {}
-      courses.forEach((c) => { cmap[c.courseId] = c.courseTitle || c.courseId })
-      setCourseMap(cmap)
 
       const modules = {}
       const chaptersByModule = {}
@@ -70,13 +65,6 @@ export default function QuizSelectPage() {
     }
     fetch()
   }, [])
-
-  const isCourseCompleted = (courseId) => {
-    if (!courseId) return true
-    if (!profile?.learning?.enrolledCourses) return false
-    const prog = profile.learning.enrolledCourses[courseId]
-    return ['LESSONS_COMPLETED', 'PASSED'].includes(prog?.courseStatus)
-  }
 
   const handleTypeSelect = (type) => {
     if (type === 'final') {
@@ -222,7 +210,6 @@ export default function QuizSelectPage() {
   }
 
   const testTypes = settings ? getTestTypes(settings) : []
-  const isModerator = profile?.role === 'moderator' || profile?.role === 'admin'
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto">
@@ -242,37 +229,23 @@ export default function QuizSelectPage() {
       )}
 
       <div className="space-y-3">
-        {testTypes.map((t) => {
-          const completed = isCourseCompleted(t.linkedCourse)
-          const locked = !!t.linkedCourse && !completed && !isModerator
-          return (
-            <button
-              key={t.key}
-              onClick={() => !locked && handleTypeSelect(t.key)}
-              disabled={locked}
-              className={`w-full border p-5 rounded-xl transition-all flex items-center gap-4 text-left ${
-                locked
-                  ? 'bg-surface-container-low border-outline-variant opacity-60 cursor-not-allowed'
-                  : 'bg-surface border-outline-variant hover:shadow-md active:scale-[0.98] cursor-pointer'
-              }`}
-            >
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${t.color} flex items-center justify-center shrink-0 shadow-sm ${locked ? 'grayscale' : ''}`}>
-                <span className="material-symbols-outlined text-white text-[24px]">{locked ? 'lock' : t.icon}</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-['Hanken_Grotesk'] font-bold text-base text-on-surface">{t.label}</h3>
-                <p className="text-xs text-on-surface-variant mt-0.5">
-                  {locked
-                    ? `Complete "${courseMap[t.linkedCourse] || t.linkedCourse}" to unlock`
-                    : t.desc}
-                </p>
-              </div>
-              <span className="material-symbols-outlined text-on-surface-variant text-[22px]">{locked ? 'lock' : 'chevron_right'}</span>
-            </button>
-          )
-        })}
+        {testTypes.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => handleTypeSelect(t.key)}
+            className="w-full bg-surface border border-outline-variant p-5 rounded-xl hover:shadow-md transition-all flex items-center gap-4 text-left active:scale-[0.98] cursor-pointer"
+          >
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${t.color} flex items-center justify-center shrink-0 shadow-sm`}>
+              <span className="material-symbols-outlined text-white text-[24px]">{t.icon}</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-['Hanken_Grotesk'] font-bold text-base text-on-surface">{t.label}</h3>
+              <p className="text-xs text-on-surface-variant mt-0.5">{t.desc}</p>
+            </div>
+            <span className="material-symbols-outlined text-on-surface-variant text-[22px]">chevron_right</span>
+          </button>
+        ))}
       </div>
-
     </div>
   )
 }
