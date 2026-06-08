@@ -41,7 +41,8 @@ function getDefaultLearningProfile() {
 
 export async function ensureLearningProfile(userId) {
   const ref = doc(db, 'users', userId)
-  const snap = await getDoc(ref)
+  let snap
+  try { snap = await getDoc(ref, { source: 'server' }) } catch { snap = await getDoc(ref, { source: 'cache' }) }
   if (!snap.exists()) return getDefaultLearningProfile()
   const data = snap.data()
   if (!data.learning) {
