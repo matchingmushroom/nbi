@@ -11,12 +11,10 @@ import ChapterQuizPage from './pages/ChapterQuizPage'
 import ModuleQuizPage from './pages/ModuleQuizPage'
 import ModeQuizPage from './pages/ModeQuizPage'
 import FinalQuizPage from './pages/FinalQuizPage'
-import CertificationQuizPage from './pages/CertificationQuizPage'
 import ResultsPage from './pages/ResultsPage'
 import ResultDetailPage from './pages/ResultDetailPage'
 import LeaderboardPage from './pages/LeaderboardPage'
 import ProfilePage from './pages/ProfilePage'
-import MicroLearningPage from './pages/MicroLearningPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminQuestionsPage from './pages/AdminQuestionsPage'
 import AdminAnalyticsPage from './pages/AdminAnalyticsPage'
@@ -43,12 +41,10 @@ function App() {
                       <Route path="/quiz/module/:moduleName" element={<ModuleQuizPage />} />
                       <Route path="/quiz/mode/:modeName" element={<ModeQuizPage />} />
                       <Route path="/quiz/final" element={<FinalQuizPage />} />
-                      <Route path="/quiz/certification/:courseChapter" element={<CertificationQuizPage />} />
                       <Route path="/results" element={<ResultsPage />} />
                       <Route path="/results/:id" element={<ResultDetailPage />} />
                       <Route path="/leaderboard" element={<LeaderboardPage />} />
                       <Route path="/profile" element={<ProfilePage />} />
-                      <Route path="/learn" element={<MicroLearningPage />} />
                       <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
                       <Route path="/admin/questions" element={<ModeratorRoute><AdminQuestionsPage /></ModeratorRoute>} />
                       <Route path="/admin/courses" element={<ModeratorRoute><AdminCoursesPage /></ModeratorRoute>} />

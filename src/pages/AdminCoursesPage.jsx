@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getAllCourses, setCourseVisibility, deleteCourse, updateCourseTitle, resetCourseProgress, resetDailyLimit } from '../lib/steakService'
 import { useAuth } from '../context/AuthContext'
-import { invalidateCachePrefix } from '../lib/cache'
-import MicroLearningUploader from '../components/MicroLearningUploader'
 
 export default function AdminCoursesPage() {
   const { profile, getAllUsers } = useAuth()
@@ -13,7 +11,6 @@ export default function AdminCoursesPage() {
   const [deleting, setDeleting] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [editValue, setEditValue] = useState('')
-  const [showUpload, setShowUpload] = useState(false)
   const [users, setUsers] = useState([])
   const [resetCourseId, setResetCourseId] = useState(null)
   const [resetUserId, setResetUserId] = useState('')
@@ -135,31 +132,10 @@ export default function AdminCoursesPage() {
             <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Manage Courses</h1>
             <p className="text-sm text-on-surface-variant">Show or hide courses from students</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowUpload(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">upload_file</span>
-              Upload CSV
-            </button>
-            <button onClick={load} className="px-3 py-2 text-sm font-medium text-primary hover:bg-[#f0f3ff] rounded-lg transition-colors cursor-pointer">
-              <span className="material-symbols-outlined text-[20px] align-middle">refresh</span>
-            </button>
-          </div>
+          <button onClick={load} className="px-3 py-2 text-sm font-medium text-primary hover:bg-[#f0f3ff] rounded-lg transition-colors cursor-pointer">
+            <span className="material-symbols-outlined text-[20px] align-middle">refresh</span>
+          </button>
         </div>
-
-      {showUpload && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => setShowUpload(false)}>
-          <div className="bg-surface rounded-xl p-6 w-full max-w-3xl mx-auto max-h-[85vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-on-surface">Upload Micro-Learning CSV</h2>
-              <button onClick={() => setShowUpload(false)} className="cursor-pointer"><span className="material-symbols-outlined">close</span></button>
-            </div>
-            <MicroLearningUploader onUploadComplete={() => { invalidateCachePrefix('allCourses'); load() }} />
-          </div>
-        </div>
-      )}
 
       {showResetModal && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => !resetting && setShowResetModal(false)}>

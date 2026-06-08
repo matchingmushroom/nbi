@@ -6,7 +6,6 @@ import { formatDate } from '../lib/utils'
 import { BADGES, getLevelProgress } from '../lib/gamification'
 import { DAILY_MISSIONS, checkDailyMission } from '../lib/missions'
 import { FiUsers, FiFileText, FiBookOpen } from 'react-icons/fi'
-import { getAllCourses } from '../lib/steakService'
 import { getAllUsersCached, getAllResultsCached, getUserResultsCached } from '../lib/cache'
 
 export default function DashboardPage() {
@@ -19,7 +18,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ total: 0, avgScore: 0, bestScore: 0 })
   const [completedMissions, setCompletedMissions] = useState([])
   const [quizToast, setQuizToast] = useState(null)
-  const [enrolledCourses, setEnrolledCourses] = useState([])
+
 
   useEffect(() => {
     try {
@@ -69,19 +68,6 @@ export default function DashboardPage() {
           const todayResults = all.filter(r => (r.completedAt || '').split('T')[0] === todayStr)
           setCompletedMissions(DAILY_MISSIONS.filter(m => checkDailyMission(m.id, todayResults)).map(m => m.id))
 
-          const learning = profile.learning || {}
-          const enrolledIds = Object.keys(learning.enrolledCourses || {})
-          if (enrolledIds.length) {
-            const allCourses = await getAllCourses()
-            const enrolled = enrolledIds
-              .map((cid) => {
-                const meta = allCourses.find((c) => c.courseId === cid)
-                const prog = learning.enrolledCourses[cid]
-                return { courseId: cid, courseTitle: meta?.courseTitle || cid, dayCount: meta?.dayCount || 0, progress: prog }
-              })
-              .filter((c) => c.dayCount > 0)
-            if (!cancelled) setEnrolledCourses(enrolled)
-          }
         }
       } catch (e) {
         console.error('Dashboard fetch error:', e)
@@ -267,52 +253,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Enrolled Courses */}
-      {enrolledCourses.length > 0 && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">My Courses</h3>
-            <button onClick={() => navigate('/learn')} className="text-xs text-primary font-semibold hover:underline cursor-pointer">View All</button>
-          </div>
-          <div className="space-y-2">
-            {enrolledCourses.map((c) => {
-              const completed = c.progress.completedDays?.length || 0
-              const total = c.dayCount
-              const pct = total > 0 ? Math.round((completed / total) * 100) : 0
-              const steak = c.progress.currentSteak || 0
-              return (
-                <button key={c.courseId} onClick={() => navigate('/learn')} className="w-full bg-surface border border-outline-variant rounded-xl p-3 text-left transition-all active:scale-[0.98] cursor-pointer">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-sm font-semibold text-on-surface truncate">{c.courseTitle}</p>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                      {steak > 0 && (
-                        <span className="flex items-center gap-0.5 text-orange-500 text-[10px] font-bold">
-                          <span className="material-symbols-outlined text-[12px]" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
-                          {steak}
-                        </span>
-                      )}
-                      <span className="text-[10px] font-medium text-on-surface-variant">{completed}/{total}</span>
-                    </div>
-                  </div>
-                  <div className="w-full h-1.5 bg-surface-container-low rounded-full overflow-hidden">
-                    <div className="h-full bg-secondary rounded-full transition-all" style={{ width: `${pct}%` }} />
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         <div className="bg-surface border border-outline-variant rounded-xl p-4">
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Tests</span>
           <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{stats.total}</p>
-        </div>
-        <div className="bg-surface border border-outline-variant rounded-xl p-4">
-          <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Courses</span>
-          <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{enrolledCourses.filter((c) => c.progress.completedDays?.length >= c.dayCount).length}</p>
         </div>
         <div className="bg-surface border border-outline-variant rounded-xl p-4">
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Avg</span>
@@ -331,15 +276,15 @@ export default function DashboardPage() {
           <h3 className="font-['Hanken_Grotesk'] text-lg font-bold">Take a Quiz</h3>
           <p className="text-sm text-white/80 mt-1">Chapter, Module, Mode, or Final Mock Test</p>
         </button>
-        <button onClick={() => navigate('/learn')} className="bg-secondary text-white p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm">
-          <span className="material-symbols-outlined text-[32px] mb-3">school</span>
-          <h3 className="font-['Hanken_Grotesk'] text-lg font-bold">Enroll in Course</h3>
-          <p className="text-sm text-white/80 mt-1">Micro-learning with daily concepts and quizzes</p>
+        <button onClick={() => navigate('/results')} className="bg-amber-500 text-white p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm">
+          <span className="material-symbols-outlined text-[32px] mb-3">insights</span>
+          <h3 className="font-['Hanken_Grotesk'] text-lg font-bold">View Results</h3>
+          <p className="text-sm text-white/80 mt-1">Track your progress and scores</p>
         </button>
-        <button onClick={() => navigate('/results')} className="bg-surface border border-outline-variant p-6 rounded-xl text-left hover:shadow-sm transition-all active:scale-[0.98] cursor-pointer">
-          <span className="material-symbols-outlined text-[32px] text-primary mb-3">insights</span>
-          <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface">My Results</h3>
-          <p className="text-sm text-on-surface-variant mt-1">View past attempts and track progress</p>
+        <button onClick={() => navigate('/leaderboard')} className="bg-surface border border-outline-variant p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm">
+          <span className="material-symbols-outlined text-[32px] mb-3 text-warning">leaderboard</span>
+          <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface">Leaderboard</h3>
+          <p className="text-sm text-on-surface-variant mt-1">See how you rank against others</p>
         </button>
       </div>
 
