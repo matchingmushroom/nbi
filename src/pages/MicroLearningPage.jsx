@@ -10,6 +10,7 @@ import {
 import { useSound } from '../hooks/useSound'
 import { downloadCertificate } from '../lib/certificate'
 import CourseCatalog from '../components/CourseCatalog'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 const STEAK_VISUALS = [
   { max: 0, label: 'Not Started', emoji: '🥩', color: 'from-gray-300 to-gray-400', desc: 'Begin your learning streak today!' },
@@ -400,8 +401,8 @@ export default function MicroLearningPage() {
           </div>
           <h1 className="font-['Hanken_Grotesk'] text-xl md:text-2xl font-bold text-on-surface mt-2 mb-1">{currentPost?.title}</h1>
           <p className="text-[11px] text-on-surface-variant mb-4">Day {dayData.day} · {dayData.courseTitle || courseId}</p>
-          <div className="prose prose-sm max-w-none text-on-surface leading-relaxed whitespace-pre-line">
-            {currentPost?.content}
+          <div className="max-w-none">
+            <MarkdownRenderer content={currentPost?.content} />
           </div>
         </div>
 
@@ -668,10 +669,11 @@ export default function MicroLearningPage() {
           {Array.from({ length: courseContent.length }, (_, i) => i + 1).map((day) => {
             const conceptId = `day_${String(day).padStart(2, '0')}`
             const dayState = courseProgress?.dayStates?.[conceptId]
+            const bypass = profile?.bypassDailyLimit === true
             const completed = courseProgress?.completedDays?.includes(conceptId)
-            const reviewed = courseProgress?.reviewedDays?.includes(conceptId)
+            const reviewed = courseProgress?.reviewedDays?.includes(conceptId) || (bypass && completed)
             const isActiveDay = phase?.day === day
-            const isLocked = !isModerator && day > (courseProgress?.unlockedDay || 1)
+            const isLocked = !isModerator && !bypass && day > (courseProgress?.unlockedDay || 1)
 
             let cls = 'bg-surface-container-low text-on-surface-variant'
             let icon = String(day)
