@@ -9,7 +9,7 @@ import {
   isFullyComplete, needsReview, accumulateReviewScore,
 } from '../lib/learnService'
 import { getQuizSettings } from '../lib/quizSettings'
-import { awardLearningXP, LEVEL_THRESHOLDS } from '../lib/gamification'
+import { awardLearningXP } from '../lib/gamification'
 import QuizRunner from '../components/QuizRunner'
 import Certificate from '../components/Certificate'
 import ReactMarkdown from 'react-markdown'
@@ -228,75 +228,6 @@ export default function SimpleLearnPage() {
           <h3 className="font-semibold text-on-surface">{days[0]?.courseTitle || courseId}</h3>
           <p className="text-xs text-on-surface-variant mt-0.5">{fullyCompleted}/{days.length} days completed</p>
         </div>
-
-        <div className="glass rounded-xl p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-primary bg-primary-fixed px-2 py-0.5 rounded-full">Lv.{profile?.level || 1}</span>
-              {profile?.streak > 0 && (
-                <span className="text-xs font-semibold text-on-surface-variant flex items-center gap-1">
-                  <span className="text-orange-400">🔥</span>{profile.streak} day streak
-                </span>
-              )}
-            </div>
-            <span className="text-xs text-on-surface-variant">{profile?.xp || 0} XP</span>
-          </div>
-          {(() => {
-            const xp = profile?.xp || 0
-            const currentLevel = profile?.level || 1
-            const next = LEVEL_THRESHOLDS.find(l => l.level === currentLevel + 1)
-            const curr = LEVEL_THRESHOLDS.find(l => l.level === currentLevel)
-            if (!next || !curr) return null
-            const prevXp = curr.xp
-            const nextXp = next.xp
-            const pct = nextXp > prevXp ? Math.min(100, ((xp - prevXp) / (nextXp - prevXp)) * 100) : 0
-            return (
-              <div className="mt-2">
-                <div className="h-1.5 bg-outline-variant/50 rounded-full overflow-hidden">
-                  <div className="h-full xp-bar-fill rounded-full" style={{ width: `${pct}%` }} />
-                </div>
-                <p className="text-[10px] text-on-surface-variant mt-1 text-right">{Math.round(pct)}% to Level {currentLevel + 1}</p>
-              </div>
-            )
-          })()}
-        </div>
-
-          {scoreData.dailyMax > 0 && (
-          <div className="glass rounded-xl p-4 mb-4">
-            <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Daily Review Score (40% weight)</p>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-primary">{scoreData.dailyPct}%</span>
-              <div className="flex-1 h-2 bg-outline-variant rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${scoreData.dailyPct}%` }} />
-              </div>
-              <span className="text-xs text-on-surface-variant">{scoreData.dailyRaw}/{scoreData.dailyMax} &middot; {Math.round((scoreData.dailyRaw / scoreData.dailyMax) * 40)}/40 pts</span>
-            </div>
-          </div>
-        )}
-        {scoreData.finalRaw > 0 && (
-          <div className="glass rounded-xl p-4 mb-4">
-            <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Final Exam Score (60% weight)</p>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-primary">{scoreData.finalPct}%</span>
-              <div className="flex-1 h-2 bg-outline-variant rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${scoreData.finalPct}%` }} />
-              </div>
-              <span className="text-xs text-on-surface-variant">{scoreData.finalRaw}/{scoreData.finalMax} &middot; {scoreData.finalRaw}/60 pts</span>
-            </div>
-          </div>
-        )}
-        {(scoreData.dailyMax > 0 || scoreData.finalRaw > 0) && (
-          <div className="glass-dark rounded-xl p-4 mb-4">
-            <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Overall Score</p>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-primary">{scoreData.overall}/{scoreData.overallMax}</span>
-              <div className="flex-1 h-2 bg-outline-variant rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${scoreData.overall}%` }} />
-              </div>
-              <span className="text-xs text-on-surface-variant">{scoreData.overall}%</span>
-            </div>
-          </div>
-        )}
 
         <div className="glass rounded-xl p-4 mb-4">
           <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Progress</p>
