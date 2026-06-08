@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getQuizSettings } from '../lib/quizSettings'
+import { getQuizSettings, canAccessPremium } from '../lib/quizSettings'
 import { getAllQuestionsCached } from '../lib/cache'
 
 
@@ -62,6 +62,16 @@ export default function QuizSelectPage() {
 
       setItems({ modules, chaptersByModule, modes })
       setLoading(false)
+
+      if (!canAccessPremium(profile) && s.premiumQuizChapters?.length) {
+        const banned = new Set(s.premiumQuizChapters)
+        Object.keys(chaptersByModule).forEach((mod) => {
+          Object.keys(chaptersByModule[mod]).forEach((ch) => {
+            if (banned.has(ch)) delete chaptersByModule[mod][ch]
+          })
+          if (Object.keys(chaptersByModule[mod]).length === 0) delete chaptersByModule[mod]
+        })
+      }
     }
     fetch()
   }, [])

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAllCourses, setCourseVisibility, deleteCourse, updateCourseTitle, resetCourseProgress } from '../lib/steakService'
+import { getQuizSettings, saveQuizSettings } from '../lib/quizSettings'
 import { useAuth } from '../context/AuthContext'
 
 export default function AdminCoursesPage() {
@@ -18,12 +19,15 @@ export default function AdminCoursesPage() {
   const [resetUserId, setResetUserId] = useState('')
   const [showResetModal, setShowResetModal] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [premiumCourses, setPremiumCourses] = useState([])
+  const [premiumSaving, setPremiumSaving] = useState(null)
 
   const load = async () => {
     setLoading(true)
-    const [allCourses, allUsers] = await Promise.all([getAllCourses(), getAllUsers()])
+    const [allCourses, allUsers, settings] = await Promise.all([getAllCourses(), getAllUsers(), getQuizSettings()])
     setCourses(allCourses)
     setUsers(allUsers.filter((u) => u.role !== 'admin' && u.role !== 'moderator'))
+    setPremiumCourses(settings.premiumCourses || [])
     setLoading(false)
   }
 
@@ -87,6 +91,16 @@ export default function AdminCoursesPage() {
       alert('Failed to update title: ' + err.message)
     }
     setEditingId(null)
+  }
+
+  const handleStarToggle = async (courseId) => {
+    setPremiumSaving(courseId)
+    const updated = premiumCourses.includes(courseId)
+      ? premiumCourses.filter((id) => id !== courseId)
+      : [...premiumCourses, courseId]
+    setPremiumCourses(updated)
+    await saveQuizSettings({ premiumCourses: updated })
+    setPremiumSaving(null)
   }
 
   if (loading) {
@@ -181,7 +195,12 @@ export default function AdminCoursesPage() {
                       </button>
                     </div>
                   ) : (
-                    <p className="font-semibold text-on-surface truncate">{course.courseTitle}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-on-surface truncate">{course.courseTitle}</p>
+                      {premiumCourses.includes(course.courseId) && (
+                        <span className="shrink-0 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Premium</span>
+                      )}
+                    </div>
                   )}
                   <p className="text-xs text-on-surface-variant">
                     ID: {course.courseId} &middot; {course.dayCount} day{course.dayCount !== 1 ? 's' : ''}
@@ -217,6 +236,18 @@ export default function AdminCoursesPage() {
                       Delete
                     </button>
                   </>
+                )}
+                {!isModerator && (
+                  <button
+                    onClick={() => handleStarToggle(course.courseId)}
+                    disabled={premiumSaving === course.courseId}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    title={premiumCourses.includes(course.courseId) ? 'Remove premium' : 'Mark as premium'}
+                  >
+                    <span className={`material-symbols-outlined text-[16px] ${premiumCourses.includes(course.courseId) ? 'text-amber-500' : 'text-on-surface-variant'}`}>
+                      {premiumCourses.includes(course.courseId) ? 'star' : 'star_border'}
+                    </span>
+                  </button>
                 )}
                 <div className="ml-auto flex items-center gap-1">
                   <button

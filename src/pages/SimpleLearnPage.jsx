@@ -8,7 +8,7 @@ import {
   getCertificationQuestions, getCourseScore,
   isFullyComplete, needsReview, accumulateReviewScore,
 } from '../lib/learnService'
-import { getQuizSettings } from '../lib/quizSettings'
+import { getQuizSettings, canAccessPremium, getEnrollmentLimit } from '../lib/quizSettings'
 import { awardLearningXP } from '../lib/gamification'
 import QuizRunner from '../components/QuizRunner'
 import Certificate from '../components/Certificate'
@@ -40,6 +40,7 @@ export default function SimpleLearnPage() {
   const [showCert, setShowCert] = useState(false)
   const [pendingReadDay, setPendingReadDay] = useState(null)
   const [xpToast, setXpToast] = useState(null)
+  const [premiumCourses, setPremiumCourses] = useState([])
   const touchStartX = useRef(0)
 
   const fetchLearning = async (cid) => {
@@ -53,9 +54,17 @@ export default function SimpleLearnPage() {
   }
 
   useEffect(() => {
-    getAllCourses().then((c) => { setCourses(c.filter((x) => x.visible !== false)); setLoading(false) })
-    if (profile?.uid) fetchLearning()
-    getQuizSettings().then((s) => setBypassLock(s.bypassDailyLearningLock))
+    Promise.all([getAllCourses(), profile?.uid ? fetchLearning() : Promise.resolve(), getQuizSettings()]).then(([allCourses, _, s]) => {
+      let filtered = allCourses.filter((x) => x.visible !== false)
+      if (!canAccessPremium(profile) && s.premiumCourses?.length) {
+        const banned = new Set(s.premiumCourses)
+        filtered = filtered.filter((c) => !banned.has(c.courseId))
+      }
+      setCourses(filtered)
+      setLoading(false)
+      setBypassLock(s.bypassDailyLearningLock)
+      setPremiumCourses(s.premiumCourses || [])
+    })
   }, [profile?.uid])
 
   useEffect(() => {
@@ -74,6 +83,17 @@ export default function SimpleLearnPage() {
   const handleEnroll = async (cid) => {
     if (!profile?.uid) return
     try {
+      const s = await getQuizSettings()
+      if (s.premiumCourses?.includes(cid) && !canAccessPremium(profile)) {
+        alert('This course is premium and requires StudentX access.')
+        return
+      }
+      const enrolledCount = Object.keys(learning?.enrolledCourses || {}).length
+      const limit = getEnrollmentLimit(profile, s)
+      if (enrolledCount >= limit) {
+        alert(`You can be enrolled in up to ${limit} course(s) at a time. Complete or reset a course first.`)
+        return
+      }
       await enrollInCourse(profile.uid, cid)
       await fetchLearning(cid)
       await enterCourse(cid, 1)
@@ -562,7 +582,12 @@ export default function SimpleLearnPage() {
               <div key={c.courseId} className={`glass rounded-xl p-5 card-hover ${stagger}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-on-surface">{c.courseTitle}</h3>
+                    <h3 className="font-semibold text-on-surface flex items-center gap-2">
+                      {c.courseTitle}
+                      {premiumCourses.includes(c.courseId) && (
+                        <span className="shrink-0 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Premium</span>
+                      )}
+                    </h3>
                     <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-2">
                       <span className="material-symbols-outlined text-[14px]">calendar_month</span>
                       {c.dayCount} day{c.dayCount !== 1 ? 's' : ''}

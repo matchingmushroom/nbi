@@ -24,6 +24,10 @@ const DEFAULTS = {
   certificationAttemptLimit: 0,
   courseLinkedQuizzes: {},
   bypassDailyLearningLock: false,
+  premiumCourses: [],
+  premiumQuizChapters: [],
+  studentEnrollmentLimit: 2,
+  studentxEnrollmentLimit: 5,
 }
 
 export async function getQuizSettings() {
@@ -99,4 +103,13 @@ export async function checkAttemptLimit(profile, quizType) {
   if (snap.size < limit) return true
   sessionStorage.setItem('nbi_attempt_limit', JSON.stringify({ quizType, limit }))
   return false
+}
+
+export function canAccessPremium(profile) {
+  return profile?.role === 'studentx' || profile?.role === 'admin' || profile?.role === 'moderator'
+}
+
+export function getEnrollmentLimit(profile, settings) {
+  if (profile?.role === 'studentx') return settings.studentxEnrollmentLimit || 5
+  return settings.studentEnrollmentLimit || 2
 }

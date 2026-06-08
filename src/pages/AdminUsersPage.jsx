@@ -147,9 +147,10 @@ export default function AdminUsersPage() {
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
                   u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
                   u.role === 'moderator' ? 'bg-blue-100 text-blue-700' :
+                  u.role === 'studentx' ? 'bg-amber-100 text-amber-700' :
                   'bg-green-100 text-green-700'
                 }`}>
-                  {u.role || 'student'}
+                  {u.role === 'studentx' ? 'StudentX' : u.role || 'student'}
                 </span>
               </div>
               <div className="flex items-center flex-wrap gap-1.5 mt-2 pt-2 border-t border-outline-variant/40">
@@ -203,6 +204,7 @@ export default function AdminUsersPage() {
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Role</label>
                 <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
                   <option value="student">Student</option>
+                  <option value="studentx">StudentX</option>
                   <option value="moderator">Moderator</option>
                   <option value="admin">Admin</option>
                 </select>
