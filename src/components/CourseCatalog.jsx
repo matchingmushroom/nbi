@@ -7,6 +7,7 @@ export default function CourseCatalog({ learning, onRefresh, onEnter, onError })
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(null)
+  const [fetchError, setFetchError] = useState(null)
 
   useEffect(() => {
     load()
@@ -14,11 +15,14 @@ export default function CourseCatalog({ learning, onRefresh, onEnter, onError })
 
   async function load() {
     setLoading(true)
+    setFetchError(null)
     try {
       const avail = await getAvailableCourses()
+      console.log('[CourseCatalog] courses loaded:', avail.length)
       setCourses(avail)
     } catch (err) {
-      console.error(err)
+      console.error('[CourseCatalog] failed to load courses:', err)
+      setFetchError(err.message || 'Failed to fetch courses')
     } finally {
       setLoading(false)
     }
@@ -53,6 +57,9 @@ export default function CourseCatalog({ learning, onRefresh, onEnter, onError })
       <div className="text-center py-12">
         <span className="material-symbols-outlined text-5xl text-outline-variant">school</span>
         <p className="text-sm text-on-surface-variant mt-2">No courses available yet.</p>
+        {fetchError && (
+          <p className="text-xs text-error mt-1">Error loading courses. Check console (F12).</p>
+        )}
       </div>
     )
   }

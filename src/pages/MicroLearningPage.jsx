@@ -29,6 +29,7 @@ export default function MicroLearningPage() {
   const [rewardSteak, setRewardSteak] = useState(0)
   const [rewardNextDay, setRewardNextDay] = useState(null)
   const [courseError, setCourseError] = useState(null)
+  const [navigating, setNavigating] = useState(false)
   const touchStartX = useRef(0)
   const reviewAnswers = useRef({})
   const rewardTimer = useRef(null)
@@ -73,7 +74,7 @@ export default function MicroLearningPage() {
 
   async function enterCourse(cid) {
     setCourseError(null)
-    setLoading(true)
+    setNavigating(true)
     try {
       const content = await getCourseContent(cid)
       if (!content.length) {
@@ -90,7 +91,7 @@ export default function MicroLearningPage() {
       console.error('enterCourse error:', err)
       setCourseError('Failed to load course: ' + (err.message || 'Unknown error'))
     } finally {
-      setLoading(false)
+      setNavigating(false)
     }
   }
 
@@ -176,7 +177,7 @@ export default function MicroLearningPage() {
     return getCoursePhase(prog, dayCount)
   })()
 
-  if (loading && !courseId) {
+  if (loading && !learning) {
     return (
       <div className="p-6 max-w-2xl mx-auto animate-pulse space-y-4">
         <div className="h-8 bg-outline-variant/30 rounded w-1/3" />

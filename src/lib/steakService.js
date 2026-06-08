@@ -91,6 +91,7 @@ export async function getAllCourses() {
     }
   })
   const result = Object.values(courses).sort((a, b) => a.courseId.localeCompare(b.courseId))
+  console.log('[getAllCourses] found', result.length, 'courses from', coursesSnap.size, 'course docs and', mlSnap.size, 'micro_learning docs')
   setCache('allCourses', result)
   return result
 }
@@ -192,11 +193,21 @@ export async function deleteCourse(courseId) {
 }
 
 export async function getCourseContent(courseId) {
+  console.log('[getCourseContent] fetching for courseId:', courseId)
   const q = query(collection(db, 'micro_learning'), where('courseId', '==', courseId))
-  const snap = await getDocs(q)
-  return snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => a.day - b.day)
+  let snap
+  try {
+    snap = await getDocs(q)
+  } catch (err) {
+    console.error('[getCourseContent] query failed:', err)
+    if (err.message?.includes('index')) {
+      throw new Error('Firestore index missing. Create index at: https://console.firebase.google.com/v1/r/project/nbi-exam/firestore/indexes')
+    }
+    throw err
+  }
+  const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.day - b.day)
+  console.log('[getCourseContent] found', docs.length, 'docs')
+  return docs
 }
 
 export async function getDayContent(courseId, day) {
