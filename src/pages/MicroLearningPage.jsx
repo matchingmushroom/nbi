@@ -664,7 +664,7 @@ export default function MicroLearningPage() {
             const completed = courseProgress?.completedDays?.includes(conceptId)
             const reviewed = courseProgress?.reviewedDays?.includes(conceptId)
             const isActiveDay = phase?.day === day
-            const isLocked = !isModerator && !(profile?.bypassDailyLimit) && day > (courseProgress?.unlockedDay || 1)
+            const isLocked = !isModerator && day > (courseProgress?.unlockedDay || 1)
 
             let cls = 'bg-surface-container-low text-on-surface-variant'
             let icon = String(day)
