@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getAvailableCourses, getLocalLearningProfile, getCourseProgress, enrollCourse } from '../lib/steakService'
 import { useAuth } from '../context/AuthContext'
 
-export default function CourseCatalog({ learning, onRefresh, onEnter }) {
+export default function CourseCatalog({ learning, onRefresh, onEnter, onError }) {
   const { user } = useAuth()
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
@@ -29,9 +29,10 @@ export default function CourseCatalog({ learning, onRefresh, onEnter }) {
     try {
       await enrollCourse(user.uid, courseId)
       if (onRefresh) await onRefresh()
-      if (onEnter) onEnter(courseId)
+      if (onEnter) await onEnter(courseId)
     } catch (err) {
       console.error(err)
+      if (onError) onError(err.message || 'Enrollment failed')
     } finally {
       setEnrolling(null)
     }
@@ -57,7 +58,7 @@ export default function CourseCatalog({ learning, onRefresh, onEnter }) {
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
       {courses.map(c => {
         const prog = getCourseProgress(learning, c.courseId)
         const enrolled = !!prog

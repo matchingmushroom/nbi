@@ -28,6 +28,7 @@ export default function MicroLearningPage() {
   const [rewardScore, setRewardScore] = useState(0)
   const [rewardSteak, setRewardSteak] = useState(0)
   const [rewardNextDay, setRewardNextDay] = useState(null)
+  const [courseError, setCourseError] = useState(null)
   const touchStartX = useRef(0)
   const reviewAnswers = useRef({})
   const rewardTimer = useRef(null)
@@ -71,9 +72,14 @@ export default function MicroLearningPage() {
   }
 
   async function enterCourse(cid) {
+    setCourseError(null)
     setLoading(true)
     try {
       const content = await getCourseContent(cid)
+      if (!content.length) {
+        setCourseError('No lesson content found for this course. Contact admin.')
+        return
+      }
       setCourseContent(content)
       setCourseId(cid)
       setDayCount(content.length)
@@ -81,7 +87,8 @@ export default function MicroLearningPage() {
       setLearning(prof.learning)
       setView('DASHBOARD')
     } catch (err) {
-      console.error(err)
+      console.error('enterCourse error:', err)
+      setCourseError('Failed to load course: ' + (err.message || 'Unknown error'))
     } finally {
       setLoading(false)
     }
@@ -183,10 +190,17 @@ export default function MicroLearningPage() {
     return (
       <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-4">
         <h1 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface">Available Courses</h1>
+        {courseError && (
+          <div className="bg-error/10 border border-error/30 rounded-xl p-3 text-center">
+            <p className="text-sm text-error font-medium">{courseError}</p>
+            <button onClick={() => setCourseError(null)} className="mt-2 text-xs text-primary underline cursor-pointer">Dismiss</button>
+          </div>
+        )}
         <CourseCatalog
           learning={learning}
           onRefresh={refreshLearning}
           onEnter={enterCourse}
+          onError={(msg) => setCourseError(msg)}
         />
       </div>
     )
