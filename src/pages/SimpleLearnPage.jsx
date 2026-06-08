@@ -9,6 +9,7 @@ import {
   isFullyComplete, needsReview, accumulateReviewScore,
 } from '../lib/learnService'
 import { getQuizSettings } from '../lib/quizSettings'
+import { awardLearningXP, LEVEL_THRESHOLDS } from '../lib/gamification'
 import QuizRunner from '../components/QuizRunner'
 import Certificate from '../components/Certificate'
 import ReactMarkdown from 'react-markdown'
@@ -38,6 +39,7 @@ export default function SimpleLearnPage() {
   const [bypassLock, setBypassLock] = useState(false)
   const [showCert, setShowCert] = useState(false)
   const [pendingReadDay, setPendingReadDay] = useState(null)
+  const [xpToast, setXpToast] = useState(null)
   const touchStartX = useRef(0)
 
   const fetchLearning = async (cid) => {
@@ -55,6 +57,10 @@ export default function SimpleLearnPage() {
     if (profile?.uid) fetchLearning()
     getQuizSettings().then((s) => setBypassLock(s.bypassDailyLearningLock))
   }, [profile?.uid])
+
+  useEffect(() => {
+    if (xpToast) { const t = setTimeout(() => setXpToast(null), 2500); return () => clearTimeout(t) }
+  }, [xpToast])
 
   const enterCourse = async (cid, startDay) => {
     setCourseId(cid)
@@ -102,6 +108,8 @@ export default function SimpleLearnPage() {
     if (!profile?.uid || !courseId || !currentDay) return
     const result = await markDayRead(profile.uid, courseId, currentDay, days.length)
     if (result.error) { alert(result.error); return }
+    const xpResult = await awardLearningXP(profile.uid, 'lesson_read')
+    if (xpResult) setXpToast(xpResult)
     await fetchLearning(courseId)
     setView(VIEWS.DASHBOARD)
   }
@@ -140,6 +148,11 @@ export default function SimpleLearnPage() {
     const result = await submitReview(profile.uid, courseId, currentDay)
     if (result.error) { alert(result.error); setView(VIEWS.DASHBOARD); return }
     await accumulateReviewScore(profile.uid, courseId, score)
+    for (let i = 0; i < score; i++) {
+      await awardLearningXP(profile.uid, 'review_correct')
+    }
+    const xpResult = await awardLearningXP(profile.uid, 'review_complete')
+    if (xpResult) setXpToast(xpResult)
     const d = await getCourseDays(courseId)
     setDays(d)
     await fetchLearning(courseId)
@@ -199,45 +212,7 @@ export default function SimpleLearnPage() {
     ? Math.max(0, Math.ceil((certWindowEnd - new Date()) / (1000 * 60 * 60 * 24)))
     : null
 
-  if (loading && view === VIEWS.CATALOG) {
-    return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading...</p></div>
-  }
-
-  // ==================== CATALOG ====================
-  if (view === VIEWS.CATALOG) {
-    return (
-      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
-        <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface mb-1">My Learning</h1>
-        <p className="text-sm text-on-surface-variant mb-6">Choose a course to start learning</p>
-        {courses.length === 0 && <p className="text-center py-12 text-on-surface-variant text-sm">No courses available yet.</p>}
-        <div className="space-y-3">
-          {courses.map((c) => {
-            const enrolled = learning?.enrolledCourses?.[c.courseId]
-            return (
-              <div key={c.courseId} className="bg-surface border border-outline-variant rounded-xl p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-on-surface">{c.courseTitle}</h3>
-                    <p className="text-xs text-on-surface-variant mt-1">{c.dayCount} day{c.dayCount !== 1 ? 's' : ''}</p>
-                  </div>
-                  {enrolled ? (
-                    <button onClick={() => enterCourse(c.courseId)}
-                      className="shrink-0 px-4 py-2 bg-primary text-on-primary rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer">Enter</button>
-                  ) : (
-                    <button onClick={() => handleEnroll(c.courseId)}
-                      className="shrink-0 px-4 py-2 border border-primary text-primary rounded-xl text-sm font-semibold hover:bg-primary-fixed active:scale-[0.98] transition-all cursor-pointer">Enroll</button>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
-
-  // ==================== DASHBOARD ====================
-  if (view === VIEWS.DASHBOARD && courseId) {
+  const DASHBOARD = () => {
     const nextUnread = days.find((d) => !readDays.includes(`day_${String(d.day).padStart(2, '0')}`) && d.day <= effUnlocked)
     return (
       <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
@@ -247,13 +222,45 @@ export default function SimpleLearnPage() {
             <span className="material-symbols-outlined text-[14px]">arrow_back</span>All courses
           </button>
         </div>
-        <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-4">
+        <div className="glass rounded-xl p-4 mb-4">
           <h3 className="font-semibold text-on-surface">{days[0]?.courseTitle || courseId}</h3>
           <p className="text-xs text-on-surface-variant mt-0.5">{fullyCompleted}/{days.length} days completed</p>
         </div>
 
+        <div className="glass rounded-xl p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-primary bg-primary-fixed px-2 py-0.5 rounded-full">Lv.{profile?.level || 1}</span>
+              {profile?.streak > 0 && (
+                <span className="text-xs font-semibold text-on-surface-variant flex items-center gap-1">
+                  <span className="text-orange-400">🔥</span>{profile.streak} day streak
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-on-surface-variant">{profile?.xp || 0} XP</span>
+          </div>
+          {(() => {
+            const xp = profile?.xp || 0
+            const currentLevel = profile?.level || 1
+            const next = LEVEL_THRESHOLDS.find(l => l.level === currentLevel + 1)
+            const curr = LEVEL_THRESHOLDS.find(l => l.level === currentLevel)
+            if (!next || !curr) return null
+            const prevXp = curr.xp
+            const nextXp = next.xp
+            const pct = nextXp > prevXp ? Math.min(100, ((xp - prevXp) / (nextXp - prevXp)) * 100) : 0
+            return (
+              <div className="mt-2">
+                <div className="h-1.5 bg-outline-variant/50 rounded-full overflow-hidden">
+                  <div className="h-full xp-bar-fill rounded-full" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="text-[10px] text-on-surface-variant mt-1 text-right">{Math.round(pct)}% to Level {currentLevel + 1}</p>
+              </div>
+            )
+          })()}
+        </div>
+
           {scoreData.dailyMax > 0 && (
-          <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-4">
+          <div className="glass rounded-xl p-4 mb-4">
             <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Daily Review Score (40% weight)</p>
             <div className="flex items-center gap-3">
               <span className="text-2xl font-bold text-primary">{scoreData.dailyPct}%</span>
@@ -265,7 +272,7 @@ export default function SimpleLearnPage() {
           </div>
         )}
         {scoreData.finalRaw > 0 && (
-          <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-4">
+          <div className="glass rounded-xl p-4 mb-4">
             <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Final Exam Score (60% weight)</p>
             <div className="flex items-center gap-3">
               <span className="text-2xl font-bold text-primary">{scoreData.finalPct}%</span>
@@ -277,7 +284,7 @@ export default function SimpleLearnPage() {
           </div>
         )}
         {(scoreData.dailyMax > 0 || scoreData.finalRaw > 0) && (
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
+          <div className="glass-dark rounded-xl p-4 mb-4">
             <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Overall Score</p>
             <div className="flex items-center gap-3">
               <span className="text-2xl font-bold text-primary">{scoreData.overall}/{scoreData.overallMax}</span>
@@ -289,7 +296,7 @@ export default function SimpleLearnPage() {
           </div>
         )}
 
-        <div className="bg-surface border border-outline-variant rounded-xl p-4 mb-4">
+        <div className="glass rounded-xl p-4 mb-4">
           <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Progress</p>
           <div className="grid grid-cols-6 sm:grid-cols-10 gap-1.5">
             {Array.from({ length: days.length }, (_, i) => i + 1).map((day) => {
@@ -317,7 +324,7 @@ export default function SimpleLearnPage() {
         </div>
 
         {certWindowEnd && progress?.courseStatus === 'LESSONS_COMPLETED' && progress?.courseStatus !== 'CERTIFIED' && (
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
+          <div className="glass rounded-xl p-4 mb-4">
             <div className="flex items-start gap-3">
               <span className="material-symbols-outlined text-primary text-[24px]">timer</span>
               <div className="min-w-0">
@@ -333,8 +340,8 @@ export default function SimpleLearnPage() {
         )}
 
         {days.length > 0 && fullyCompleted === days.length && progress?.courseStatus !== 'CERTIFIED' && (
-          <div className="bg-success/10 border border-success/20 rounded-xl p-5 text-center">
-            <span className="material-symbols-outlined text-success text-[36px]">celebration</span>
+          <div className="glass-dark rounded-xl p-5 text-center">
+            <span className="material-symbols-outlined text-primary text-[36px]">celebration</span>
             <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-1">Course Complete!</h3>
             <p className="text-xs text-on-surface-variant mt-1">All {days.length} days completed.</p>
             <button onClick={startCertQuiz}
@@ -344,7 +351,7 @@ export default function SimpleLearnPage() {
           </div>
         )}
         {progress?.courseStatus === 'CERTIFIED' && (
-          <div className="bg-primary/10 border border-primary/20 rounded-xl p-5 text-center">
+          <div className="glass-dark rounded-xl p-5 text-center">
             <span className="material-symbols-outlined text-primary text-[36px]">verified</span>
             <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-1">Certified!</h3>
             <p className="text-xs text-on-surface-variant mt-1">Final score: {scoreData.overall}/{scoreData.overallMax} ({scoreData.overall}%)</p>
@@ -371,8 +378,7 @@ export default function SimpleLearnPage() {
     )
   }
 
-  // ==================== READING ====================
-  if (view === VIEWS.READING && dayData) {
+  const READING = () => {
     const posts = dayData.posts?.length > 0 ? dayData.posts : [{ title: dayData.title, content: dayData.shortExplanation }]
     const totalSlides = posts.length
     const curr = posts[slideIndex] || {}
@@ -392,7 +398,7 @@ export default function SimpleLearnPage() {
             <span className="material-symbols-outlined text-[14px]">arrow_back</span>Back to course
           </button>
         </div>
-        <div className="bg-surface border border-outline-variant rounded-xl p-5 md:p-6 shadow-sm mb-4 flex-1 flex flex-col min-h-0"
+        <div className="glass-strong rounded-xl p-5 md:p-6 mb-4 flex-1 flex flex-col min-h-0"
           onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-semibold text-primary uppercase tracking-widest bg-primary-fixed px-1.5 py-0.5 rounded">{dayData.category || 'Lesson'}</span>
@@ -434,8 +440,7 @@ export default function SimpleLearnPage() {
     )
   }
 
-  // ==================== REVIEW ====================
-  if (view === VIEWS.REVIEW && dayData) {
+  const REVIEW = () => {
     const qs = dayData.questions?.slice(0, 3) || []
     if (qs.length === 0) return <div className="h-full flex items-center justify-center p-4 text-on-surface-variant text-sm">No review questions.</div>
     const q = qs[qIndex]
@@ -448,7 +453,7 @@ export default function SimpleLearnPage() {
             <span className="material-symbols-outlined text-[14px]">arrow_back</span>Back to course
           </button>
         </div>
-        <div className="bg-surface border border-outline-variant rounded-xl p-5 shadow-sm mb-4">
+        <div className="glass-strong rounded-xl p-5 mb-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">Review Day {currentDay} &middot; Question {qIndex + 1} of {qs.length}</span>
             <div className="flex gap-1">{qs.map((_, i) => (<div key={i} className={`w-2 h-2 rounded-full ${i < qIndex ? 'bg-primary' : i === qIndex ? 'bg-primary ring-2 ring-primary/30' : 'bg-outline-variant'}`} />))}</div>
@@ -479,7 +484,7 @@ export default function SimpleLearnPage() {
           </div>
         </div>
         {revealed && (
-          <div className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm">
+          <div className="glass rounded-xl p-4">
             <div className={`p-3 rounded-lg border mb-3 ${selected === q.correctAnswer ? 'bg-green-50 border-success' : 'bg-red-50 border-error'}`}>
               <p className="font-bold text-xs flex items-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">{selected === q.correctAnswer ? 'check_circle' : 'cancel'}</span>
@@ -497,12 +502,11 @@ export default function SimpleLearnPage() {
     )
   }
 
-  // ==================== REWARD ====================
-  if (view === VIEWS.REWARD && reviewResult) {
+  const REWARD = () => {
     const targetDay = pendingReadDay || (currentDay ? currentDay + 1 : null)
     return (
       <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="bg-surface border border-outline-variant rounded-xl p-6 md:p-8 shadow-sm text-center max-w-md w-full">
+        <div className="glass-strong rounded-xl p-6 md:p-8 text-center max-w-md w-full">
           <div className="text-5xl mb-3">📝</div>
           <h2 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface mb-1">Review Complete!</h2>
           <p className="text-sm text-on-surface-variant mb-2">Day {reviewResult.reviewedDay} review &middot; You scored {reviewResult.score}/{reviewResult.total}</p>
@@ -533,12 +537,52 @@ export default function SimpleLearnPage() {
     )
   }
 
-  // ==================== CERTIFICATION QUIZ ====================
-  if (view === VIEWS.CERT_QUIZ) {
+  let content
+  if (loading && view === VIEWS.CATALOG) {
+    content = <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading...</p></div>
+  } else if (view === VIEWS.CATALOG) {
+    content = (
+      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
+        <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface mb-1">My Learning</h1>
+        <p className="text-sm text-on-surface-variant mb-6">Choose a course to start learning</p>
+        {courses.length === 0 && <p className="text-center py-12 text-on-surface-variant text-sm">No courses available yet.</p>}
+        <div className="space-y-3">
+          {courses.map((c) => {
+            const enrolled = learning?.enrolledCourses?.[c.courseId]
+            return (
+              <div key={c.courseId} className="glass rounded-xl p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-on-surface">{c.courseTitle}</h3>
+                    <p className="text-xs text-on-surface-variant mt-1">{c.dayCount} day{c.dayCount !== 1 ? 's' : ''}</p>
+                  </div>
+                  {enrolled ? (
+                    <button onClick={() => enterCourse(c.courseId)}
+                      className="shrink-0 px-4 py-2 bg-primary text-on-primary rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer">Enter</button>
+                  ) : (
+                    <button onClick={() => handleEnroll(c.courseId)}
+                      className="shrink-0 px-4 py-2 border border-primary text-primary rounded-xl text-sm font-semibold hover:bg-primary-fixed active:scale-[0.98] transition-all cursor-pointer">Enroll</button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  } else if (view === VIEWS.DASHBOARD && courseId) {
+    content = <DASHBOARD />
+  } else if (view === VIEWS.READING && dayData) {
+    content = <READING />
+  } else if (view === VIEWS.REVIEW && dayData) {
+    content = <REVIEW />
+  } else if (view === VIEWS.REWARD && reviewResult) {
+    content = <REWARD />
+  } else if (view === VIEWS.CERT_QUIZ) {
     if (!certQuestions || certQuestions.length === 0) {
-      return (
+      content = (
         <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[60vh]">
-          <div className="bg-surface border border-outline-variant rounded-xl p-6 shadow-sm text-center max-w-md w-full">
+          <div className="glass-strong rounded-xl p-6 text-center max-w-md w-full">
             <span className="material-symbols-outlined text-[48px] text-on-surface-variant">quiz</span>
             <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-2">No Certification Questions</h3>
             <p className="text-sm text-on-surface-variant mt-2">Certification questions are not available yet for this course. Please check back later.</p>
@@ -549,15 +593,31 @@ export default function SimpleLearnPage() {
           </div>
         </div>
       )
+    } else {
+      content = (
+        <QuizRunner
+          questions={certQuestions}
+          config={{ quizType: 'Certification', chapter: courseId, module: 'Course', mode: 'Certification' }}
+          onFinish={handleCertFinish}
+        />
+      )
     }
-    return (
-      <QuizRunner
-        questions={certQuestions}
-        config={{ quizType: 'Certification', chapter: courseId, module: 'Course', mode: 'Certification' }}
-        onFinish={handleCertFinish}
-      />
-    )
   }
 
-  return null
+  return (
+    <>
+      {content}
+      {xpToast && (
+        <div className="fixed top-4 right-4 z-[100] xp-toast-enter">
+          <div className="glass-dark rounded-xl px-4 py-3 shadow-lg flex items-center gap-3">
+            <span className="material-symbols-outlined text-[22px] text-primary">stars</span>
+            <div>
+              <p className="text-sm font-bold text-on-surface">+{xpToast.xpEarned} XP</p>
+              <p className="text-[10px] text-on-surface-variant">{xpToast.leveledUp ? `Level Up! Now Level ${xpToast.level}` : `${xpToast.totalXp} total XP`}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
 }

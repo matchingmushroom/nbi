@@ -215,6 +215,32 @@ export async function backfillUserXP(userId) {
   return { xp: totalXp, level, streak: currentStreak, lastActiveDate: lastDate, badges: newBadges.map(b => b.id) }
 }
 
+export const LEARNING_XP = {
+  lesson_read: 5,
+  review_correct: 3,
+  review_complete: 10,
+}
+
+export async function awardLearningXP(userId, action, count = 1) {
+  const xp = (LEARNING_XP[action] || 0) * count
+  if (xp <= 0) return null
+  const userRef = doc(db, 'users', userId)
+  const userSnap = await getDoc(userRef)
+  if (!userSnap.exists()) return null
+  const userData = userSnap.data()
+  const today = getToday()
+  const s = updateStreak(userData)
+  const newXp = (userData.xp || 0) + xp
+  const newLevel = getLevel(newXp)
+  const leveledUp = newLevel > getLevel(userData.xp || 0)
+  await setDoc(userRef, { xp: newXp, level: newLevel, streak: s.streak, lastActiveDate: s.lastActiveDate }, { merge: true })
+  invalidateCache('allUsers')
+  return {
+    xpEarned: xp, totalXp: newXp, level: newLevel, leveledUp,
+    streak: s.streak, progress: getLevelProgress(newXp), xpToNext: getXPForNextLevel(newXp),
+  }
+}
+
 export async function updateGamification(userId, quizResult, quizQuestions) {
   const userRef = doc(db, 'users', userId)
   const userSnap = await getDoc(userRef)

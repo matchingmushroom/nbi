@@ -92,6 +92,73 @@
   animation: slide-down 0.4s ease-out;
 }
 
+/* Glassmorphic utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 40, 142, 0.06);
+}
+.glass-strong {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 40, 142, 0.08);
+}
+.glass-dark {
+  background: rgba(0, 40, 142, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 40, 142, 0.08);
+}
+.glass-card {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 24px rgba(0, 40, 142, 0.05);
+  transition: all 0.2s ease;
+}
+.glass-card:hover {
+  box-shadow: 0 8px 40px rgba(0, 40, 142, 0.1);
+  transform: translateY(-1px);
+}
+
+/* XP bar animation */
+@keyframes xp-fill {
+  from { width: 0%; }
+}
+.xp-bar-fill {
+  animation: xp-fill 0.8s ease-out;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #00288e, #1e40af);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gradient-gold {
+  background: linear-gradient(135deg, #D97706, #F59E0B);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* XP toast animation */
+@keyframes xp-float {
+  0% { opacity: 0; transform: translateY(10px) scale(0.95); }
+  20% { opacity: 1; transform: translateY(-4px) scale(1.02); }
+  40% { transform: translateY(0) scale(1); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.xp-toast-enter {
+  animation: xp-float 0.4s ease-out;
+}
+
 .markdown-content p { margin-bottom: 0.5rem; }
 .markdown-content p:last-child { margin-bottom: 0; }
 .markdown-content strong { font-weight: 600; color: var(--color-on-surface); }
