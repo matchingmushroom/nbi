@@ -8,32 +8,6 @@ import { getAllCourses } from '../lib/steakService'
 import { getCourseScore } from '../lib/learnService'
 import Certificate from '../components/Certificate'
 
-function CollapsibleSection({ title, icon, defaultOpen, children, badge }) {
-  const [open, setOpen] = useState(defaultOpen !== false)
-  return (
-    <div className="bg-surface border border-outline-variant rounded-xl mb-4 overflow-hidden">
-      <button onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-4 cursor-pointer hover:bg-[#f8f9ff] transition-colors active:scale-[0.99]">
-        <div className="flex items-center gap-2.5">
-          <span className="material-symbols-outlined text-primary text-[20px]" style={{fontVariationSettings: "'FILL' 1"}}>{icon}</span>
-          <h2 className="font-['Hanken_Grotesk'] text-base font-bold text-on-surface">{title}</h2>
-          {badge != null && (
-            <span className="text-[10px] font-semibold bg-primary-fixed text-primary px-1.5 py-0.5 rounded-full">{badge}</span>
-          )}
-        </div>
-        <span className={`material-symbols-outlined text-on-surface-variant text-[20px] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
-          expand_more
-        </span>
-      </button>
-      <div className={`transition-all duration-200 overflow-hidden ${open ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
-        <div className="px-4 pb-4 overflow-y-auto max-h-[560px]">
-          {children}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function LeaderboardPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
@@ -45,6 +19,7 @@ export default function LeaderboardPage() {
   const [filter, setFilter] = useState(new URLSearchParams(location.search).get('filter') || 'all')
   const [allCourses, setAllCourses] = useState([])
   const [showCertFor, setShowCertFor] = useState(null)
+  const [tab, setTab] = useState('results')
 
   const completedCourses = useMemo(() => {
     if (!profile?.learning?.enrolledCourses) return []
@@ -267,10 +242,149 @@ export default function LeaderboardPage() {
         <p className="text-on-surface-variant text-sm mt-1">Your achievement profile and leaderboard rankings</p>
       </div>
 
-      {/* My Achievement */}
-      {myStats && (
-        <CollapsibleSection title="My Achievement" icon="stars" defaultOpen={true}
-          badge={myRank > 0 ? `#${myRank}` : null}>
+      {/* Pill Tabs */}
+      <div className="inline-flex bg-surface-container-low rounded-full p-1 mb-4 w-full sm:w-auto">
+        {[
+          { key: 'results', label: 'My Results', icon: 'insights', badge: results.length + completedCourses.length },
+          { key: 'achievement', label: 'My Achievement', icon: 'stars', badge: myRank > 0 ? `#${myRank}` : null },
+          { key: 'leaderboard', label: 'Leaderboard', icon: 'leaderboard', badge: `${entries.length} ranked` },
+        ].map((t) => (
+          <button key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              tab === t.key
+                ? 'bg-primary text-on-primary shadow-sm'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}>
+            <span className="material-symbols-outlined text-[16px]" style={{fontVariationSettings: "'FILL' 1"}}>{t.icon}</span>
+            {t.label}
+            {t.badge != null && t.badge !== '' && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                tab === t.key ? 'bg-primary-fixed text-primary' : 'bg-primary-fixed text-primary'
+              }`}>{t.badge}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab: Results */}
+      {tab === 'results' && (
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+          <div className="inline-flex bg-surface-container-low rounded-full p-1 mb-4 flex-wrap">
+            {[
+              { key: 'all', label: 'All Tests' },
+              { key: 'course', label: 'Course' },
+              { key: 'chapter', label: 'Chapter' },
+              { key: 'module', label: 'Module' },
+              { key: 'mode', label: 'Mode' },
+              { key: 'final', label: 'Final' },
+            ].map((t) => (
+              <button key={t.key}
+                onClick={() => setFilter(t.key)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  filter === t.key
+                    ? 'bg-primary text-on-primary shadow-sm'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {filter === 'course' ? (
+            completedCourses.length === 0 ? (
+              <div className="text-center py-8 text-on-surface-variant">
+                <span className="material-symbols-outlined text-[36px] mb-2">school</span>
+                <p className="text-sm font-medium">No completed courses yet.</p>
+                <p className="text-xs mt-1">Complete a course to see it here.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {completedCourses.map((c) => {
+                  const s = getCourseScore(c.progress, c.dayCount)
+                  const passed = s.overall >= 50
+                  return (
+                    <div key={c.courseId} className="bg-surface border border-success/20 rounded-xl p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-on-surface truncate">{c.courseTitle}</p>
+                          <p className="text-[10px] text-on-surface-variant mt-0.5">{c.dayCount} days</p>
+                        </div>
+                        <div className={`shrink-0 ml-2 w-9 h-9 rounded-full flex items-center justify-center ${passed ? 'bg-success/20 text-success' : 'bg-error/10 text-error'}`}>
+                          <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings: "'FILL' 1"}}>{passed ? 'verified' : 'cancel'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="text-center">
+                          <p className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface">{s.overall}%</p>
+                          <p className="text-[9px] text-on-surface-variant">Overall</p>
+                        </div>
+                        <div className="h-8 w-px bg-outline-variant/50" />
+                        <div className="text-center">
+                          <p className="text-xs font-semibold text-on-surface">{s.dailyRaw}/{s.dailyMax}</p>
+                          <p className="text-[9px] text-on-surface-variant">Daily</p>
+                        </div>
+                        <div className="h-8 w-px bg-outline-variant/50" />
+                        <div className="text-center">
+                          <p className="text-xs font-semibold text-on-surface">{s.finalRaw}/{s.finalMax}</p>
+                          <p className="text-[9px] text-on-surface-variant">Final</p>
+                        </div>
+                      </div>
+                      {passed && (
+                        <button onClick={() => setShowCertFor(c)}
+                          className="w-full flex items-center justify-center gap-1.5 bg-success/10 border border-success/20 rounded-lg py-2 text-xs font-bold text-success hover:bg-success/15 transition-all cursor-pointer active:scale-[0.97]">
+                          <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>download</span>
+                          Download Certificate
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-8 text-on-surface-variant">
+              <span className="material-symbols-outlined text-[36px] mb-2">insights</span>
+              <p className="text-sm font-medium">No results found.</p>
+              <p className="text-xs mt-1">Take a quiz to see your results here.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((r) => (
+                <button key={r.id}
+                  onClick={() => navigate(`/results/${r.id}`)}
+                  className="w-full bg-surface border border-outline-variant rounded-xl p-4 hover:shadow-sm transition-all flex items-center justify-between active:scale-[0.98] cursor-pointer">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                      (r.percentage || 0) >= 80 ? 'bg-green-100' :
+                      (r.percentage || 0) >= 60 ? 'bg-yellow-100' : 'bg-red-100'
+                    }`}>
+                      <span className={`material-symbols-outlined text-[20px] ${
+                        (r.percentage || 0) >= 80 ? 'text-success' :
+                        (r.percentage || 0) >= 60 ? 'text-warning' : 'text-error'
+                      }`}>
+                        {(r.percentage || 0) >= 60 ? 'check_circle' : 'cancel'}
+                      </span>
+                    </div>
+                    <div className="text-left min-w-0">
+                      <h3 className="text-sm font-semibold text-on-surface truncate">{getResultTitle(r)}</h3>
+                      <p className="text-xs text-on-surface-variant">{formatDate(r.completedAt)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 ml-3">
+                    <p className="text-sm font-bold text-primary">{r.score}<span className="text-xs text-on-surface-variant font-normal">/{r.totalQuestions}</span></p>
+                    <p className="text-xs text-on-surface-variant">{r.percentage}%</p>
+                    {r.xpEarned > 0 && <p className="text-[10px] text-warning font-semibold">+{r.xpEarned} XP</p>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Achievement */}
+      {tab === 'achievement' && myStats && (
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold">
               {(profile?.displayName || profile?.email || '?')[0].toUpperCase()}
@@ -281,194 +395,81 @@ export default function LeaderboardPage() {
             </div>
           </div>
           <AchievementCard s={myStats} />
-        </CollapsibleSection>
+        </div>
       )}
 
-      {/* Leaderboard */}
-      <CollapsibleSection title="Leaderboard" icon="leaderboard" defaultOpen={true}
-        badge={`${entries.length} ranked`}>
-        {entries.length === 0 ? (
-          <div className="text-center py-8 text-on-surface-variant">
-            <span className="material-symbols-outlined text-[36px] mb-2">leaderboard</span>
-            <p className="text-sm font-medium">No Final Test results yet.</p>
-            <p className="text-xs mt-1">Be the first to take the Final Test!</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {entries.map((entry, i) => {
-              const isMe = entry.userId === profile?.uid
-              return (
-                <div key={entry.userId}
-                  className={`bg-surface border rounded-xl p-4 shadow-sm ${
-                    i < 3 ? 'border-yellow-300' : isMe ? 'border-primary border-2' : 'border-outline-variant'
-                  }`}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 flex justify-center shrink-0">{getMedal(i + 1)}</div>
-                    <div className="relative shrink-0">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-                        i === 0 ? 'bg-yellow-500' : i === 1 ? 'bg-gray-400' : i === 2 ? 'bg-orange-500' : isMe ? 'bg-primary' : 'bg-primary/60'
-                      }`}>
-                        {entry.displayName.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="absolute -bottom-1 -right-1 bg-warning text-white text-[8px] font-bold px-1 py-0.5 rounded-full leading-none border border-white">
-                        Lv{entry.level}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-semibold text-on-surface truncate">{entry.displayName}</p>
-                        {isMe && <span className="text-[8px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">You</span>}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-warning font-semibold">{entry.xp} XP</span>
-                        <div className="flex-1 h-1.5 bg-surface-container-low rounded-full overflow-hidden max-w-[100px]">
-                          <div className="h-full bg-secondary rounded-full" style={{ width: `${getLevelProgress(entry.xp)}%` }} />
+      {/* Tab: Leaderboard */}
+      {tab === 'leaderboard' && (
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+          {entries.length === 0 ? (
+            <div className="text-center py-8 text-on-surface-variant">
+              <span className="material-symbols-outlined text-[36px] mb-2">leaderboard</span>
+              <p className="text-sm font-medium">No Final Test results yet.</p>
+              <p className="text-xs mt-1">Be the first to take the Final Test!</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {entries.map((entry, i) => {
+                const isMe = entry.userId === profile?.uid
+                return (
+                  <div key={entry.userId}
+                    className={`bg-surface border rounded-xl p-4 shadow-sm ${
+                      i < 3 ? 'border-yellow-300' : isMe ? 'border-primary border-2' : 'border-outline-variant'
+                    }`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 flex justify-center shrink-0">{getMedal(i + 1)}</div>
+                      <div className="relative shrink-0">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                          i === 0 ? 'bg-yellow-500' : i === 1 ? 'bg-gray-400' : i === 2 ? 'bg-orange-500' : isMe ? 'bg-primary' : 'bg-primary/60'
+                        }`}>
+                          {entry.displayName.charAt(0).toUpperCase()}
                         </div>
-                        {entry.streak > 0 && (
-                          <div className="flex items-center gap-0.5 text-orange-500">
-                            <span className="material-symbols-outlined text-[12px]" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
-                            <span className="text-[10px] font-bold">{entry.streak}</span>
+                        <span className="absolute -bottom-1 -right-1 bg-warning text-white text-[8px] font-bold px-1 py-0.5 rounded-full leading-none border border-white">
+                          Lv{entry.level}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold text-on-surface truncate">{entry.displayName}</p>
+                          {isMe && <span className="text-[8px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">You</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-warning font-semibold">{entry.xp} XP</span>
+                          <div className="flex-1 h-1.5 bg-surface-container-low rounded-full overflow-hidden max-w-[100px]">
+                            <div className="h-full bg-secondary rounded-full" style={{ width: `${getLevelProgress(entry.xp)}%` }} />
+                          </div>
+                          {entry.streak > 0 && (
+                            <div className="flex items-center gap-0.5 text-orange-500">
+                              <span className="material-symbols-outlined text-[12px]" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
+                              <span className="text-[10px] font-bold">{entry.streak}</span>
+                            </div>
+                          )}
+                        </div>
+                        {entry.badges?.length > 0 && (
+                          <div className="flex items-center gap-1 mt-1">
+                            {BADGES.filter(b => entry.badges.includes(b.id)).slice(0, 4).map((b) => (
+                              <span key={b.id} className="material-symbols-outlined text-primary text-[14px]" style={{fontVariationSettings: "'FILL' 1"}} title={b.name}>{b.icon}</span>
+                            ))}
+                            {entry.badges.length > 4 && (
+                              <span className="text-[9px] text-on-surface-variant font-medium">+{entry.badges.length - 4}</span>
+                            )}
                           </div>
                         )}
                       </div>
-                      {entry.badges?.length > 0 && (
-                        <div className="flex items-center gap-1 mt-1">
-                          {BADGES.filter(b => entry.badges.includes(b.id)).slice(0, 4).map((b) => (
-                            <span key={b.id} className="material-symbols-outlined text-primary text-[14px]" style={{fontVariationSettings: "'FILL' 1"}} title={b.name}>{b.icon}</span>
-                          ))}
-                          {entry.badges.length > 4 && (
-                            <span className="text-[9px] text-on-surface-variant font-medium">+{entry.badges.length - 4}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0 ml-2">
-                      <p className="text-lg font-bold text-primary">{entry.score}<span className="text-xs text-on-surface-variant font-normal">/{entry.totalQuestions}</span></p>
-                      <p className={`text-xs font-semibold ${entry.percentage >= 80 ? 'text-success' : entry.percentage >= 60 ? 'text-warning' : 'text-error'}`}>
-                        {entry.percentage}%
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </CollapsibleSection>
-
-      {/* My Results */}
-      <CollapsibleSection title="My Results" icon="insights" defaultOpen={false}
-        badge={`${results.length + completedCourses.length} total`}>
-        <div className="inline-flex bg-surface-container-low rounded-full p-1 mb-4 flex-wrap">
-          {[
-            { key: 'all', label: 'All Tests' },
-            { key: 'course', label: 'Course' },
-            { key: 'chapter', label: 'Chapter' },
-            { key: 'module', label: 'Module' },
-            { key: 'mode', label: 'Mode' },
-            { key: 'final', label: 'Final' },
-          ].map((t) => (
-            <button key={t.key}
-              onClick={() => setFilter(t.key)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                filter === t.key
-                  ? 'bg-primary text-on-primary shadow-sm'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-        {filter === 'course' ? (
-          completedCourses.length === 0 ? (
-            <div className="text-center py-8 text-on-surface-variant">
-              <span className="material-symbols-outlined text-[36px] mb-2">school</span>
-              <p className="text-sm font-medium">No completed courses yet.</p>
-              <p className="text-xs mt-1">Complete a course to see it here.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {completedCourses.map((c) => {
-                const s = getCourseScore(c.progress, c.dayCount)
-                const passed = s.overall >= 50
-                return (
-                  <div key={c.courseId} className="bg-surface border border-success/20 rounded-xl p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-on-surface truncate">{c.courseTitle}</p>
-                        <p className="text-[10px] text-on-surface-variant mt-0.5">{c.dayCount} days</p>
-                      </div>
-                      <div className={`shrink-0 ml-2 w-9 h-9 rounded-full flex items-center justify-center ${passed ? 'bg-success/20 text-success' : 'bg-error/10 text-error'}`}>
-                        <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings: "'FILL' 1"}}>{passed ? 'verified' : 'cancel'}</span>
+                      <div className="text-right shrink-0 ml-2">
+                        <p className="text-lg font-bold text-primary">{entry.score}<span className="text-xs text-on-surface-variant font-normal">/{entry.totalQuestions}</span></p>
+                        <p className={`text-xs font-semibold ${entry.percentage >= 80 ? 'text-success' : entry.percentage >= 60 ? 'text-warning' : 'text-error'}`}>
+                          {entry.percentage}%
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="text-center">
-                        <p className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface">{s.overall}%</p>
-                        <p className="text-[9px] text-on-surface-variant">Overall</p>
-                      </div>
-                      <div className="h-8 w-px bg-outline-variant/50" />
-                      <div className="text-center">
-                        <p className="text-xs font-semibold text-on-surface">{s.dailyRaw}/{s.dailyMax}</p>
-                        <p className="text-[9px] text-on-surface-variant">Daily</p>
-                      </div>
-                      <div className="h-8 w-px bg-outline-variant/50" />
-                      <div className="text-center">
-                        <p className="text-xs font-semibold text-on-surface">{s.finalRaw}/{s.finalMax}</p>
-                        <p className="text-[9px] text-on-surface-variant">Final</p>
-                      </div>
-                    </div>
-                    {passed && (
-                      <button onClick={() => setShowCertFor(c)}
-                        className="w-full flex items-center justify-center gap-1.5 bg-success/10 border border-success/20 rounded-lg py-2 text-xs font-bold text-success hover:bg-success/15 transition-all cursor-pointer active:scale-[0.97]">
-                        <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>download</span>
-                        Download Certificate
-                      </button>
-                    )}
                   </div>
                 )
               })}
             </div>
-          )
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-8 text-on-surface-variant">
-            <span className="material-symbols-outlined text-[36px] mb-2">insights</span>
-            <p className="text-sm font-medium">No results found.</p>
-            <p className="text-xs mt-1">Take a quiz to see your results here.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map((r) => (
-              <button key={r.id}
-                onClick={() => navigate(`/results/${r.id}`)}
-                className="w-full bg-surface border border-outline-variant rounded-xl p-4 hover:shadow-sm transition-all flex items-center justify-between active:scale-[0.98] cursor-pointer">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                    (r.percentage || 0) >= 80 ? 'bg-green-100' :
-                    (r.percentage || 0) >= 60 ? 'bg-yellow-100' : 'bg-red-100'
-                  }`}>
-                    <span className={`material-symbols-outlined text-[20px] ${
-                      (r.percentage || 0) >= 80 ? 'text-success' :
-                      (r.percentage || 0) >= 60 ? 'text-warning' : 'text-error'
-                    }`}>
-                      {(r.percentage || 0) >= 60 ? 'check_circle' : 'cancel'}
-                    </span>
-                  </div>
-                  <div className="text-left min-w-0">
-                    <h3 className="text-sm font-semibold text-on-surface truncate">{getResultTitle(r)}</h3>
-                    <p className="text-xs text-on-surface-variant">{formatDate(r.completedAt)}</p>
-                  </div>
-                </div>
-                <div className="text-right shrink-0 ml-3">
-                  <p className="text-sm font-bold text-primary">{r.score}<span className="text-xs text-on-surface-variant font-normal">/{r.totalQuestions}</span></p>
-                  <p className="text-xs text-on-surface-variant">{r.percentage}%</p>
-                  {r.xpEarned > 0 && <p className="text-[10px] text-warning font-semibold">+{r.xpEarned} XP</p>}
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </CollapsibleSection>
+          )}
+        </div>
+      )}
 
       {/* Certificate Modal */}
       {showCertFor && (
