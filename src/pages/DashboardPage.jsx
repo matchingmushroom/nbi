@@ -292,12 +292,14 @@ export default function DashboardPage() {
       </div>
 
       {/* My Courses — Ongoing */}
-      {enrolledCourses.length > 0 && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">My Courses</h3>
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">My Courses</h3>
+          {enrolledCourses.length > 0 && (
             <button onClick={() => navigate('/learn')} className="text-xs text-primary font-semibold hover:underline cursor-pointer">View All</button>
-          </div>
+          )}
+        </div>
+        {enrolledCourses.length > 0 ? (
           <div className="space-y-2">
             {enrolledCourses.map((c) => {
               const completed = c.progress.completedDays?.length || 0
@@ -325,8 +327,17 @@ export default function DashboardPage() {
               )
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="bg-surface border border-dashed border-outline-variant rounded-xl p-5 text-center">
+            <span className="material-symbols-outlined text-[32px] text-outline-variant">school</span>
+            <p className="text-sm text-on-surface-variant mt-1">No ongoing courses</p>
+            <button onClick={() => navigate('/learn')}
+              className="mt-3 bg-primary text-white px-5 py-2 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer">
+              Start Learning
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Completed Courses */}
       {completedCourses.length > 0 && (
