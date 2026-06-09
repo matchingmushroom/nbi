@@ -8,6 +8,8 @@ import { DAILY_MISSIONS, checkDailyMission } from '../lib/missions'
 import { FiUsers, FiFileText, FiBookOpen } from 'react-icons/fi'
 import { getAllCourses } from '../lib/steakService'
 import { getAllUsersCached, getAllResultsCached, getUserResultsCached } from '../lib/cache'
+import { getCourseScore } from '../lib/learnService'
+import Certificate from '../components/Certificate'
 
 export default function DashboardPage() {
   const { profile } = useAuth()
@@ -20,6 +22,8 @@ export default function DashboardPage() {
   const [completedMissions, setCompletedMissions] = useState([])
   const [quizToast, setQuizToast] = useState(null)
   const [enrolledCourses, setEnrolledCourses] = useState([])
+  const [completedCourses, setCompletedCourses] = useState([])
+  const [showCertFor, setShowCertFor] = useState(null)
 
   useEffect(() => {
     try {
@@ -80,7 +84,10 @@ export default function DashboardPage() {
                 return { courseId: cid, courseTitle: meta?.courseTitle || cid, dayCount: meta?.dayCount || 0, progress: prog }
               })
               .filter((c) => c.dayCount > 0)
-            if (!cancelled) setEnrolledCourses(enrolled)
+            if (!cancelled) {
+              setEnrolledCourses(enrolled.filter(c => c.progress.courseStatus !== 'CERTIFIED'))
+              setCompletedCourses(enrolled.filter(c => c.progress.courseStatus === 'CERTIFIED'))
+            }
           }
         }
       } catch (e) {
@@ -174,9 +181,26 @@ export default function DashboardPage() {
             <p className="text-xs text-on-surface-variant mt-1">Bulk add questions from CSV</p>
           </button>
         </div>
+      {/* Certificate Modal */}
+      {showCertFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowCertFor(null)}>
+          <div className="max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-2xl overflow-hidden shadow-xl">
+              <Certificate
+                userName={profile?.displayName || profile?.email || 'Student'}
+                courseTitle={showCertFor.courseTitle}
+                score={(() => { const s = getCourseScore(showCertFor.progress); return s.overall })()}
+                overallMax={100}
+                courseDuration={`${showCertFor.dayCount} days`}
+                onClose={() => setShowCertFor(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       </div>
-    )
-  }
+  )
+}
 
   return (
       <div className="h-full overflow-y-auto p-4 md:p-8 max-w-5xl mx-auto">
@@ -267,7 +291,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Enrolled Courses */}
+      {/* My Courses — Ongoing */}
       {enrolledCourses.length > 0 && (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
@@ -304,6 +328,57 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Completed Courses */}
+      {completedCourses.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="material-symbols-outlined text-[14px] text-success" style={{fontVariationSettings: "'FILL' 1"}}>verified</span>
+            <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Completed Courses</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {completedCourses.map((c) => {
+              const { overall, dailyRaw, dailyMax, finalRaw, finalMax } = getCourseScore(c.progress)
+              const passed = overall >= 50
+              return (
+                <div key={c.courseId} className="bg-surface border border-success/20 rounded-xl p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-on-surface truncate">{c.courseTitle}</p>
+                      <p className="text-[10px] text-on-surface-variant mt-0.5">{c.dayCount} days</p>
+                    </div>
+                    <div className={`shrink-0 ml-2 w-9 h-9 rounded-full flex items-center justify-center ${passed ? 'bg-success/20 text-success' : 'bg-error/10 text-error'}`}>
+                      <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings: "'FILL' 1"}}>{passed ? 'verified' : 'cancel'}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="text-center">
+                      <p className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface">{overall}%</p>
+                      <p className="text-[9px] text-on-surface-variant">Overall</p>
+                    </div>
+                    <div className="h-8 w-px bg-outline-variant/50" />
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-on-surface">{dailyRaw}/{dailyMax}</p>
+                      <p className="text-[9px] text-on-surface-variant">Daily</p>
+                    </div>
+                    <div className="h-8 w-px bg-outline-variant/50" />
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-on-surface">{finalRaw}/{finalMax}</p>
+                      <p className="text-[9px] text-on-surface-variant">Final</p>
+                    </div>
+                  </div>
+                  {passed && (
+                    <button onClick={() => setShowCertFor(c)} className="w-full flex items-center justify-center gap-1.5 bg-success/10 border border-success/20 rounded-lg py-2 text-xs font-bold text-success hover:bg-success/15 transition-all cursor-pointer active:scale-[0.97]">
+                      <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>download</span>
+                      Download Certificate
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <div className="bg-surface border border-outline-variant rounded-xl p-4">
@@ -312,7 +387,7 @@ export default function DashboardPage() {
         </div>
         <div className="bg-surface border border-outline-variant rounded-xl p-4">
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Courses</span>
-          <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{enrolledCourses.filter((c) => c.progress.completedDays?.length >= c.dayCount).length}</p>
+          <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{enrolledCourses.filter((c) => c.progress.completedDays?.length >= c.dayCount).length + completedCourses.length}</p>
         </div>
         <div className="bg-surface border border-outline-variant rounded-xl p-4">
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Avg</span>

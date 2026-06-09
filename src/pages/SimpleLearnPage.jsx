@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
@@ -9,6 +10,7 @@ import {
   isFullyComplete, needsReview, accumulateReviewScore,
 } from '../lib/learnService'
 import { getQuizSettings, canAccessPremium, getEnrollmentLimit } from '../lib/quizSettings'
+import { resetCourseProgress } from '../lib/steakService'
 import { awardLearningXP } from '../lib/gamification'
 import QuizRunner from '../components/QuizRunner'
 import Certificate from '../components/Certificate'
@@ -20,6 +22,7 @@ const VIEWS = { CATALOG: 'catalog', DASHBOARD: 'dashboard', READING: 'reading', 
 
 export default function SimpleLearnPage() {
   const { profile, refreshProfile } = useAuth()
+  const navigate = useNavigate()
   const [view, setView] = useState(VIEWS.CATALOG)
   const [courses, setCourses] = useState([])
   const [learning, setLearning] = useState(null)
@@ -106,7 +109,7 @@ export default function SimpleLearnPage() {
     const read = progress.readDays?.includes(conceptId)
     const effUnlocked = bypassLock ? 999 : (progress.unlockedDay || 1)
     if (day > effUnlocked) return
-    if (read) return
+    if (read) { startReading(day); return }
     if (day > 1 && needsReview(day, progress.readDays, progress.reviewedDays)) {
       const prevDayData = days.find((d) => d.day === day - 1)
       if (prevDayData) {
@@ -195,6 +198,8 @@ export default function SimpleLearnPage() {
 
   const startCertQuiz = async () => {
     if (!courseId) return
+    if (progress?.certAttempts >= 2) return
+    if (progress?.certNextAttemptAt && new Date(progress.certNextAttemptAt) > new Date()) return
     setView(VIEWS.CERT_QUIZ)
     const course = courses.find((c) => c.courseId === courseId)
     const qs = await getCertificationQuestions(courseId, course?.courseTitle)
@@ -210,8 +215,20 @@ export default function SimpleLearnPage() {
         const learning = data.learning || { enrolledCourses: {} }
         if (learning.enrolledCourses?.[courseId]) {
           const course = learning.enrolledCourses[courseId]
-          course.courseStatus = 'CERTIFIED'
-          course.finalExamRaw = Math.min(80, Math.round((rawScore / totalQ) * 80))
+          const pct = totalQ > 0 ? rawScore / totalQ : 0
+          course.finalExamRaw = Math.min(80, Math.round(pct * 80))
+          if (pct >= 0.5) {
+            course.courseStatus = 'CERTIFIED'
+          } else {
+            const attempts = (course.certAttempts || 0) + 1
+            course.certAttempts = attempts
+            if (attempts < 2) {
+              const next = new Date()
+              next.setDate(next.getDate() + 1)
+              next.setHours(0, 0, 0, 0)
+              course.certNextAttemptAt = next.toISOString()
+            }
+          }
           await setDoc(ref, { learning }, { merge: true })
         }
       }
@@ -278,12 +295,17 @@ export default function SimpleLearnPage() {
               const readOnly = !done && readDays.includes(conceptId)
               const locked = day > effUnlocked
               const isNext = day === nextUnread?.day
+              const isCertified = progress?.courseStatus === 'CERTIFIED'
               let cls = 'bg-surface-container-low text-on-surface-variant'
               let icon = String(day)
               let clickable = false
-              if (done) { cls = 'bg-success/70 text-white cursor-default'; icon = '✓' }
-              else if (readOnly) { cls = 'bg-[#00288e] text-white cursor-default'; icon = '✓' }
-              else if (locked) { cls = 'bg-outline-variant/30 text-on-surface-variant/40 cursor-default'; icon = '🔒' }
+              if (done) {
+                cls = isCertified ? 'bg-success/70 text-white cursor-default' : 'bg-success/70 text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'
+                icon = '✓'; clickable = !isCertified
+              } else if (readOnly) {
+                cls = isCertified ? 'bg-[#00288e] text-white cursor-default' : 'bg-[#00288e] text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'
+                icon = '✓'; clickable = !isCertified
+              } else if (locked) { cls = 'bg-outline-variant/30 text-on-surface-variant/40 cursor-default'; icon = '🔒' }
               else if (isNext) { cls = 'bg-primary text-white ring-2 ring-primary ring-offset-2 cursor-pointer hover:opacity-90 active:scale-[0.92] animate-glow-pulse'; clickable = true }
               else if (!locked) { cls = 'bg-primary text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'; clickable = true }
               return clickable ? (
@@ -296,7 +318,54 @@ export default function SimpleLearnPage() {
           </div>
         </div>
 
-        {certWindowEnd && progress?.courseStatus === 'LESSONS_COMPLETED' && progress?.courseStatus !== 'CERTIFIED' && (
+        {(() => {
+          const attempts = progress?.certAttempts || 0
+          const nextAttemptAt = progress?.certNextAttemptAt ? new Date(progress.certNextAttemptAt) : null
+          const blocked = nextAttemptAt && nextAttemptAt > new Date()
+
+          if (attempts >= 2) {
+            return (
+              <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in border border-warning/30">
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-warning text-[28px]">report</span>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-sm text-on-surface">Attempts Exhausted</h3>
+                    <p className="text-xs text-on-surface-variant mt-0.5">You've used both certification attempts. Re-take the course to try again.</p>
+                    {certWindowEnd && certRemainingDays !== null && certRemainingDays > 0 && (
+                      <p className="text-[10px] text-on-surface-variant mt-0.5">Window closes in {certRemainingDays} day{certRemainingDays !== 1 ? 's' : ''} (until {certWindowEnd.toLocaleDateString()})</p>
+                    )}
+                    <button onClick={() => { resetCourseProgress(profile.uid, courseId).then(() => navigate('/learn')) }}
+                      className="mt-3 bg-warning text-white px-5 py-2 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer">
+                      <span className="material-symbols-outlined text-[16px] align-middle mr-1">refresh</span>
+                      Re-take Course
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          if (blocked) {
+            return (
+              <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in">
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-primary text-[28px]">lock_clock</span>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-sm text-on-surface">Certification Exam — Retry Pending</h3>
+                    <p className="text-xs text-on-surface-variant mt-0.5">Next attempt available on <strong>{nextAttemptAt.toLocaleDateString()}</strong></p>
+                    <div className="mt-3 bg-outline-variant/50 text-on-surface-variant px-5 py-2 rounded-xl text-sm font-medium inline-block">
+                      Start Certification
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          return null
+        })()}
+
+        {certWindowEnd && progress?.courseStatus === 'LESSONS_COMPLETED' && progress?.courseStatus !== 'CERTIFIED' && !(progress?.certAttempts >= 2) && !(progress?.certNextAttemptAt && new Date(progress.certNextAttemptAt) > new Date()) && (
           <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in">
             <div className="flex items-start gap-3">
               <span className="material-symbols-outlined text-primary text-[28px] animate-timer-pulse">timer</span>
@@ -316,7 +385,7 @@ export default function SimpleLearnPage() {
           </div>
         )}
 
-        {days.length > 0 && fullyCompleted === days.length && progress?.courseStatus !== 'CERTIFIED' && (
+        {days.length > 0 && fullyCompleted === days.length && progress?.courseStatus !== 'CERTIFIED' && !(progress?.certAttempts >= 2) && !(progress?.certNextAttemptAt && new Date(progress.certNextAttemptAt) > new Date()) && (
           <div className="glass-dark rounded-xl p-5 text-center animate-fade-scale-in">
             <span className="material-symbols-outlined text-primary text-[42px] animate-combo-bounce">celebration</span>
             <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-2 gradient-text">Course Complete!</h3>
@@ -332,7 +401,7 @@ export default function SimpleLearnPage() {
             <span className="material-symbols-outlined text-primary text-[42px] animate-combo-bounce">verified</span>
             <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface mt-2 gradient-text">Certified!</h3>
             <p className="text-xs text-on-surface-variant mt-1">Final score: {scoreData.overall}/{scoreData.overallMax} ({scoreData.overall}%)</p>
-            {scoreData.overall >= 70 && (
+            {scoreData.overall >= 50 && (
               <button onClick={() => setShowCert(true)}
                 className="mt-3 bg-primary text-white px-5 py-2 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer">
                 <span className="material-symbols-outlined text-[18px] align-middle mr-1">reward</span>
@@ -418,15 +487,28 @@ export default function SimpleLearnPage() {
             </button>
           </div>
         )}
-        {slideIndex === totalSlides - 1 && (
-          <button onClick={handleMarkRead}
-            className="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer animate-glow-pulse">
-            <span className="flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">check_circle</span>
-              Mark Lesson as Completed
-            </span>
-          </button>
-        )}
+        {slideIndex === totalSlides - 1 && (() => {
+          const alreadyRead = progress?.readDays?.includes(`day_${String(currentDay).padStart(2, '0')}`)
+          if (alreadyRead) {
+            return (
+              <div className="w-full bg-outline-variant/30 text-on-surface-variant py-3 rounded-xl text-sm font-medium text-center">
+                <span className="flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">visibility</span>
+                  Read-only review
+                </span>
+              </div>
+            )
+          }
+          return (
+            <button onClick={handleMarkRead}
+              className="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer animate-glow-pulse">
+              <span className="flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                Mark Lesson as Completed
+              </span>
+            </button>
+          )
+        })()}
       </div>
     )
   }
