@@ -122,6 +122,15 @@ export default function LeaderboardPage() {
     fetch()
   }, [profile])
 
+  useEffect(() => {
+    const p = new URLSearchParams(location.search)
+    const f = p.get('filter')
+    if (f && ['all', 'course', 'chapter', 'module', 'mode', 'final'].includes(f)) {
+      setFilter(f)
+      setTab('results')
+    }
+  }, [location.search])
+
   const getQuizType = (r) => r.quizType || r.testType || 'chapter'
 
   const getResultTitle = (r) => {
