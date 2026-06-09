@@ -22,8 +22,8 @@ function CollapsibleSection({ title, icon, defaultOpen, children, badge }) {
           expand_more
         </span>
       </button>
-      <div className={`transition-all duration-200 overflow-hidden ${open ? 'max-h-[9999px] opacity-100' : 'max-h-0 opacity-0'}`}>
-        <div className="px-4 pb-4">
+      <div className={`transition-all duration-200 overflow-hidden ${open ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="px-4 pb-4 overflow-y-auto max-h-[560px]">
           {children}
         </div>
       </div>
