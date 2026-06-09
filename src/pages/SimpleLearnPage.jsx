@@ -332,6 +332,13 @@ export default function SimpleLearnPage() {
           </div>
         </div>
 
+        {fullyCompleted === 0 && progress?.courseStatus === 'ENROLLED' && !bypassLock && (
+          <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in text-center">
+            <p className="text-sm font-semibold text-on-surface">
+              Welcome aboard! 🎉 Ready to dive in? Start your very first lesson now.
+            </p>
+          </div>
+        )}
         {fullyCompleted > 0 && fullyCompleted < days.length && progress?.courseStatus !== 'CERTIFIED' && !bypassLock && (
           <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in text-center">
             <p className="text-sm font-semibold text-on-surface">
