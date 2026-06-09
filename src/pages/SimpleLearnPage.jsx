@@ -170,6 +170,8 @@ export default function SimpleLearnPage() {
       correct: q.correctAnswer, isCorrect: ans[i] === q.correctAnswer,
       explanation: q.explanation,
     }))
+    setView(VIEWS.REWARD)
+    setReviewResult({ score, total: 3, details, reviewedDay: currentDay })
     const result = await submitReview(profile.uid, courseId, currentDay)
     if (result.error) { alert(result.error); setView(VIEWS.DASHBOARD); return }
     await accumulateReviewScore(profile.uid, courseId, score)
@@ -182,8 +184,6 @@ export default function SimpleLearnPage() {
     setDays(d)
     await fetchLearning(courseId)
     await refreshProfile()
-    setReviewResult({ score, total: 3, details, reviewedDay: currentDay })
-    setView(VIEWS.REWARD)
   }
 
   const continueToReading = () => {
