@@ -652,36 +652,35 @@ export default function SimpleLearnPage() {
     content = <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading...</p></div>
   } else if (view === VIEWS.CATALOG) {
     content = (
-      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto animate-fade-scale-in">
+      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-5xl mx-auto animate-fade-scale-in">
         <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface mb-1">My Learning</h1>
         <p className="text-sm text-on-surface-variant mb-6">Choose a course to start learning</p>
         {courses.length === 0 && <p className="text-center py-12 text-on-surface-variant text-sm">No courses available yet.</p>}
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {courses.map((c, idx) => {
             const enrolled = learning?.enrolledCourses?.[c.courseId]
             const stagger = `animate-slide-up-in animate-stagger-${Math.min(idx + 1, 5)}`
             return (
-              <div key={c.courseId} className={`glass rounded-xl p-5 card-hover ${stagger}`}>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-on-surface flex items-center gap-2">
-                      {c.courseTitle}
-                      {premiumCourses.includes(c.courseId) && (
-                        <span className="shrink-0 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Premium</span>
-                      )}
-                    </h3>
-                    <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[14px]">calendar_month</span>
-                      {c.dayCount} day{c.dayCount !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <button onClick={() => enrolled ? enterCourse(c.courseId) : handleEnroll(c.courseId)}
-                    className={`shrink-0 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer active:scale-[0.95] ${enrolled ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30'}`}>
-                    {enrolled ? (
-                      <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-[16px]">arrow_forward</span>Continue</span>
-                    ) : 'Enroll'}
-                  </button>
+              <div key={c.courseId} className={`glass rounded-xl p-5 card-hover flex flex-col ${stagger}`}>
+                <div className="flex-1">
+                  <span className="material-symbols-outlined text-[36px] text-primary/60 mb-3" style={{fontVariationSettings: "'FILL' 1"}}>school</span>
+                  <h3 className="font-semibold text-on-surface flex items-center gap-2">
+                    {c.courseTitle}
+                    {premiumCourses.includes(c.courseId) && (
+                      <span className="shrink-0 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Premium</span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-on-surface-variant mt-2 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[14px]">calendar_month</span>
+                    {c.dayCount} day{c.dayCount !== 1 ? 's' : ''}
+                  </p>
                 </div>
+                <button onClick={() => enrolled ? enterCourse(c.courseId) : handleEnroll(c.courseId)}
+                  className={`mt-4 w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer active:scale-[0.95] ${enrolled ? 'bg-primary text-on-primary hover:opacity-90 flex items-center justify-center gap-1.5' : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30'}`}>
+                  {enrolled ? (
+                    <span className="flex items-center justify-center gap-1.5"><span className="material-symbols-outlined text-[16px]">arrow_forward</span>Continue</span>
+                  ) : 'Enroll'}
+                </button>
               </div>
             )
           })}
