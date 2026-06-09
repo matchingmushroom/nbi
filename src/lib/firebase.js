@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore'
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: "AIzaSyDy-37FHq_J6ObSK2KrGup94nwWjcEn65s",
@@ -14,6 +14,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
-export const db = getFirestore(app)
-
-enableIndexedDbPersistence(db, { cacheSizeBytes: 50000000 }).catch(() => {})
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+    cacheSizeBytes: 50000000,
+  }),
+})
