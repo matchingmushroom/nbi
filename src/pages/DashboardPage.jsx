@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [enrolledCourses, setEnrolledCourses] = useState([])
   const [completedCourses, setCompletedCourses] = useState([])
   const [showCertFor, setShowCertFor] = useState(null)
+  const [courseTitles, setCourseTitles] = useState({})
 
   useEffect(() => {
     try {
@@ -73,10 +74,14 @@ export default function DashboardPage() {
           const todayResults = all.filter(r => (r.completedAt || '').split('T')[0] === todayStr)
           setCompletedMissions(DAILY_MISSIONS.filter(m => checkDailyMission(m.id, todayResults)).map(m => m.id))
 
+          const allCourses = await getAllCourses()
+          const titleMap = {}
+          allCourses.forEach((c) => { titleMap[c.courseId] = c.courseTitle || c.courseId })
+          if (!cancelled) setCourseTitles(titleMap)
+
           const learning = profile.learning || {}
           const enrolledIds = Object.keys(learning.enrolledCourses || {})
           if (enrolledIds.length) {
-            const allCourses = await getAllCourses()
             const enrolled = enrolledIds
               .map((cid) => {
                 const meta = allCourses.find((c) => c.courseId === cid)
@@ -100,6 +105,7 @@ export default function DashboardPage() {
 
   const getResultTitle = (r) => {
     const qt = r.quizType || r.testType || ''
+    if (qt === 'certification' || qt === 'Certification') return courseTitles[r.chapter] || r.chapter || 'Certification'
     if (qt === 'chapter') return r.chapter || 'Chapter Test'
     if (qt === 'module') return r.module || 'Module Test'
     if (qt === 'mode') {
