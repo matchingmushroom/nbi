@@ -44,6 +44,7 @@ export default function SimpleLearnPage() {
   const [pendingReadDay, setPendingReadDay] = useState(null)
   const [xpToast, setXpToast] = useState(null)
   const [premiumCourses, setPremiumCourses] = useState([])
+  const [quizSettings, setQuizSettings] = useState(null)
   const touchStartX = useRef(0)
 
   const fetchLearning = async (cid) => {
@@ -67,6 +68,7 @@ export default function SimpleLearnPage() {
       setLoading(false)
       setBypassLock(s.bypassDailyLearningLock)
       setPremiumCourses(s.premiumCourses || [])
+      setQuizSettings(s)
     })
   }, [profile?.uid])
 
@@ -714,7 +716,7 @@ export default function SimpleLearnPage() {
       content = (
         <QuizRunner
           questions={certQuestions}
-          config={{ quizType: 'Certification', chapter: courseId, module: 'Course', mode: 'Certification' }}
+          config={{ quizType: 'Certification', chapter: courseId, module: 'Course', mode: 'Certification', timerMinutes: quizSettings?.certificationTimerMinutes || 30 }}
           onFinish={handleCertFinish}
         />
       )
