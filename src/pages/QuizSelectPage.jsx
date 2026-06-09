@@ -48,6 +48,7 @@ export default function QuizSelectPage() {
       const modes = {}
 
       qs.forEach((q) => {
+        if (q.module === 'Course' && q.mode === 'Certification') return
         const mod = q.module || 'General'
         const ch = q.chapter || 'Unknown'
         const mode = q.mode || 'Unknown'
