@@ -114,7 +114,7 @@ export default function AdminCoursesPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-6">
+    <div className="h-full overflow-y-auto p-4 md:p-6 max-w-3xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface">Manage Courses</h1>
