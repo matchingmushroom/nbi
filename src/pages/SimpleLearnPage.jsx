@@ -333,17 +333,35 @@ export default function SimpleLearnPage() {
         </div>
 
         {fullyCompleted === 0 && progress?.courseStatus === 'ENROLLED' && !bypassLock && (
-          <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in text-center">
-            <p className="text-sm font-semibold text-on-surface">
-              Welcome aboard! 🎉 Ready to dive in? Start your very first lesson now.
-            </p>
+          <div className="glass-strong rounded-xl p-5 mb-4 animate-fade-scale-in border border-primary/10 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent pointer-events-none" />
+            <div className="flex items-start gap-4 relative">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shrink-0 shadow-md shadow-primary/20">
+                <span className="material-symbols-outlined text-white text-[22px]">celebration</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-bold text-on-surface">Welcome aboard!</h4>
+                <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                  Ready to dive in? Start your very first lesson now and begin your learning journey.
+                </p>
+              </div>
+            </div>
           </div>
         )}
         {fullyCompleted > 0 && fullyCompleted < days.length && progress?.courseStatus !== 'CERTIFIED' && !bypassLock && (
-          <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in text-center">
-            <p className="text-sm font-semibold text-on-surface">
-              You're making great progress! Day {fullyCompleted} is completed. 🚀 See you tomorrow for Day {fullyCompleted + 1} ⏳
-            </p>
+          <div className="glass-strong rounded-xl p-5 mb-4 animate-fade-scale-in border border-primary/10 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent pointer-events-none" />
+            <div className="flex items-start gap-4 relative">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-secondary to-emerald-500 flex items-center justify-center shrink-0 shadow-md shadow-secondary/20">
+                <span className="material-symbols-outlined text-white text-[22px]" style={{fontVariationSettings: "'FILL' 1"}}>rocket_launch</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-bold text-on-surface">You're making great progress!</h4>
+                <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                  Day {fullyCompleted} is completed. 🚀 See you tomorrow for Day {fullyCompleted + 1} ⏳
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
