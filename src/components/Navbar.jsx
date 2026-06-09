@@ -5,7 +5,6 @@ const studentLinks = [
   { to: '/dashboard', icon: 'dashboard', label: 'Home' },
   { to: '/mylearn', icon: 'school', label: 'Learn' },
   { to: '/quiz/select', icon: 'list_alt', label: 'Exam' },
-  { to: '/results', icon: 'insights', label: 'Stats' },
   { to: '/leaderboard', icon: 'leaderboard', label: 'Rank' },
   { to: '/profile', icon: 'person', label: 'Profile' },
 ]
@@ -23,7 +22,6 @@ const moderatorLinks = [
   { to: '/dashboard', icon: 'dashboard', label: 'Home' },
   { to: '/mylearn', icon: 'school', label: 'Learn' },
   { to: '/quiz/select', icon: 'list_alt', label: 'Exam' },
-  { to: '/results', icon: 'insights', label: 'Stats' },
   { to: '/admin/questions', icon: 'quiz', label: 'Questions' },
   { to: '/admin/courses', icon: 'school', label: 'Courses' },
   { to: '/profile', icon: 'person', label: 'Profile' },
