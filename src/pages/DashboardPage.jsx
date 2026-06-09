@@ -296,7 +296,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">My Courses</h3>
           {enrolledCourses.length > 0 && (
-            <button onClick={() => navigate('/learn')} className="text-xs text-primary font-semibold hover:underline cursor-pointer">View All</button>
+            <button onClick={() => navigate('/mylearn')} className="text-xs text-primary font-semibold hover:underline cursor-pointer">View All</button>
           )}
         </div>
         {enrolledCourses.length > 0 ? (
@@ -307,7 +307,7 @@ export default function DashboardPage() {
               const pct = total > 0 ? Math.round((completed / total) * 100) : 0
               const steak = c.progress.currentSteak || 0
               return (
-                <button key={c.courseId} onClick={() => navigate('/learn')} className="w-full bg-surface border border-outline-variant rounded-xl p-3 text-left transition-all active:scale-[0.98] cursor-pointer">
+                <button key={c.courseId} onClick={() => navigate('/mylearn')} className="w-full bg-surface border border-outline-variant rounded-xl p-3 text-left transition-all active:scale-[0.98] cursor-pointer">
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-sm font-semibold text-on-surface truncate">{c.courseTitle}</p>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -331,7 +331,7 @@ export default function DashboardPage() {
           <div className="bg-surface border border-dashed border-outline-variant rounded-xl p-5 text-center">
             <span className="material-symbols-outlined text-[32px] text-outline-variant">school</span>
             <p className="text-sm text-on-surface-variant mt-1">No ongoing courses</p>
-            <button onClick={() => navigate('/learn')}
+            <button onClick={() => navigate('/mylearn')}
               className="mt-3 bg-primary text-white px-5 py-2 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer">
               Start Learning
             </button>
@@ -417,7 +417,7 @@ export default function DashboardPage() {
           <h3 className="font-['Hanken_Grotesk'] text-lg font-bold">Take a Quiz</h3>
           <p className="text-sm text-white/80 mt-1">Chapter, Module, Mode, or Final Mock Test</p>
         </button>
-        <button onClick={() => navigate('/learn')} className="bg-secondary text-white p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm">
+        <button onClick={() => navigate('/mylearn')} className="bg-secondary text-white p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm">
           <span className="material-symbols-outlined text-[32px] mb-3">school</span>
           <h3 className="font-['Hanken_Grotesk'] text-lg font-bold">Enroll in Course</h3>
           <p className="text-sm text-white/80 mt-1">Micro-learning with daily concepts and quizzes</p>

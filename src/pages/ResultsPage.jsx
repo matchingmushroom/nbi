@@ -82,7 +82,7 @@ export default function ResultsPage() {
         <div className="mb-6 bg-surface border border-outline-variant rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">My Courses</h3>
-            <button onClick={() => navigate('/learn')} className="text-xs text-primary font-semibold hover:underline cursor-pointer">View All</button>
+            <button onClick={() => navigate('/mylearn')} className="text-xs text-primary font-semibold hover:underline cursor-pointer">View All</button>
           </div>
           <div className="space-y-2">
             {enrolledCourses.map((c) => {
@@ -92,7 +92,7 @@ export default function ResultsPage() {
               const steak = c.progress.currentSteak || 0
               const isComplete = completed >= total
               return (
-                <button key={c.courseId} onClick={() => navigate('/learn')} className="w-full text-left transition-all active:scale-[0.98] cursor-pointer">
+                <button key={c.courseId} onClick={() => navigate('/mylearn')} className="w-full text-left transition-all active:scale-[0.98] cursor-pointer">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5 min-w-0">
                       {isComplete && <span className="material-symbols-outlined text-[14px] text-success shrink-0" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>}

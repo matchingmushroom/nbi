@@ -334,7 +334,7 @@ export default function SimpleLearnPage() {
                     {certWindowEnd && certRemainingDays !== null && certRemainingDays > 0 && (
                       <p className="text-[10px] text-on-surface-variant mt-0.5">Window closes in {certRemainingDays} day{certRemainingDays !== 1 ? 's' : ''} (until {certWindowEnd.toLocaleDateString()})</p>
                     )}
-                    <button onClick={() => { resetCourseProgress(profile.uid, courseId).then(() => navigate('/learn')) }}
+                    <button onClick={() => { resetCourseProgress(profile.uid, courseId).then(() => navigate('/mylearn')) }}
                       className="mt-3 bg-warning text-white px-5 py-2 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.95] transition-all cursor-pointer">
                       <span className="material-symbols-outlined text-[16px] align-middle mr-1">refresh</span>
                       Re-take Course
