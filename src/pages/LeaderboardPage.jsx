@@ -335,7 +335,7 @@ export default function LeaderboardPage() {
       {/* My Results */}
       <CollapsibleSection title="My Results" icon="insights" defaultOpen={false}
         badge={`${results.length} total`}>
-        <div className="flex gap-2 mb-4 flex-wrap">
+        <div className="inline-flex bg-surface-container-low rounded-full p-1 mb-4">
           {[
             { key: 'all', label: 'All Tests' },
             { key: 'chapter', label: 'Chapter' },
@@ -345,10 +345,10 @@ export default function LeaderboardPage() {
           ].map((t) => (
             <button key={t.key}
               onClick={() => setFilter(t.key)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 filter === t.key
-                  ? 'bg-primary text-on-primary'
-                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+                  ? 'bg-primary text-on-primary shadow-sm'
+                  : 'text-on-surface-variant hover:text-on-surface'
               }`}>
               {t.label}
             </button>
