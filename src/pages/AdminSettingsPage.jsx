@@ -36,17 +36,13 @@ export default function AdminSettingsPage() {
   const [linkChapter, setLinkChapter] = useState('')
   const [cleaning, setCleaning] = useState(false)
   const [cleanResult, setCleanResult] = useState(null)
-  const [selectedChapters, setSelectedChapters] = useState([])
-
   useEffect(() => {
     Promise.all([getQuizSettings(), getAllCourses(), getAllQuestionsCached()]).then(([s, c, q]) => {
       s.courseLinkedQuizzes = s.courseLinkedQuizzes || {}
       s.premiumCourses = s.premiumCourses || []
-      s.premiumQuizChapters = s.premiumQuizChapters || []
       setSettings(s)
       setCourses(c)
       setQuestions(q)
-      setSelectedChapters(s.premiumQuizChapters || [])
       if (c.length > 0) setSelectedCourse(c[0].courseId)
       setLoading(false)
     })
@@ -108,16 +104,6 @@ export default function AdminSettingsPage() {
         [selectedCourse]: (prev.courseLinkedQuizzes[selectedCourse] || []).filter((_, i) => i !== idx)
       }
     }))
-  }
-
-  const allChapters = [...new Set(questions.filter((q) => q.chapter).map((q) => q.chapter))].sort()
-
-  const toggleChapter = (ch) => {
-    const updated = selectedChapters.includes(ch)
-      ? selectedChapters.filter((c) => c !== ch)
-      : [...selectedChapters, ch]
-    setSelectedChapters(updated)
-    setSettings((prev) => ({ ...prev, premiumQuizChapters: updated }))
   }
 
   if (loading) return <div className="p-4 md:p-6"><div className="animate-pulse space-y-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-12 bg-gray-200 rounded-lg" />)}</div></div>
@@ -315,31 +301,6 @@ export default function AdminSettingsPage() {
             <p className="text-[10px] text-on-surface-variant mt-0.5">Default: 5</p>
           </div>
         </div>
-      </div>
-
-      <div className="bg-surface border border-outline-variant rounded-xl p-5 space-y-4">
-        <h2 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Premium Quiz Chapters</h2>
-        <p className="text-xs text-on-surface-variant -mt-2">
-          Selected quiz chapters will only be accessible to StudentX users. Unchecked chapters are available to all students.
-        </p>
-        {allChapters.length === 0 ? (
-          <p className="text-sm text-on-surface-variant">No chapters found in question bank.</p>
-        ) : (
-          <div className="max-h-64 overflow-y-auto space-y-1.5 border border-outline-variant rounded-lg p-3">
-            {allChapters.map((ch) => (
-              <label key={ch} className="flex items-center gap-3 cursor-pointer py-1 px-2 rounded-lg hover:bg-[#f0f3ff] transition-colors">
-                <input
-                  type="checkbox"
-                  checked={selectedChapters.includes(ch)}
-                  onChange={() => toggleChapter(ch)}
-                  className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary"
-                />
-                <span className="text-sm text-on-surface">{ch}</span>
-              </label>
-            ))}
-          </div>
-        )}
-        <p className="text-[10px] text-on-surface-variant">{selectedChapters.length} chapter{selectedChapters.length !== 1 ? 's' : ''} marked premium</p>
       </div>
 
       <div className="bg-surface border border-outline-variant rounded-xl p-5 space-y-4">
