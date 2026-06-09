@@ -332,6 +332,14 @@ export default function SimpleLearnPage() {
           </div>
         </div>
 
+        {fullyCompleted > 0 && fullyCompleted < days.length && progress?.courseStatus !== 'CERTIFIED' && !bypassLock && (
+          <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in text-center">
+            <p className="text-sm font-semibold text-on-surface">
+              Day {fullyCompleted} crushed! 🚀 See you tomorrow for Day {fullyCompleted + 1} ⏳
+            </p>
+          </div>
+        )}
+
         {(() => {
           const attempts = progress?.certAttempts || 0
           const nextAttemptAt = progress?.certNextAttemptAt ? new Date(progress.certNextAttemptAt) : null
