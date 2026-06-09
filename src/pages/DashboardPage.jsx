@@ -345,58 +345,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Completed Courses */}
-      {completedCourses.length > 0 && (
-        <div className="mb-4">
-          <div className="flex items-center gap-1.5 mb-2">
-            <span className="material-symbols-outlined text-[14px] text-success" style={{fontVariationSettings: "'FILL' 1"}}>verified</span>
-            <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Completed Courses</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {completedCourses.map((c) => {
-              const { overall, dailyRaw, dailyMax, finalRaw, finalMax } = getCourseScore(c.progress)
-              const passed = overall >= 50
-              return (
-                <div key={c.courseId}
-                  onClick={() => navigate('/leaderboard?filter=course')}
-                  className="bg-surface border border-success/20 rounded-xl p-4 cursor-pointer hover:shadow-sm transition-all active:scale-[0.98]">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-on-surface truncate">{c.courseTitle}</p>
-                      <p className="text-[10px] text-on-surface-variant mt-0.5">{c.dayCount} days</p>
-                    </div>
-                    <div className={`shrink-0 ml-2 w-9 h-9 rounded-full flex items-center justify-center ${passed ? 'bg-success/20 text-success' : 'bg-error/10 text-error'}`}>
-                      <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings: "'FILL' 1"}}>{passed ? 'verified' : 'cancel'}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="text-center">
-                      <p className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface">{overall}%</p>
-                      <p className="text-[9px] text-on-surface-variant">Overall</p>
-                    </div>
-                    <div className="h-8 w-px bg-outline-variant/50" />
-                    <div className="text-center">
-                      <p className="text-xs font-semibold text-on-surface">{dailyRaw}/{dailyMax}</p>
-                      <p className="text-[9px] text-on-surface-variant">Daily</p>
-                    </div>
-                    <div className="h-8 w-px bg-outline-variant/50" />
-                    <div className="text-center">
-                      <p className="text-xs font-semibold text-on-surface">{finalRaw}/{finalMax}</p>
-                      <p className="text-[9px] text-on-surface-variant">Final</p>
-                    </div>
-                  </div>
-                  {passed && (
-                    <button onClick={(e) => { e.stopPropagation(); setShowCertFor(c) }} className="w-full flex items-center justify-center gap-1.5 bg-success/10 border border-success/20 rounded-lg py-2 text-xs font-bold text-success hover:bg-success/15 transition-all cursor-pointer active:scale-[0.97]">
-                      <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>download</span>
-                      Download Certificate
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
