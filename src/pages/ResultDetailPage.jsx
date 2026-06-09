@@ -3,28 +3,18 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { formatDate } from '../lib/utils'
-import { getAllQuestionsCached } from '../lib/cache'
 
 export default function ResultDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [result, setResult] = useState(null)
-  const [questionMap, setQuestionMap] = useState({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetch = async () => {
       const snap = await getDoc(doc(db, 'results', id))
       if (!snap.exists()) { navigate('/results'); return }
-      const data = { id: snap.id, ...snap.data() }
-      setResult(data)
-
-      const allQuestions = await getAllQuestionsCached()
-      const map = {}
-      allQuestions.forEach((q) => {
-        map[q.question] = q
-      })
-      setQuestionMap(map)
+      setResult({ id: snap.id, ...snap.data() })
       setLoading(false)
     }
     fetch()
@@ -43,12 +33,6 @@ export default function ResultDetailPage() {
       return r.mode || 'Mode Test'
     }
     return 'Final Mock Test'
-  }
-
-  const getOptionText = (q, letter) => {
-    if (!q) return ''
-    const map = { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD }
-    return map[letter] || ''
   }
 
   return (
@@ -100,50 +84,7 @@ export default function ResultDetailPage() {
         </div>
       </div>
 
-      {/* Question Review */}
-      <h2 className="text-sm font-semibold text-on-surface mb-4">Question Review</h2>
-      <div className="space-y-3">
-        {result.answers?.map((ans, i) => {
-          const q = questionMap[ans.questionId] || null
-          return (
-            <div key={i} className={`bg-surface border rounded-xl p-4 md:p-5 border-l-4 ${
-              ans.isCorrect ? 'border-l-success' : 'border-l-error'
-            } shadow-sm`}>
-              <div className="flex gap-3">
-                <div className="mt-0.5 shrink-0">
-                  {ans.isCorrect
-                    ? <span className="material-symbols-outlined text-success text-[20px]">check_circle</span>
-                    : <span className="material-symbols-outlined text-error text-[20px]">cancel</span>
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-on-surface mb-3">
-                    <span className="text-on-surface-variant">Q{i + 1}.</span> {q?.question || 'Question not found'}
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {['A', 'B', 'C', 'D'].map((l) => (
-                      <div key={l} className={`text-xs p-2.5 rounded-lg ${
-                        ans.correct === l ? 'bg-green-50 border border-success text-success font-medium' :
-                        ans.selected === l && ans.selected !== ans.correct ? 'bg-red-50 border border-error text-error font-medium' :
-                        'bg-surface-container-low text-on-surface-variant'
-                      }`}>
-                        <span className="font-bold">{l}.</span> {q ? getOptionText(q, l) : ''}
-                        {ans.correct === l && <span className="ml-1">✓</span>}
-                        {ans.selected === l && ans.selected !== ans.correct && <span className="ml-1">✗</span>}
-                      </div>
-                    ))}
-                  </div>
-                  {q?.explanation && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded-lg text-xs text-blue-800 leading-relaxed">
-                      <strong>Explanation:</strong> {q.explanation}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+
     </div>
   )
 }
