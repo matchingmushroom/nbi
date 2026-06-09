@@ -357,7 +357,9 @@ export default function DashboardPage() {
               const { overall, dailyRaw, dailyMax, finalRaw, finalMax } = getCourseScore(c.progress)
               const passed = overall >= 50
               return (
-                <div key={c.courseId} className="bg-surface border border-success/20 rounded-xl p-4">
+                <div key={c.courseId}
+                  onClick={() => navigate('/leaderboard?filter=course')}
+                  className="bg-surface border border-success/20 rounded-xl p-4 cursor-pointer hover:shadow-sm transition-all active:scale-[0.98]">
                   <div className="flex items-start justify-between mb-2">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-on-surface truncate">{c.courseTitle}</p>
@@ -384,7 +386,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   {passed && (
-                    <button onClick={() => setShowCertFor(c)} className="w-full flex items-center justify-center gap-1.5 bg-success/10 border border-success/20 rounded-lg py-2 text-xs font-bold text-success hover:bg-success/15 transition-all cursor-pointer active:scale-[0.97]">
+                    <button onClick={(e) => { e.stopPropagation(); setShowCertFor(c) }} className="w-full flex items-center justify-center gap-1.5 bg-success/10 border border-success/20 rounded-lg py-2 text-xs font-bold text-success hover:bg-success/15 transition-all cursor-pointer active:scale-[0.97]">
                       <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>download</span>
                       Download Certificate
                     </button>
@@ -398,14 +400,14 @@ export default function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+        <button onClick={() => navigate('/leaderboard?filter=all')} className="bg-surface border border-outline-variant rounded-xl p-4 text-left cursor-pointer active:scale-[0.98] transition-all hover:shadow-sm">
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Tests</span>
           <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{stats.total}</p>
-        </div>
-        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+        </button>
+        <button onClick={() => navigate('/leaderboard?filter=course')} className="bg-surface border border-outline-variant rounded-xl p-4 text-left cursor-pointer active:scale-[0.98] transition-all hover:shadow-sm">
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Courses</span>
           <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{enrolledCourses.filter((c) => c.progress.completedDays?.length >= c.dayCount).length + completedCourses.length}</p>
-        </div>
+        </button>
         <div className="bg-surface border border-outline-variant rounded-xl p-4">
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Avg</span>
           <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{stats.avgScore}%</p>

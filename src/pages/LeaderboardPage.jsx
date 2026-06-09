@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { BADGES, getLevelProgress, getXPForNextLevel } from '../lib/gamification'
 import { formatDate } from '../lib/utils'
@@ -37,11 +37,12 @@ function CollapsibleSection({ title, icon, defaultOpen, children, badge }) {
 export default function LeaderboardPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [entries, setEntries] = useState([])
   const [myStats, setMyStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [results, setResults] = useState([])
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState(new URLSearchParams(location.search).get('filter') || 'all')
   const [allCourses, setAllCourses] = useState([])
   const [showCertFor, setShowCertFor] = useState(null)
 
