@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { BADGES, getLevelProgress, getXPForNextLevel } from '../lib/gamification'
 import { formatDate } from '../lib/utils'
 import { getAllUsersCached, getAllResultsCached, getUserResultsCached } from '../lib/cache'
+import { getAllCourses } from '../lib/steakService'
+import { getCourseScore } from '../lib/learnService'
+import Certificate from '../components/Certificate'
 
 function CollapsibleSection({ title, icon, defaultOpen, children, badge }) {
   const [open, setOpen] = useState(defaultOpen !== false)
@@ -39,13 +42,33 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true)
   const [results, setResults] = useState([])
   const [filter, setFilter] = useState('all')
+  const [allCourses, setAllCourses] = useState([])
+  const [showCertFor, setShowCertFor] = useState(null)
+
+  const completedCourses = useMemo(() => {
+    if (!profile?.learning?.enrolledCourses) return []
+    const enrolled = profile.learning.enrolledCourses
+    return Object.keys(enrolled)
+      .filter((cid) => enrolled[cid].courseStatus === 'CERTIFIED')
+      .map((cid) => {
+        const meta = allCourses.find((c) => c.courseId === cid)
+        return {
+          courseId: cid,
+          courseTitle: meta?.courseTitle || cid,
+          dayCount: meta?.dayCount || 0,
+          progress: enrolled[cid],
+        }
+      })
+  }, [profile, allCourses])
 
   useEffect(() => {
     const fetch = async () => {
-      const [allUsers, allResults] = await Promise.all([
+      const [allUsers, allResults, courses] = await Promise.all([
         getAllUsersCached(),
         getAllResultsCached(),
+        getAllCourses(),
       ])
+      setAllCourses(courses)
 
       const resultsByUser = {}
       allResults.forEach((r) => {
@@ -334,10 +357,11 @@ export default function LeaderboardPage() {
 
       {/* My Results */}
       <CollapsibleSection title="My Results" icon="insights" defaultOpen={false}
-        badge={`${results.length} total`}>
-        <div className="inline-flex bg-surface-container-low rounded-full p-1 mb-4">
+        badge={`${results.length + completedCourses.length} total`}>
+        <div className="inline-flex bg-surface-container-low rounded-full p-1 mb-4 flex-wrap">
           {[
             { key: 'all', label: 'All Tests' },
+            { key: 'course', label: 'Course' },
             { key: 'chapter', label: 'Chapter' },
             { key: 'module', label: 'Module' },
             { key: 'mode', label: 'Mode' },
@@ -354,7 +378,58 @@ export default function LeaderboardPage() {
             </button>
           ))}
         </div>
-        {filtered.length === 0 ? (
+        {filter === 'course' ? (
+          completedCourses.length === 0 ? (
+            <div className="text-center py-8 text-on-surface-variant">
+              <span className="material-symbols-outlined text-[36px] mb-2">school</span>
+              <p className="text-sm font-medium">No completed courses yet.</p>
+              <p className="text-xs mt-1">Complete a course to see it here.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {completedCourses.map((c) => {
+                const s = getCourseScore(c.progress, c.dayCount)
+                const passed = s.overall >= 50
+                return (
+                  <div key={c.courseId} className="bg-surface border border-success/20 rounded-xl p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-on-surface truncate">{c.courseTitle}</p>
+                        <p className="text-[10px] text-on-surface-variant mt-0.5">{c.dayCount} days</p>
+                      </div>
+                      <div className={`shrink-0 ml-2 w-9 h-9 rounded-full flex items-center justify-center ${passed ? 'bg-success/20 text-success' : 'bg-error/10 text-error'}`}>
+                        <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings: "'FILL' 1"}}>{passed ? 'verified' : 'cancel'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="text-center">
+                        <p className="font-['Hanken_Grotesk'] text-lg font-bold text-on-surface">{s.overall}%</p>
+                        <p className="text-[9px] text-on-surface-variant">Overall</p>
+                      </div>
+                      <div className="h-8 w-px bg-outline-variant/50" />
+                      <div className="text-center">
+                        <p className="text-xs font-semibold text-on-surface">{s.dailyRaw}/{s.dailyMax}</p>
+                        <p className="text-[9px] text-on-surface-variant">Daily</p>
+                      </div>
+                      <div className="h-8 w-px bg-outline-variant/50" />
+                      <div className="text-center">
+                        <p className="text-xs font-semibold text-on-surface">{s.finalRaw}/{s.finalMax}</p>
+                        <p className="text-[9px] text-on-surface-variant">Final</p>
+                      </div>
+                    </div>
+                    {passed && (
+                      <button onClick={() => setShowCertFor(c)}
+                        className="w-full flex items-center justify-center gap-1.5 bg-success/10 border border-success/20 rounded-lg py-2 text-xs font-bold text-success hover:bg-success/15 transition-all cursor-pointer active:scale-[0.97]">
+                        <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>download</span>
+                        Download Certificate
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        ) : filtered.length === 0 ? (
           <div className="text-center py-8 text-on-surface-variant">
             <span className="material-symbols-outlined text-[36px] mb-2">insights</span>
             <p className="text-sm font-medium">No results found.</p>
@@ -393,6 +468,24 @@ export default function LeaderboardPage() {
           </div>
         )}
       </CollapsibleSection>
+
+      {/* Certificate Modal */}
+      {showCertFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowCertFor(null)}>
+          <div className="max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-2xl overflow-hidden shadow-xl">
+              <Certificate
+                userName={profile?.displayName || profile?.email || 'Student'}
+                courseTitle={showCertFor.courseTitle}
+                score={getCourseScore(showCertFor.progress, showCertFor.dayCount).overall}
+                overallMax={100}
+                courseDuration={`${showCertFor.dayCount} days`}
+                onClose={() => setShowCertFor(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
