@@ -109,7 +109,13 @@ export default function SimpleLearnPage() {
     if (!progress) return
     const conceptId = `day_${String(day).padStart(2, '0')}`
     const read = progress.readDays?.includes(conceptId)
-    const effUnlocked = bypassLock ? 999 : (progress.unlockedDay || 1)
+    let calendarUnlocked = 999
+    if (!bypassLock && progress.enrolledAt) {
+      const enrolled = new Date(progress.enrolledAt + 'T00:00:00')
+      const daysSince = Math.floor((new Date() - enrolled) / 86400000)
+      calendarUnlocked = Math.max(1, daysSince + 1)
+    }
+    const effUnlocked = bypassLock ? 999 : Math.min(progress.unlockedDay || 1, calendarUnlocked)
     if (day > effUnlocked) return
     if (read) { startReading(day); return }
     if (day > 1 && needsReview(day, progress.readDays, progress.reviewedDays)) {
@@ -245,7 +251,13 @@ export default function SimpleLearnPage() {
   const readDays = progress?.readDays || []
   const reviewedDays = progress?.reviewedDays || []
   const scoreData = getCourseScore(progress, days.length)
-  const effUnlocked = bypassLock ? 999 : (progress?.unlockedDay || 1)
+  let calendarUnlocked = 999
+  if (!bypassLock && progress?.enrolledAt) {
+    const enrolled = new Date(progress.enrolledAt + 'T00:00:00')
+    const daysSince = Math.floor((new Date() - enrolled) / 86400000)
+    calendarUnlocked = Math.max(1, daysSince + 1)
+  }
+  const effUnlocked = bypassLock ? 999 : Math.min(progress?.unlockedDay || 1, calendarUnlocked)
   const fullyCompleted = days.filter((d) => isFullyComplete(d.day, readDays, reviewedDays, days.length, progress?.courseStatus)).length
 
   const certWindowEnd = progress?.certificationWindowEndsAt ? new Date(progress.certificationWindowEndsAt) : null
