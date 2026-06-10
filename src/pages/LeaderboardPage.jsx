@@ -252,7 +252,7 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Pill Tabs */}
-      <div className="inline-flex bg-surface-container-low rounded-full p-1 mb-4 w-full sm:w-auto">
+      <div className="inline-flex bg-surface-container-low rounded-full p-1 mb-4 w-full">
         {[
           { key: 'results', label: 'My Results', icon: 'insights', badge: results.length + completedCourses.length },
           { key: 'achievement', label: 'My Achievement', icon: 'stars', badge: myRank > 0 ? `#${myRank}` : null },
@@ -260,17 +260,15 @@ export default function LeaderboardPage() {
         ].map((t) => (
           <button key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
               tab === t.key
                 ? 'bg-primary text-on-primary shadow-sm'
-                : 'text-on-surface-variant hover:text-on-surface'
+                : 'text-on-surface-variant/60 hover:text-on-surface'
             }`}>
-            <span className="material-symbols-outlined text-[16px]" style={{fontVariationSettings: "'FILL' 1"}}>{t.icon}</span>
-            {t.label}
-            {t.badge != null && t.badge !== '' && (
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                tab === t.key ? 'bg-primary-fixed text-primary' : 'bg-primary-fixed text-primary'
-              }`}>{t.badge}</span>
+            <span className="material-symbols-outlined text-[18px] sm:text-[16px] leading-none" style={{fontVariationSettings: "'FILL' 1"}}>{t.icon}</span>
+            <span className={`${tab === t.key ? 'inline' : 'hidden sm:inline'}`}>{t.label}</span>
+            {t.badge != null && t.badge !== '' && tab === t.key && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary-fixed text-primary">{t.badge}</span>
             )}
           </button>
         ))}
