@@ -256,6 +256,20 @@ export default function QuizSelectPage() {
             <span className="material-symbols-outlined text-on-surface-variant text-[22px]">chevron_right</span>
           </button>
         ))}
+        {/* Pre-Assessment Test */}
+        <button
+          onClick={() => navigate('/quiz/pre-assessment')}
+          className="w-full glass-strong border border-white/40 p-5 rounded-xl hover:shadow-md transition-all flex items-center gap-4 text-left active:scale-[0.98] cursor-pointer"
+        >
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-rose-500 flex items-center justify-center shrink-0 shadow-sm">
+            <span className="material-symbols-outlined text-white text-[24px]">verified_user</span>
+          </div>
+          <div className="flex-1">
+            <h3 className="font-['Hanken_Grotesk'] font-bold text-base text-on-surface">Pre-Assessment Test</h3>
+            <p className="text-xs text-on-surface-variant mt-0.5">{settings.preassessmentQuestionCount} Expert Qs · {settings.preassessmentTimerMinutes} min · Proctored</p>
+          </div>
+          <span className="material-symbols-outlined text-on-surface-variant text-[22px]">chevron_right</span>
+        </button>
       </div>
     </div>
   )

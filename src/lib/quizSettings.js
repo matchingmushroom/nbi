@@ -23,6 +23,8 @@ const DEFAULTS = {
   certificationTimerMinutes: 30,
   certificationAttemptLimit: 0,
   courseLinkedQuizzes: {},
+  preassessmentQuestionCount: 20,
+  preassessmentTimerMinutes: 30,
   bypassDailyLearningLock: false,
   premiumCourses: [],
   premiumQuizChapters: [],
