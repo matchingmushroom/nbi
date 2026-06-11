@@ -139,6 +139,9 @@ export default function QuizSelectPage() {
 
   if (step === 'list' && selectedType === 'chapter') {
     const { chaptersByModule } = items
+    const filteredChaptersByModule = Object.fromEntries(
+      Object.entries(chaptersByModule).filter(([mod]) => checkModuleAccess(profile, mod, settings))
+    )
     return (
       <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
         <button onClick={handleBack} className="flex items-center gap-1 text-sm text-primary font-semibold hover:underline mb-4 cursor-pointer">
@@ -147,11 +150,11 @@ export default function QuizSelectPage() {
         </button>
         <h1 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface mb-1">Chapter Based Test</h1>
         <p className="text-sm text-on-surface-variant mb-5">Select a chapter to test your knowledge</p>
-        {Object.keys(chaptersByModule).length === 0 ? (
+        {Object.keys(filteredChaptersByModule).length === 0 ? (
           <p className="text-center py-8 text-on-surface-variant text-sm">No chapters available.</p>
         ) : (
           <div className="space-y-4">
-            {Object.entries(chaptersByModule).sort().map(([mod, chs]) => (
+            {Object.entries(filteredChaptersByModule).sort().map(([mod, chs]) => (
               <div key={mod}>
                 {mod !== 'General' && (
                   <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 px-1">{mod}</h3>
