@@ -21,6 +21,7 @@ export default function ChapterQuizPage() {
       const all = await getAllQuestionsCached()
       const chModule = all.find((q) => q.chapter === chapter)?.module
       if (chModule && !checkModuleAccess(profile, chModule, settings)) { navigate('/quiz/select'); return }
+      if (!checkModuleAccess(profile, chapter, settings)) { navigate('/quiz/select'); return }
       const allowed = await checkAttemptLimit(profile, 'chapter')
       if (!allowed) { navigate('/quiz/select'); return }
       const total = settings.chapterQuestionCount
@@ -43,5 +44,5 @@ export default function ChapterQuizPage() {
 
   if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading chapter test...</p></div>
 
-  return <ProctoredQuizRunner proctored questions={questions} config={config} />
+  return <ProctoredQuizRunner questions={questions} config={config} />
 }

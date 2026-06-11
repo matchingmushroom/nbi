@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { pickByDifficulty } from '../lib/utils'
-import { getQuizSettings, getDifficultySplit, getConfigTimerLabel, checkAttemptLimit, checkQuizAccess } from '../lib/quizSettings'
+import { getQuizSettings, getDifficultySplit, getConfigTimerLabel, checkAttemptLimit, checkQuizAccess, checkModuleAccess } from '../lib/quizSettings'
 import { getAllQuestionsCached } from '../lib/cache'
 import ProctoredQuizRunner from '../components/ProctoredQuizRunner'
 
@@ -23,7 +23,7 @@ export default function ModeQuizPage() {
       const total = settings.modeQuestionCount
       const min = Math.round(total * 0.3)
       const all = await getAllQuestionsCached()
-      const filtered = all.filter((q) => q.mode === mode && !(q.module === 'Course' && q.mode === 'Certification'))
+      const filtered = all.filter((q) => q.mode === mode && !(q.module === 'Course' && q.mode === 'Certification') && checkModuleAccess(profile, q.module, settings))
       if (filtered.length < min) { navigate('/quiz/select'); return }
       const split = getDifficultySplit(total, 'mode')
       const picked = pickByDifficulty(filtered, split)
@@ -41,5 +41,5 @@ export default function ModeQuizPage() {
 
   if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading mode test...</p></div>
 
-  return <ProctoredQuizRunner proctored questions={questions} config={config} />
+  return <ProctoredQuizRunner questions={questions} config={config} />
 }

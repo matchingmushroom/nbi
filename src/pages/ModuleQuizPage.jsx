@@ -42,5 +42,5 @@ export default function ModuleQuizPage() {
 
   if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading module test...</p></div>
 
-  return <ProctoredQuizRunner proctored questions={questions} config={config} />
+  return <ProctoredQuizRunner questions={questions} config={config} />
 }

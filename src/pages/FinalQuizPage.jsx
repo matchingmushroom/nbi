@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { shuffle, pickByDifficulty } from '../lib/utils'
-import { getQuizSettings, getFinalSplit, getConfigTimerLabel, checkAttemptLimit, checkQuizAccess } from '../lib/quizSettings'
+import { getQuizSettings, getFinalSplit, getConfigTimerLabel, checkAttemptLimit, checkQuizAccess, checkModuleAccess } from '../lib/quizSettings'
 import { getAllQuestionsCached } from '../lib/cache'
 import ProctoredQuizRunner from '../components/ProctoredQuizRunner'
 
@@ -21,11 +21,12 @@ export default function FinalQuizPage() {
       const total = settings.finalQuestionCount
       const min = Math.round(total * 0.3)
       const all = await getAllQuestionsCached()
-      if (all.length < min) { navigate('/quiz/select'); return }
+      const accessible = all.filter((q) => checkModuleAccess(profile, q.module, settings))
+      if (accessible.length < min) { navigate('/quiz/select'); return }
 
-      const book = all.filter((q) => q.mode === 'Book')
-      const physical = all.filter((q) => q.mode === 'Physical')
-      const other = all.filter((q) => q.mode !== 'Book' && q.mode !== 'Physical')
+      const book = accessible.filter((q) => q.mode === 'Book')
+      const physical = accessible.filter((q) => q.mode === 'Physical')
+      const other = accessible.filter((q) => q.mode !== 'Book' && q.mode !== 'Physical')
 
       const { bookTarget, physicalTarget, bookSplit, physicalSplit } = getFinalSplit(total)
 

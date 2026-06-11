@@ -38,7 +38,9 @@ const DEFAULTS = {
     preassessment: { student: true, studentx: true, moderator: true, admin: true },
     certification: { student: true, studentx: true, moderator: true, admin: true },
   },
-  moduleAccess: {},
+  moduleAccess: {
+    "Mock Test": { student: false, studentx: true, moderator: true, admin: true },
+  },
 }
 
 export async function getQuizSettings() {

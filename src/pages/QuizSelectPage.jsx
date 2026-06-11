@@ -140,7 +140,13 @@ export default function QuizSelectPage() {
   if (step === 'list' && selectedType === 'chapter') {
     const { chaptersByModule } = items
     const filteredChaptersByModule = Object.fromEntries(
-      Object.entries(chaptersByModule).filter(([mod]) => checkModuleAccess(profile, mod, settings))
+      Object.entries(chaptersByModule)
+        .filter(([mod]) => checkModuleAccess(profile, mod, settings))
+        .map(([mod, chs]) => [
+          mod,
+          Object.fromEntries(Object.entries(chs).filter(([ch]) => checkModuleAccess(profile, ch, settings)))
+        ])
+        .filter(([, chs]) => Object.keys(chs).length > 0)
     )
     return (
       <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
