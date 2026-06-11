@@ -125,7 +125,7 @@ export default function LeaderboardPage() {
   useEffect(() => {
     const p = new URLSearchParams(location.search)
     const f = p.get('filter')
-    if (f && ['all', 'course', 'chapter', 'module', 'mode', 'final'].includes(f)) {
+    if (f && ['all', 'course', 'chapter', 'module', 'mode', 'final', 'preassessment'].includes(f)) {
       setFilter(f)
       setTab('results')
     }
@@ -142,6 +142,7 @@ export default function LeaderboardPage() {
       if (r.mode === 'Physical') return 'Instructor-Led (Physical)'
       return r.mode || 'Mode Test'
     }
+    if (qt === 'preassessment') return 'Pre-Assessment Test'
     return 'Final Mock Test'
   }
 
@@ -281,6 +282,7 @@ export default function LeaderboardPage() {
             {[
               { key: 'all', label: 'All Tests' },
               { key: 'course', label: 'Course' },
+              { key: 'preassessment', label: 'Pre-Assessment' },
               { key: 'chapter', label: 'Chapter' },
               { key: 'module', label: 'Module' },
               { key: 'mode', label: 'Mode' },
