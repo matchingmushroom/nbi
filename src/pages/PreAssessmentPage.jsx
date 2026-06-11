@@ -285,7 +285,7 @@ export default function PreAssessmentPage() {
   const handleSelect = (letter) => {
     if (submitted) return
     const q = questions[currentIndex]
-    setAnswers((prev) => ({ ...prev, [currentIndex]: { questionId: q.id || q.question, question: q.question, selected: letter, correct: q.answer, isCorrect: letter === q.answer } }))
+    setAnswers((prev) => ({ ...prev, [currentIndex]: { questionId: q.id || q.question, question: q.question, selected: letter, correct: q.correctAnswer, isCorrect: letter === q.correctAnswer } }))
   }
 
   const toggleReview = () => {
@@ -304,7 +304,7 @@ export default function PreAssessmentPage() {
     submittedRef.current = true
     setSubmitting(true)
     stopProctoring()
-    const finalAnswers = questions.map((q, i) => answers[i] || { questionId: q.id || q.question, question: q.question, selected: null, correct: q.answer, isCorrect: false })
+    const finalAnswers = questions.map((q, i) => answers[i] || { questionId: q.id || q.question, question: q.question, selected: null, correct: q.correctAnswer, isCorrect: false })
     const finalScore = finalAnswers.filter((a) => a.isCorrect).length
     const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000)
     const result = {

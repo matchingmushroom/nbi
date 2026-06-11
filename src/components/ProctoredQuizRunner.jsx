@@ -86,7 +86,7 @@ export default function ProctoredQuizRunner({ questions, config, onFinish, proct
     submittedRef.current = true
     setSubmitting(true)
     if (proctored) proctoring.stopProctoring()
-    const finalAnswers = questions.map((q, i) => answers[i] || { questionId: q.id || q.question, question: q.question, selected: null, correct: q.answer, isCorrect: false })
+    const finalAnswers = questions.map((q, i) => answers[i] || { questionId: q.id || q.question, question: q.question, selected: null, correct: q.correctAnswer, isCorrect: false })
     const finalScore = finalAnswers.filter((a) => a.isCorrect).length
     await saveResult(finalAnswers, finalScore, isAuto)
     if (proctored) {
@@ -127,7 +127,7 @@ export default function ProctoredQuizRunner({ questions, config, onFinish, proct
   const handleSelect = (letter) => {
     if (submitted) return
     const q = questions[currentIndex]
-    setAnswers((prev) => ({ ...prev, [currentIndex]: { questionId: q.id || q.question, question: q.question, selected: letter, correct: q.answer, isCorrect: letter === q.answer } }))
+    setAnswers((prev) => ({ ...prev, [currentIndex]: { questionId: q.id || q.question, question: q.question, selected: letter, correct: q.correctAnswer, isCorrect: letter === q.correctAnswer } }))
   }
 
   const toggleReview = () => {
@@ -243,7 +243,7 @@ export default function ProctoredQuizRunner({ questions, config, onFinish, proct
                 <p className="text-sm font-medium text-on-surface">{questions[current].question}</p>
                 <div className="space-y-2">
                   {['A', 'B', 'C', 'D'].map((l) => (
-                    <button key={l} onClick={() => handleNext({ questionId: questions[current].id || questions[current].question, question: questions[current].question, selected: l, correct: questions[current].answer, isCorrect: l === questions[current].answer })}
+                    <button key={l} onClick={() => handleNext({ questionId: questions[current].id || questions[current].question, question: questions[current].question, selected: l, correct: questions[current].correctAnswer, isCorrect: l === questions[current].correctAnswer })}
                       className="w-full flex items-center gap-3 p-3 rounded-xl border border-outline-variant text-left hover:bg-surface-container-low transition-all cursor-pointer">
                       <span className="w-7 h-7 rounded-full bg-surface-container-low flex items-center justify-center text-xs font-bold text-on-surface-variant shrink-0">{l}</span>
                       <span className="text-sm">{getOptionText(questions[current], l)}</span>
