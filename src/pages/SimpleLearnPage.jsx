@@ -12,7 +12,7 @@ import {
 import { getQuizSettings, canAccessPremium, getEnrollmentLimit } from '../lib/quizSettings'
 import { resetCourseProgress } from '../lib/steakService'
 import { awardLearningXP } from '../lib/gamification'
-import QuizRunner from '../components/QuizRunner'
+import ProctoredQuizRunner from '../components/ProctoredQuizRunner'
 import Certificate from '../components/Certificate'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -215,6 +215,7 @@ export default function SimpleLearnPage() {
   }
 
   const handleCertFinish = async (rawScore, totalQ) => {
+    if (rawScore === undefined) { setCertQuestions(null); setView(VIEWS.DASHBOARD); return }
     if (profile?.uid) {
       const ref = doc(db, 'users', profile.uid)
       const snap = await getDoc(ref)
@@ -759,7 +760,7 @@ export default function SimpleLearnPage() {
       )
     } else {
       content = (
-        <QuizRunner
+        <ProctoredQuizRunner proctored
           questions={certQuestions}
           config={{ quizType: 'Certification', chapter: courseId, module: 'Course', mode: 'Certification', timerMinutes: quizSettings?.certificationTimerMinutes || 30 }}
           onFinish={handleCertFinish}

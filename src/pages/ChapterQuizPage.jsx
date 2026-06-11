@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { pickByDifficulty } from '../lib/utils'
 import { getQuizSettings, getDifficultySplit, getConfigTimerLabel, checkAttemptLimit } from '../lib/quizSettings'
 import { getAllQuestionsCached } from '../lib/cache'
-import QuizRunner from '../components/QuizRunner'
+import ProctoredQuizRunner from '../components/ProctoredQuizRunner'
 
 export default function ChapterQuizPage() {
   const { chapterName } = useParams()
@@ -40,5 +40,5 @@ export default function ChapterQuizPage() {
 
   if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading chapter test...</p></div>
 
-  return <QuizRunner questions={questions} config={config} />
+  return <ProctoredQuizRunner proctored questions={questions} config={config} />
 }

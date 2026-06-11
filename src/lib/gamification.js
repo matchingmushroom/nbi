@@ -7,6 +7,8 @@ export const QUIZ_XP_BASE = {
   module: 15,
   mode: 20,
   final: 25,
+  preassessment: 10,
+  Certification: 20,
 }
 
 export const LEVEL_THRESHOLDS = [

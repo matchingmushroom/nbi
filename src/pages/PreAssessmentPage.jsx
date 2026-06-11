@@ -51,6 +51,7 @@ export default function PreAssessmentPage() {
   const [submitted, setSubmitted] = useState(false)
   const submittedRef = useRef(false)
   const startTimeRef = useRef(null)
+  const handleSubmitRef = useRef(null)
 
   const tabWarnRef = useRef(0)
   const fsWarnRef = useRef(0)
@@ -76,7 +77,7 @@ export default function PreAssessmentPage() {
     if (submittedRef.current) return
     submittedRef.current = true
     setSubmitted(true)
-    handleSubmit(true)
+    handleSubmitRef.current?.(true)
   }, [])
 
   const handleTabSwitch = useCallback(() => {
@@ -337,6 +338,7 @@ export default function PreAssessmentPage() {
     setSubmitting(false)
     setSubmitted(true)
   }, [profile, user, questions, answers, refreshProfile])
+  handleSubmitRef.current = handleSubmit
 
   const formatTime = (s) => {
     const m = Math.floor(s / 60)
