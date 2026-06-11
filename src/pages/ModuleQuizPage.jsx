@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { pickByDifficulty } from '../lib/utils'
 import { getQuizSettings, getDifficultySplit, getConfigTimerLabel, checkAttemptLimit, checkQuizAccess, checkModuleAccess } from '../lib/quizSettings'
 import { getAllQuestionsCached } from '../lib/cache'
-import ProctoredQuizRunner from '../components/ProctoredQuizRunner'
+import QuizRunner from '../components/QuizRunner'
 
 export default function ModuleQuizPage() {
   const { moduleName } = useParams()
@@ -42,5 +42,5 @@ export default function ModuleQuizPage() {
 
   if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading module test...</p></div>
 
-  return <ProctoredQuizRunner questions={questions} config={config} />
+  return <QuizRunner questions={questions} config={config} />
 }
