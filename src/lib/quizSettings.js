@@ -30,6 +30,14 @@ const DEFAULTS = {
   premiumQuizChapters: [],
   studentEnrollmentLimit: 2,
   studentxEnrollmentLimit: 5,
+  quizAccess: {
+    chapter: { student: true, studentx: true, moderator: true, admin: true },
+    module: { student: true, studentx: true, moderator: true, admin: true },
+    mode: { student: true, studentx: true, moderator: true, admin: true },
+    final: { student: true, studentx: true, moderator: true, admin: true },
+    preassessment: { student: true, studentx: true, moderator: true, admin: true },
+    certification: { student: true, studentx: true, moderator: true, admin: true },
+  },
 }
 
 export async function getQuizSettings() {
@@ -120,4 +128,11 @@ export function canAccessPremium(profile) {
 export function getEnrollmentLimit(profile, settings) {
   if (profile?.role === 'studentx') return settings.studentxEnrollmentLimit || 5
   return settings.studentEnrollmentLimit || 2
+}
+
+export function checkQuizAccess(profile, quizType, settings) {
+  if (!profile?.role) return false
+  const access = settings?.quizAccess?.[quizType]
+  if (!access) return true
+  return access[profile.role] === true
 }

@@ -304,6 +304,63 @@ export default function AdminSettingsPage() {
       </div>
 
       <div className="bg-surface border border-outline-variant rounded-xl p-5 space-y-4">
+        <h2 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Quiz Access Control</h2>
+        <p className="text-xs text-on-surface-variant -mt-2">
+          Control which roles can access each quiz type. Uncheck a role to restrict access.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-outline-variant">
+                <th className="text-left py-2 pr-4 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Quiz Type</th>
+                <th className="text-center py-2 px-2 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Student</th>
+                <th className="text-center py-2 px-2 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">StudentX</th>
+                <th className="text-center py-2 px-2 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Moderator</th>
+                <th className="text-center py-2 px-2 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Admin</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { key: 'chapter', label: 'Chapter Test' },
+                { key: 'module', label: 'Module Test' },
+                { key: 'mode', label: 'Mode Test' },
+                { key: 'final', label: 'Final Mock Test' },
+                { key: 'preassessment', label: 'Pre-Assessment' },
+                { key: 'certification', label: 'Course Certification' },
+              ].map((qt) => (
+                <tr key={qt.key} className="border-b border-outline-variant/50">
+                  <td className="py-2.5 pr-4 font-medium text-on-surface">{qt.label}</td>
+                  {['student', 'studentx', 'moderator', 'admin'].map((role) => {
+                    const access = settings.quizAccess || {}
+                    const typeAccess = access[qt.key] || {}
+                    const checked = typeAccess[role] !== false
+                    return (
+                      <td key={role} className="text-center py-2.5 px-2">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setSettings((prev) => {
+                              const qa = { ...(prev.quizAccess || {}) }
+                              const ta = { ...(qa[qt.key] || {}) }
+                              ta[role] = !checked
+                              qa[qt.key] = ta
+                              return { ...prev, quizAccess: qa }
+                            })
+                          }}
+                          className="w-4 h-4 accent-primary cursor-pointer"
+                        />
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-surface border border-outline-variant rounded-xl p-5 space-y-4">
         <h2 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Database Maintenance</h2>
         <p className="text-xs text-on-surface-variant -mt-2">
           Remove orphaned course enrollment data from users whose courses no longer exist — e.g. after deleting a course that users were enrolled in.

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getQuizSettings, canAccessPremium } from '../lib/quizSettings'
+import { getQuizSettings, canAccessPremium, checkQuizAccess } from '../lib/quizSettings'
 import { getAllQuestionsCached } from '../lib/cache'
 
 
@@ -220,7 +220,7 @@ export default function QuizSelectPage() {
     )
   }
 
-  const testTypes = settings ? getTestTypes(settings) : []
+  const testTypes = settings ? getTestTypes(settings).filter((t) => checkQuizAccess(profile, t.key, settings)) : []
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto">
@@ -257,19 +257,21 @@ export default function QuizSelectPage() {
           </button>
         ))}
         {/* Pre-Assessment Test */}
-        <button
-          onClick={() => navigate('/quiz/pre-assessment')}
-          className="w-full glass-strong border border-white/40 p-5 rounded-xl hover:shadow-md transition-all flex items-center gap-4 text-left active:scale-[0.98] cursor-pointer"
-        >
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-rose-500 flex items-center justify-center shrink-0 shadow-sm">
-            <span className="material-symbols-outlined text-white text-[24px]">verified_user</span>
-          </div>
-          <div className="flex-1">
-            <h3 className="font-['Hanken_Grotesk'] font-bold text-base text-on-surface">Pre-Assessment Test</h3>
-            <p className="text-xs text-on-surface-variant mt-0.5">{settings.preassessmentQuestionCount} Expert Qs · {settings.preassessmentTimerMinutes} min · Proctored</p>
-          </div>
-          <span className="material-symbols-outlined text-on-surface-variant text-[22px]">chevron_right</span>
-        </button>
+        {checkQuizAccess(profile, 'preassessment', settings) && (
+          <button
+            onClick={() => navigate('/quiz/pre-assessment')}
+            className="w-full glass-strong border border-white/40 p-5 rounded-xl hover:shadow-md transition-all flex items-center gap-4 text-left active:scale-[0.98] cursor-pointer"
+          >
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-rose-500 flex items-center justify-center shrink-0 shadow-sm">
+              <span className="material-symbols-outlined text-white text-[24px]">verified_user</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-['Hanken_Grotesk'] font-bold text-base text-on-surface">Pre-Assessment Test</h3>
+              <p className="text-xs text-on-surface-variant mt-0.5">{settings.preassessmentQuestionCount} Expert Qs · {settings.preassessmentTimerMinutes} min · Proctored</p>
+            </div>
+            <span className="material-symbols-outlined text-on-surface-variant text-[22px]">chevron_right</span>
+          </button>
+        )}
       </div>
     </div>
   )

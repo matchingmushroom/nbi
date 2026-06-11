@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { collection, addDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
-import { getQuizSettings } from '../lib/quizSettings'
+import { getQuizSettings, checkQuizAccess } from '../lib/quizSettings'
 import { getAllQuestionsCached } from '../lib/cache'
 import { calcQuizXP, updateGamification } from '../lib/gamification'
 import { invalidateCache, invalidateCachePrefix } from '../lib/cache'
@@ -143,6 +143,7 @@ export default function PreAssessmentPage() {
     const init = async () => {
       try {
         const settings = await getQuizSettings()
+        if (!checkQuizAccess(profile, 'preassessment', settings)) { navigate('/quiz/select'); return }
         const all = await getAllQuestionsCached()
         const bookPhysical = all.filter((q) => (q.mode === 'Book' || q.mode === 'Physical') && q.difficulty === 'Expert')
         if (bookPhysical.length < settings.preassessmentQuestionCount) {

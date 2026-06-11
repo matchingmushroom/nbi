@@ -9,7 +9,7 @@ import {
   getCertificationQuestions, getCourseScore,
   isFullyComplete, needsReview, accumulateReviewScore,
 } from '../lib/learnService'
-import { getQuizSettings, canAccessPremium, getEnrollmentLimit } from '../lib/quizSettings'
+import { getQuizSettings, canAccessPremium, getEnrollmentLimit, checkQuizAccess } from '../lib/quizSettings'
 import { resetCourseProgress } from '../lib/steakService'
 import { awardLearningXP } from '../lib/gamification'
 import ProctoredQuizRunner from '../components/ProctoredQuizRunner'
@@ -208,6 +208,8 @@ export default function SimpleLearnPage() {
     if (!courseId) return
     if (progress?.certAttempts >= 2) return
     if (progress?.certNextAttemptAt && new Date(progress.certNextAttemptAt) > new Date()) return
+    const settings = await getQuizSettings()
+    if (!checkQuizAccess(profile, 'certification', settings)) return
     setView(VIEWS.CERT_QUIZ)
     const course = courses.find((c) => c.courseId === courseId)
     const qs = await getCertificationQuestions(courseId, course?.courseTitle)

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { pickByDifficulty } from '../lib/utils'
-import { getQuizSettings, getDifficultySplit, getConfigTimerLabel, checkAttemptLimit } from '../lib/quizSettings'
+import { getQuizSettings, getDifficultySplit, getConfigTimerLabel, checkAttemptLimit, checkQuizAccess } from '../lib/quizSettings'
 import { getAllQuestionsCached } from '../lib/cache'
 import ProctoredQuizRunner from '../components/ProctoredQuizRunner'
 
@@ -16,9 +16,10 @@ export default function ModuleQuizPage() {
 
   useEffect(() => {
     const fetch = async () => {
+      const settings = await getQuizSettings()
+      if (!checkQuizAccess(profile, 'module', settings)) { navigate('/quiz/select'); return }
       const allowed = await checkAttemptLimit(profile, 'module')
       if (!allowed) { navigate('/quiz/select'); return }
-      const settings = await getQuizSettings()
       const total = settings.moduleQuestionCount
       const min = Math.round(total * 0.5)
       const all = await getAllQuestionsCached()
