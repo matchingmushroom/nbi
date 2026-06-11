@@ -8,10 +8,17 @@ export function shuffle(array) {
 }
 
 export function pickByDifficulty(questions, { beginner, intermediate, expert }) {
+  const total = beginner + intermediate + expert
   const b = shuffle(questions.filter(q => q.difficulty === 'Beginner')).slice(0, beginner)
   const i = shuffle(questions.filter(q => q.difficulty === 'Intermediate')).slice(0, intermediate)
   const e = shuffle(questions.filter(q => q.difficulty === 'Expert')).slice(0, expert)
-  return shuffle([...b, ...i, ...e]).filter(Boolean)
+  let picked = [...b, ...i, ...e]
+  if (picked.length < total) {
+    const used = new Set(picked)
+    const rest = shuffle(questions.filter(q => !used.has(q)))
+    picked = [...picked, ...rest.slice(0, total - picked.length)]
+  }
+  return shuffle(picked)
 }
 
 export function getLetters() {
