@@ -49,6 +49,10 @@ export async function getQuizSettings() {
   const ref = doc(db, 'config', 'quizSettings')
   const snap = await getDoc(ref)
   const data = snap.exists() ? { ...DEFAULTS, ...snap.data() } : DEFAULTS
+  if (snap.exists()) {
+    data.moduleAccess = { ...DEFAULTS.moduleAccess, ...(snap.data().moduleAccess || {}) }
+    data.quizAccess = { ...DEFAULTS.quizAccess, ...(snap.data().quizAccess || {}) }
+  }
   setCache('quizSettings', data)
   return data
 }
@@ -137,12 +141,12 @@ export function checkQuizAccess(profile, quizType, settings) {
   if (!profile?.role) return false
   const access = settings?.quizAccess?.[quizType]
   if (!access) return true
-  return access[profile.role] === true
+  return access[profile.role] !== false
 }
 
 export function checkModuleAccess(profile, moduleName, settings) {
   if (!profile?.role) return false
   const access = settings?.moduleAccess?.[moduleName]
   if (!access) return true
-  return access[profile.role] === true
+  return access[profile.role] !== false
 }
