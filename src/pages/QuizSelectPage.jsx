@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getQuizSettings, canAccessPremium, checkQuizAccess } from '../lib/quizSettings'
+import { getQuizSettings, canAccessPremium, checkQuizAccess, checkModuleAccess } from '../lib/quizSettings'
 import { getAllQuestionsCached } from '../lib/cache'
 
 
@@ -99,6 +99,9 @@ export default function QuizSelectPage() {
 
   if (step === 'list' && selectedType === 'module') {
     const { modules } = items
+    const accessibleModules = Object.fromEntries(
+      Object.entries(modules).filter(([mod]) => checkModuleAccess(profile, mod, settings))
+    )
     return (
       <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
         <button onClick={handleBack} className="flex items-center gap-1 text-sm text-primary font-semibold hover:underline mb-4 cursor-pointer">
@@ -108,7 +111,7 @@ export default function QuizSelectPage() {
         <h1 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface mb-1">Module Based Test</h1>
         <p className="text-sm text-on-surface-variant mb-5">Select a module to test your knowledge</p>
         <div className="space-y-2">
-          {Object.entries(modules).sort().map(([mod, count]) => (
+          {Object.entries(accessibleModules).sort().map(([mod, count]) => (
             <button
               key={mod}
               onClick={() => navigate(`/quiz/module/${encodeURIComponent(mod)}`)}

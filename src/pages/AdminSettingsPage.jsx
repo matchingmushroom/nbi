@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getQuizSettings, saveQuizSettings } from '../lib/quizSettings'
+import { getQuizSettings, saveQuizSettings, checkModuleAccess } from '../lib/quizSettings'
 import { getAllCourses, cleanupOrphanedCourses } from '../lib/steakService'
 import { getAllQuestionsCached } from '../lib/cache'
 
@@ -261,7 +261,7 @@ export default function AdminSettingsPage() {
                   {[
                     { key: 'chapter', label: 'Chapter Test' },
                     { key: 'module', label: 'Module Test' },
-                    { key: 'mode', label: 'Mode Test' },
+                    { key: 'mode', label: 'Mock Test' },
                     { key: 'final', label: 'Final Mock Test' },
                     { key: 'preassessment', label: 'Pre-Assessment' },
                     { key: 'certification', label: 'Course Cert' },
@@ -293,6 +293,61 @@ export default function AdminSettingsPage() {
                       })}
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="bg-surface border border-outline-variant rounded-xl p-4 md:p-5 space-y-4">
+            <h2 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Module Access Control</h2>
+            <p className="text-xs text-on-surface-variant -mt-2">
+              Control which roles can access specific modules in the Module Test. Modules not listed are accessible to all.
+            </p>
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+              <table className="w-full text-sm min-w-[320px]">
+                <thead>
+                  <tr className="border-b border-outline-variant">
+                    <th className="text-left py-2 pr-3 pl-4 md:pl-0 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Module</th>
+                    <th className="text-center py-2 px-1.5 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Student</th>
+                    <th className="text-center py-2 px-1.5 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">StudentX</th>
+                    <th className="text-center py-2 px-1.5 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Mod</th>
+                    <th className="text-center py-2 px-1.5 md:pr-0 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Admin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...new Set(questions.map((q) => q.module).filter(Boolean))].sort().map((mod) => {
+                    const access = settings.moduleAccess || {}
+                    const modAccess = access[mod] || {}
+                    return (
+                      <tr key={mod} className="border-b border-outline-variant/50">
+                        <td className="py-2.5 pr-3 pl-4 md:pl-0 font-medium text-on-surface text-xs sm:text-sm">{mod}</td>
+                        {['student', 'studentx', 'moderator', 'admin'].map((role) => {
+                          const checked = modAccess[role] !== false
+                          return (
+                            <td key={role} className="text-center py-2.5 px-1.5">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => {
+                                  setSettings((prev) => {
+                                    const ma = { ...(prev.moduleAccess || {}) }
+                                    const maMod = { ...(ma[mod] || {}) }
+                                    maMod[role] = !checked
+                                    ma[mod] = maMod
+                                    return { ...prev, moduleAccess: ma }
+                                  })
+                                }}
+                                className="w-4 h-4 accent-primary cursor-pointer"
+                              />
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })}
+                  {(!questions || questions.length === 0) && (
+                    <tr><td colSpan="5" className="text-center py-4 text-sm text-on-surface-variant">No module data available</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>

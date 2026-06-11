@@ -38,6 +38,7 @@ const DEFAULTS = {
     preassessment: { student: true, studentx: true, moderator: true, admin: true },
     certification: { student: true, studentx: true, moderator: true, admin: true },
   },
+  moduleAccess: {},
 }
 
 export async function getQuizSettings() {
@@ -133,6 +134,13 @@ export function getEnrollmentLimit(profile, settings) {
 export function checkQuizAccess(profile, quizType, settings) {
   if (!profile?.role) return false
   const access = settings?.quizAccess?.[quizType]
+  if (!access) return true
+  return access[profile.role] === true
+}
+
+export function checkModuleAccess(profile, moduleName, settings) {
+  if (!profile?.role) return false
+  const access = settings?.moduleAccess?.[moduleName]
   if (!access) return true
   return access[profile.role] === true
 }
