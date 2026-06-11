@@ -236,6 +236,15 @@ export default function PreAssessmentPage() {
     } catch {}
   }, [logViolation, autoSubmit])
 
+  const stopProctoring = () => {
+    clearInterval(faceIntervalRef.current)
+    clearInterval(audioIntervalRef.current)
+    clearInterval(timerRef.current)
+    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
+    if (audioCtxRef.current) audioCtxRef.current.close()
+    try { document.exitFullscreen?.() } catch {}
+  }
+
   const startAudioMonitor = useCallback(() => {
     audioIntervalRef.current = setInterval(() => {
       const analyser = analyserRef.current
@@ -252,14 +261,13 @@ export default function PreAssessmentPage() {
 
   useEffect(() => {
     if (phase !== 'exam') return
-    if (timeLeft <= 0) { handleSubmit(true); return }
-    timerRef.current = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) { clearInterval(timerRef.current); return 0 }
-        return t - 1
-      })
-    }, 1000)
-    return () => clearInterval(timerRef.current)
+    const iv = setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000)
+    return () => clearInterval(iv)
+  }, [phase])
+
+  useEffect(() => {
+    if (phase !== 'exam' || timeLeft > 0) return
+    handleSubmit(true)
   }, [phase, timeLeft])
 
   useEffect(() => {
@@ -270,14 +278,7 @@ export default function PreAssessmentPage() {
     startFaceDetection()
     startAudioMonitor()
     setTimeout(() => { try { document.documentElement.requestFullscreen?.() || document.documentElement.webkitRequestFullscreen?.() } catch {} }, 500)
-    return () => {
-      clearInterval(faceIntervalRef.current)
-      clearInterval(audioIntervalRef.current)
-      clearInterval(timerRef.current)
-      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
-      if (audioCtxRef.current) audioCtxRef.current.close()
-      try { document.exitFullscreen?.() } catch {}
-    }
+    return stopProctoring
   }, [phase, startCamera, startMic, startFaceDetection, startAudioMonitor])
 
   const handleSelect = (letter) => {
@@ -301,6 +302,7 @@ export default function PreAssessmentPage() {
     if (submittedRef.current) return
     submittedRef.current = true
     setSubmitting(true)
+    stopProctoring()
     const finalAnswers = questions.map((q, i) => answers[i] || { questionId: q.id || q.question, question: q.question, selected: null, correct: q.answer, isCorrect: false })
     const finalScore = finalAnswers.filter((a) => a.isCorrect).length
     const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000)
@@ -330,27 +332,11 @@ export default function PreAssessmentPage() {
       invalidateCache('allResults')
       if (uid) invalidateCachePrefix('results_' + uid)
     } catch {}
-    clearInterval(faceIntervalRef.current)
-    clearInterval(audioIntervalRef.current)
-    clearInterval(timerRef.current)
-    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
-    if (audioCtxRef.current) audioCtxRef.current.close()
-    try { document.exitFullscreen?.() } catch {}
-    stopProctoring()
     setScoreResult({ score: finalScore, total: questions.length, percentage: result.percentage, xpEarned: result.xpEarned, proctorLog: violationsRef.current, isAuto })
     setPhase('result')
     setSubmitting(false)
     setSubmitted(true)
   }, [profile, user, questions, answers, refreshProfile])
-
-  const stopProctoring = () => {
-    clearInterval(faceIntervalRef.current)
-    clearInterval(audioIntervalRef.current)
-    clearInterval(timerRef.current)
-    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
-    if (audioCtxRef.current) audioCtxRef.current.close()
-    try { document.exitFullscreen?.() } catch {}
-  }
 
   const formatTime = (s) => {
     const m = Math.floor(s / 60)
