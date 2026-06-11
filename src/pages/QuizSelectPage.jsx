@@ -7,9 +7,9 @@ import { getAllQuestionsCached } from '../lib/cache'
 
 function getTestTypes(settings) {
   return [
-    { key: 'chapter', icon: 'menu_book', label: 'Chapter Based Test', desc: `${settings.chapterQuestionCount} Qs · ${settings.chapterTimerMinutes} min · 20% B / 40% I / 40% E`, color: 'from-blue-600 to-blue-500', linkedCourse: settings.chapterLinkedCourse || '' },
-    { key: 'module', icon: 'folder', label: 'Module Based Test', desc: `${settings.moduleQuestionCount} Qs · ${settings.moduleTimerMinutes} min · 20% B / 40% I / 40% E`, color: 'from-emerald-600 to-emerald-500', linkedCourse: settings.moduleLinkedCourse || '' },
-    { key: 'mode', icon: 'school', label: 'Mode Based Test', desc: `${settings.modeQuestionCount} Qs · ${settings.modeTimerMinutes} min · 30% B / 30% I / 40% E`, color: 'from-purple-600 to-purple-500', linkedCourse: settings.modeLinkedCourse || '' },
+    { key: 'chapter', icon: 'menu_book', label: 'Chapter Based Test', desc: `${settings.chapterQuestionCount} Qs · ${settings.chapterTimerMinutes} min · 10% B / 20% I / 70% E`, color: 'from-blue-600 to-blue-500', linkedCourse: settings.chapterLinkedCourse || '' },
+    { key: 'module', icon: 'folder', label: 'Module Based Test', desc: `${settings.moduleQuestionCount} Qs · ${settings.moduleTimerMinutes} min · 10% B / 20% I / 70% E`, color: 'from-emerald-600 to-emerald-500', linkedCourse: settings.moduleLinkedCourse || '' },
+    { key: 'mode', icon: 'school', label: 'Mode Based Test', desc: `${settings.modeQuestionCount} Qs · ${settings.modeTimerMinutes} min · 10% B / 20% I / 70% E`, color: 'from-purple-600 to-purple-500', linkedCourse: settings.modeLinkedCourse || '' },
     { key: 'final', icon: 'military_tech', label: 'Final Mock Test', desc: `${settings.finalQuestionCount} Qs · ${settings.finalTimerMinutes} min · 60% Book / 40% Physical`, color: 'from-amber-600 to-orange-500', linkedCourse: settings.finalLinkedCourse || '' },
   ]
 }
