@@ -21,7 +21,7 @@ export default function FinalQuizPage() {
       const total = settings.finalQuestionCount
       const min = Math.round(total * 0.3)
       const all = await getAllQuestionsCached()
-      const accessible = all.filter((q) => checkModuleAccess(profile, q.module, settings))
+      const accessible = all.filter((q) => q.module !== 'Mock Test' && checkModuleAccess(profile, q.module, settings))
       if (accessible.length < min) { navigate('/quiz/select'); return }
 
       const book = accessible.filter((q) => q.mode === 'Book')

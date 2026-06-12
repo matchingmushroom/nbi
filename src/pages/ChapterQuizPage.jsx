@@ -26,7 +26,7 @@ export default function ChapterQuizPage() {
       if (!allowed) { navigate('/quiz/select'); return }
       const total = settings.chapterQuestionCount
       const min = Math.round(total * 0.5)
-      const filtered = all.filter((q) => q.chapter === chapter && q.mode !== 'Physical' && !(q.module === 'Course' && q.mode === 'Certification'))
+      const filtered = all.filter((q) => q.chapter === chapter && q.mode !== 'Physical' && !(q.module === 'Course' && q.mode === 'Certification') && q.module !== 'Mock Test')
       if (filtered.length < min) { navigate('/quiz/select'); return }
       const split = getDifficultySplit(total, 'chapter')
       const picked = pickByDifficulty(filtered, split)

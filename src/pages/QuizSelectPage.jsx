@@ -49,6 +49,7 @@ export default function QuizSelectPage() {
 
       qs.forEach((q) => {
         if (q.module === 'Course' && q.mode === 'Certification') return
+        if (q.module === 'Mock Test') return
         const mod = q.module || 'General'
         const ch = q.chapter || 'Unknown'
         const mode = q.mode || 'Unknown'
@@ -268,6 +269,22 @@ export default function QuizSelectPage() {
             <span className="material-symbols-outlined text-on-surface-variant text-[22px]">chevron_right</span>
           </button>
         ))}
+        {/* Mock Test */}
+        {checkModuleAccess(profile, 'Mock Test', settings) && (
+          <button
+            onClick={() => navigate('/quiz/mock-test')}
+            className="w-full glass-strong border border-white/40 p-5 rounded-xl hover:shadow-md transition-all flex items-center gap-4 text-left active:scale-[0.98] cursor-pointer"
+          >
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-500 flex items-center justify-center shrink-0 shadow-sm">
+              <span className="material-symbols-outlined text-white text-[24px]">fact_check</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-['Hanken_Grotesk'] font-bold text-base text-on-surface">Mock Test</h3>
+              <p className="text-xs text-on-surface-variant mt-0.5">15 Qs · 15 min · 1 Beginner / 2 Intermediate / 12 Expert</p>
+            </div>
+            <span className="material-symbols-outlined text-on-surface-variant text-[22px]">chevron_right</span>
+          </button>
+        )}
         {/* Pre-Assessment Test */}
         {checkQuizAccess(profile, 'preassessment', settings) && (
           <button

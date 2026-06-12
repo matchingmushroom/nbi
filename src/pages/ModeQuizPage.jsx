@@ -23,7 +23,7 @@ export default function ModeQuizPage() {
       const total = settings.modeQuestionCount
       const min = Math.round(total * 0.3)
       const all = await getAllQuestionsCached()
-      const filtered = all.filter((q) => q.mode === mode && !(q.module === 'Course' && q.mode === 'Certification') && checkModuleAccess(profile, q.module, settings))
+      const filtered = all.filter((q) => q.mode === mode && !(q.module === 'Course' && q.mode === 'Certification') && q.module !== 'Mock Test' && checkModuleAccess(profile, q.module, settings))
       if (filtered.length < min) { navigate('/quiz/select'); return }
       const split = getDifficultySplit(total, 'mode')
       const picked = pickByDifficulty(filtered, split)

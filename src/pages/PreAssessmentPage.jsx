@@ -145,7 +145,7 @@ export default function PreAssessmentPage() {
         const settings = await getQuizSettings()
         if (!checkQuizAccess(profile, 'preassessment', settings)) { navigate('/quiz/select'); return }
         const all = await getAllQuestionsCached()
-        const bookPhysical = all.filter((q) => (q.mode === 'Book' || q.mode === 'Physical') && q.difficulty === 'Expert')
+        const bookPhysical = all.filter((q) => (q.mode === 'Book' || q.mode === 'Physical') && q.difficulty === 'Expert' && q.module !== 'Mock Test')
         if (bookPhysical.length < settings.preassessmentQuestionCount) {
           setPhase('error')
           return
