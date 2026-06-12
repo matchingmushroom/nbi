@@ -2,8 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 
 const TAB_SWITCH_MAX = 4
 const FULLSCREEN_EXIT_MAX = 2
-const NO_FACE_MAX_SEC = 30
-const MULTI_FACE_MAX_SEC = 15
+const NO_FACE_MAX_SEC = 10
+const MULTI_FACE_MAX_SEC = 5
 const FACE_CHECK_INTERVAL = 2000
 const AUDIO_CHECK_INTERVAL = 1000
 const AUDIO_THRESHOLD = 40
