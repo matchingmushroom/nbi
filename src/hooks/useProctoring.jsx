@@ -8,6 +8,20 @@ const FACE_CHECK_INTERVAL = 2000
 const AUDIO_CHECK_INTERVAL = 1000
 const AUDIO_THRESHOLD = 40
 
+function isCameraCovered(video) {
+  if (!video?.videoWidth) return false
+  const c = document.createElement('canvas')
+  c.width = video.videoWidth
+  c.height = video.videoHeight
+  const ctx = c.getContext('2d')
+  if (!ctx) return false
+  ctx.drawImage(video, 0, 0)
+  const d = ctx.getImageData(0, 0, c.width, c.height).data
+  let sum = 0
+  for (let i = 0; i < d.length; i += 4) sum += d[i] + d[i+1] + d[i+2]
+  return (sum / (d.length / 4 * 3)) < 25
+}
+
 export default function useProctoring({ active, onAutoSubmit }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
@@ -18,6 +32,7 @@ export default function useProctoring({ active, onAutoSubmit }) {
   const audioIntervalRef = useRef(null)
   const noFaceSecRef = useRef(0)
   const multiFaceSecRef = useRef(0)
+  const coveredSecRef = useRef(0)
   const tabWarnRef = useRef(0)
   const fsWarnRef = useRef(0)
   const submittedRef = useRef(false)
@@ -26,7 +41,7 @@ export default function useProctoring({ active, onAutoSubmit }) {
   const [camReady, setCamReady] = useState(false)
   const [micReady, setMicReady] = useState(false)
   const [violations, setViolations] = useState([])
-  const [faceStatus, setFaceStatus] = useState({ count: 0, looking: true })
+  const [faceStatus, setFaceStatus] = useState({ count: 0, looking: true, covered: false })
   const [noiseLevel, setNoiseLevel] = useState(0)
   const [showWarning, setShowWarning] = useState(null)
 
@@ -80,53 +95,75 @@ export default function useProctoring({ active, onAutoSubmit }) {
   }, [])
 
   const startFaceDetection = useCallback(async () => {
+    let faceapi = null
+    let options = null
     try {
-      const faceapi = await import('@vladmandic/face-api')
-      await faceapi.nets.tinyFaceDetector.loadFromUri('/models')
-      await faceapi.nets.faceLandmark68Net.loadFromUri('/models')
-      const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
-
-      faceIntervalRef.current = setInterval(async () => {
-        if (!videoRef.current || !videoRef.current.videoWidth) return
-        try {
-          const detections = await faceapi.detectAllFaces(videoRef.current, options).withFaceLandmarks()
-          const count = detections.length
-          setFaceStatus((prev) => ({ ...prev, count }))
-
-          if (count === 0) {
-            noFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
-            if (noFaceSecRef.current >= NO_FACE_MAX_SEC) {
-              logViolation('no_face')
-              noFaceSecRef.current = 0
-              if (!submittedRef.current) onAutoSubmit?.()
-            }
-          } else {
-            noFaceSecRef.current = 0
-          }
-
-          if (count > 1) {
-            multiFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
-            if (multiFaceSecRef.current >= MULTI_FACE_MAX_SEC) {
-              logViolation('multiple_faces')
-              multiFaceSecRef.current = 0
-              if (!submittedRef.current) onAutoSubmit?.()
-            }
-          } else {
-            multiFaceSecRef.current = 0
-          }
-
-          if (count > 0) {
-            const landmarks = detections[0].landmarks
-            const leftEye = landmarks.getLeftEye()
-            const rightEye = landmarks.getRightEye()
-            const eyeCenterY = (leftEye.reduce((s, p) => s + p.y, 0) / leftEye.length + rightEye.reduce((s, p) => s + p.y, 0) / rightEye.length) / 2
-            const nose = landmarks.getNose()
-            const noseY = nose.reduce((s, p) => s + p.y, 0) / nose.length
-            setFaceStatus((prev) => ({ ...prev, looking: Math.abs(eyeCenterY - noseY) < 15 }))
-          }
-        } catch {}
-      }, FACE_CHECK_INTERVAL)
+      const mod = await import('@vladmandic/face-api')
+      await mod.nets.tinyFaceDetector.loadFromUri('/models')
+      await mod.nets.faceLandmark68Net.loadFromUri('/models')
+      faceapi = mod
+      options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
     } catch {}
+
+    faceIntervalRef.current = setInterval(async () => {
+      if (!videoRef.current || !videoRef.current.videoWidth) return
+
+      // Canvas brightness check (works without WebGL/WASM)
+      const covered = isCameraCovered(videoRef.current)
+      setFaceStatus((prev) => ({ ...prev, covered }))
+      if (covered) {
+        coveredSecRef.current += FACE_CHECK_INTERVAL / 1000
+        if (coveredSecRef.current >= NO_FACE_MAX_SEC) {
+          if (!submittedRef.current) {
+            logViolation('no_face')
+            coveredSecRef.current = 0
+            onAutoSubmit?.()
+          }
+        }
+      } else {
+        coveredSecRef.current = 0
+      }
+
+      // Face-api detection (supplementary, when WebGL/WASM available)
+      if (!faceapi || !options || submittedRef.current) return
+      try {
+        const detections = await faceapi.detectAllFaces(videoRef.current, options).withFaceLandmarks()
+        const count = detections.length
+        setFaceStatus((prev) => ({ ...prev, count }))
+
+        if (count === 0) {
+          noFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
+          if (noFaceSecRef.current >= NO_FACE_MAX_SEC) {
+            logViolation('no_face')
+            noFaceSecRef.current = 0
+            if (!submittedRef.current) onAutoSubmit?.()
+          }
+        } else {
+          noFaceSecRef.current = 0
+        }
+
+        if (count > 1) {
+          multiFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
+          if (multiFaceSecRef.current >= MULTI_FACE_MAX_SEC) {
+            logViolation('multiple_faces')
+            multiFaceSecRef.current = 0
+            if (!submittedRef.current) onAutoSubmit?.()
+          }
+        } else {
+          multiFaceSecRef.current = 0
+        }
+
+        if (count > 0) {
+          const landmarks = detections[0].landmarks
+          const leftEye = landmarks.getLeftEye()
+          const rightEye = landmarks.getRightEye()
+          const eyeCenterY = (leftEye.reduce((s, p) => s + p.y, 0) / leftEye.length + rightEye.reduce((s, p) => s + p.y, 0) / rightEye.length) / 2
+          const nose = landmarks.getNose()
+          const noseY = nose.reduce((s, p) => s + p.y, 0) / nose.length
+          setFaceStatus((prev) => ({ ...prev, looking: Math.abs(eyeCenterY - noseY) < 15 }))
+        }
+      } catch {}
+    }, FACE_CHECK_INTERVAL)
   }, [logViolation, onAutoSubmit])
 
   const startAudioMonitor = useCallback(() => {
@@ -201,8 +238,8 @@ export default function useProctoring({ active, onAutoSubmit }) {
     <div className="fixed bottom-4 right-4 z-40 w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl glass-dark">
       <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-black/50 px-2 py-0.5 rounded-full text-[9px] text-white">
-        <span className={`w-1.5 h-1.5 rounded-full ${faceStatus.count > 0 ? 'bg-success' : 'bg-error'}`} />
-        {faceStatus.count > 0 ? `${faceStatus.count} face${faceStatus.count > 1 ? 's' : ''}` : 'No face'}
+        <span className={`w-1.5 h-1.5 rounded-full ${faceStatus.covered ? 'bg-error' : faceStatus.count > 0 ? 'bg-success' : 'bg-warning'}`} />
+        {faceStatus.covered ? 'Covered' : faceStatus.count > 0 ? `${faceStatus.count} face${faceStatus.count > 1 ? 's' : ''}` : 'No face'}
       </div>
     </div>
   )
