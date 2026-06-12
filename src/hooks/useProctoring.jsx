@@ -234,15 +234,39 @@ export default function useProctoring({ active, onAutoSubmit }) {
     try { document.exitFullscreen?.() } catch {}
   }, [])
 
-  const ProctorPiP = () => (
-    <div className="fixed bottom-4 right-4 z-40 w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl glass-dark">
-      <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-black/50 px-2 py-0.5 rounded-full text-[9px] text-white">
-        <span className={`w-1.5 h-1.5 rounded-full ${faceStatus.covered ? 'bg-error' : faceStatus.count > 0 ? 'bg-success' : 'bg-warning'}`} />
-        {faceStatus.covered ? 'Covered' : faceStatus.count > 0 ? `${faceStatus.count} face${faceStatus.count > 1 ? 's' : ''}` : 'No face'}
+  const ProctorPiP = () => {
+    const [pos, setPos] = useState({ x: 0, y: 0 })
+    const dragRef = useRef({ startX: 0, startY: 0, origX: 0, origY: 0, dragging: false })
+
+    const onDown = (e) => {
+      const p = e.type.startsWith('touch') ? e.touches[0] : e
+      dragRef.current = { startX: p.clientX, startY: p.clientY, origX: pos.x, origY: pos.y, dragging: true }
+    }
+
+    const onMove = (e) => {
+      if (!dragRef.current.dragging) return
+      e.preventDefault()
+      const p = e.type.startsWith('touch') ? e.touches[0] : e
+      setPos({ x: dragRef.current.origX + (p.clientX - dragRef.current.startX), y: dragRef.current.origY + (p.clientY - dragRef.current.startY) })
+    }
+
+    const onUp = () => { dragRef.current.dragging = false }
+
+    return (
+      <div
+        onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+        onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
+        className="fixed z-40 w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl glass-dark cursor-grab active:cursor-grabbing touch-none"
+        style={{ bottom: `calc(1rem - ${pos.y}px)`, right: `calc(1rem - ${pos.x}px)` }}
+      >
+        <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover pointer-events-none" />
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-black/50 px-2 py-0.5 rounded-full text-[9px] text-white pointer-events-none">
+          <span className={`w-1.5 h-1.5 rounded-full ${faceStatus.covered ? 'bg-error' : faceStatus.count > 0 ? 'bg-success' : 'bg-warning'}`} />
+          {faceStatus.covered ? 'Covered' : faceStatus.count > 0 ? `${faceStatus.count} face${faceStatus.count > 1 ? 's' : ''}` : 'No face'}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   const WarningOverlay = () => showWarning ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setShowWarning(null)}>
