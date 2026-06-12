@@ -64,20 +64,14 @@ export async function saveQuizSettings(data) {
 }
 
 export function getDifficultySplit(total, type) {
-  if (type === 'mode') {
-    const beginner = Math.round(total * 0.3)
-    const intermediate = Math.round(total * 0.3)
-    const expert = total - beginner - intermediate
-    return { beginner, intermediate, expert }
-  }
   if (type === 'final') {
     const beginner = Math.round(total * 0.05)
     const intermediate = Math.round(total * 0.1)
     const expert = total - beginner - intermediate
     return { beginner, intermediate, expert }
   }
-  const beginner = Math.round(total * 0.2)
-  const intermediate = Math.round(total * 0.4)
+  const beginner = Math.round(total * 0.1)
+  const intermediate = Math.round(total * 0.2)
   const expert = total - beginner - intermediate
   return { beginner, intermediate, expert }
 }
