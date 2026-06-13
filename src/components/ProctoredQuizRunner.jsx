@@ -117,7 +117,7 @@ export default function ProctoredQuizRunner({ questions, config, onFinish, proct
   }, [phase])
 
   useEffect(() => {
-    if (phase !== 'exam' || timeLeft > 0 || submittedRef.current) return
+    if (phase !== 'exam' || timeLeft === null || timeLeft > 0 || submittedRef.current) return
     handleSubmitRef.current?.(true)
   }, [phase, timeLeft])
 
