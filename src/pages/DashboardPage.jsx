@@ -308,21 +308,14 @@ export default function DashboardPage() {
         {enrolledCourses.length > 0 ? (
           <div className="space-y-2">
             {enrolledCourses.map((c) => {
-              const completed = c.progress.completedDays?.length || 0
+              const completed = c.progress.readDays?.length || 0
               const total = c.dayCount
               const pct = total > 0 ? Math.round((completed / total) * 100) : 0
-              const steak = c.progress.currentSteak || 0
               return (
                 <button key={c.courseId} onClick={() => navigate('/mylearn')} className="w-full bg-surface border border-outline-variant rounded-xl p-3 text-left transition-all active:scale-[0.98] cursor-pointer">
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-sm font-semibold text-on-surface truncate">{c.courseTitle}</p>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
-                      {steak > 0 && (
-                        <span className="flex items-center gap-0.5 text-orange-500 text-[10px] font-bold">
-                          <span className="material-symbols-outlined text-[12px]" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
-                          {steak}
-                        </span>
-                      )}
                       <span className="text-[10px] font-medium text-on-surface-variant">{completed}/{total}</span>
                     </div>
                   </div>
@@ -355,7 +348,7 @@ export default function DashboardPage() {
         </button>
         <button onClick={() => navigate('/leaderboard?filter=course')} className="bg-surface border border-outline-variant rounded-xl p-4 text-left cursor-pointer active:scale-[0.98] transition-all hover:shadow-sm">
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Courses</span>
-          <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{enrolledCourses.filter((c) => c.progress.completedDays?.length >= c.dayCount).length + completedCourses.length}</p>
+          <p className="font-['Hanken_Grotesk'] text-2xl font-bold text-primary mt-1">{enrolledCourses.filter((c) => (c.progress.readDays?.length || 0) >= c.dayCount).length + completedCourses.length}</p>
         </button>
         <div className="bg-surface border border-outline-variant rounded-xl p-4">
           <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Avg</span>
