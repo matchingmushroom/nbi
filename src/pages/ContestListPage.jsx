@@ -1,23 +1,36 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getUserContests } from '../lib/contestService'
+import { getUserContests, deleteContest } from '../lib/contestService'
 
 export default function ContestListPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const [contests, setContests] = useState([])
   const [loading, setLoading] = useState(true)
+  const [deleteId, setDeleteId] = useState(null)
+
+  const fetch = async () => {
+    if (!profile?.uid) return
+    const data = await getUserContests(profile.uid)
+    setContests(data)
+    setLoading(false)
+  }
 
   useEffect(() => {
-    const fetch = async () => {
-      if (!profile?.uid) return
-      const data = await getUserContests(profile.uid)
-      setContests(data)
-      setLoading(false)
-    }
     fetch()
   }, [profile])
+
+  const handleDelete = async (id) => {
+    setDeleteId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteId) return
+    await deleteContest(deleteId)
+    setDeleteId(null)
+    setContests((prev) => prev.filter((c) => c.id !== deleteId))
+  }
 
   const created = contests.filter((c) => c.myRole === 'organizer')
   const invited = contests.filter((c) => c.myRole === 'participant')
@@ -40,31 +53,43 @@ export default function ContestListPage() {
   const renderCard = (c) => {
     const participantCount = Object.keys(c.participants || {}).length
     const action = getAction(c)
+    const isOwner = c.myRole === 'organizer'
     return (
-      <button key={c.id} onClick={action}
-        className="w-full bg-surface border border-outline-variant rounded-xl p-4 text-left hover:shadow-sm transition-all active:scale-[0.98] cursor-pointer">
-        <div className="flex items-start justify-between mb-2">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-0.5">
-              <h3 className="text-sm font-bold text-on-surface truncate">{c.title}</h3>
-              {getStatusBadge(c)}
+      <div key={c.id} className="bg-surface border border-outline-variant rounded-xl overflow-hidden">
+        <button onClick={action}
+          className="w-full p-4 text-left hover:shadow-sm transition-all active:scale-[0.98] cursor-pointer">
+          <div className="flex items-start justify-between mb-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-0.5">
+                <h3 className="text-sm font-bold text-on-surface truncate">{c.title}</h3>
+                {getStatusBadge(c)}
+              </div>
+              <p className="text-[11px] text-on-surface-variant">
+                {isOwner ? 'Created by you' : `by ${c.organizerName}`}
+                {' · '}{participantCount} participant{participantCount !== 1 ? 's' : ''}
+                {' · '}{c.minBet} XP bet
+              </p>
             </div>
-            <p className="text-[11px] text-on-surface-variant">
-              {c.myRole === 'organizer' ? 'Created by you' : `by ${c.organizerName}`}
-              {' · '}{participantCount} participant{participantCount !== 1 ? 's' : ''}
-              {' · '}{c.minBet} XP bet
-            </p>
+            <span className="material-symbols-outlined text-on-surface-variant text-[20px] shrink-0 ml-2">chevron_right</span>
           </div>
-          <span className="material-symbols-outlined text-on-surface-variant text-[20px] shrink-0 ml-2">chevron_right</span>
-        </div>
-        {c.status === 'completed' && c.results?.winnerName && (
-          <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-outline-variant/30">
-            <span className="material-symbols-outlined text-yellow-500 text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>emoji_events</span>
-            <span className="text-[11px] text-on-surface-variant">Winner: <strong className="text-on-surface">{c.results.winnerName}</strong></span>
-            {c.results.prizeAmount > 0 && <span className="text-[11px] text-warning font-semibold ml-auto">+{c.results.prizeAmount} XP</span>}
+          {c.status === 'completed' && c.results?.winnerName && (
+            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-outline-variant/30">
+              <span className="material-symbols-outlined text-yellow-500 text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>emoji_events</span>
+              <span className="text-[11px] text-on-surface-variant">Winner: <strong className="text-on-surface">{c.results.winnerName}</strong></span>
+              {c.results.prizeAmount > 0 && <span className="text-[11px] text-warning font-semibold ml-auto">+{c.results.prizeAmount} XP</span>}
+            </div>
+          )}
+        </button>
+        {isOwner && c.status !== 'completed' && (
+          <div className="px-4 pb-3 flex gap-2 border-t border-outline-variant/30 pt-2">
+            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id) }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold text-error hover:bg-error/5 transition-all cursor-pointer">
+              <span className="material-symbols-outlined text-[14px]">delete</span>
+              Delete
+            </button>
           </div>
         )}
-      </button>
+      </div>
     )
   }
 
@@ -107,6 +132,25 @@ export default function ContestListPage() {
         <div>
           <h2 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Invited ({invited.length})</h2>
           <div className="space-y-2">{invited.map(renderCard)}</div>
+        </div>
+      )}
+
+      {deleteId && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => setDeleteId(null)}>
+          <div className="bg-surface rounded-xl p-6 max-w-sm w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-on-surface mb-2">Delete Contest?</h3>
+            <p className="text-sm text-on-surface-variant mb-4">This cannot be undone. All invites and data will be removed.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteId(null)}
+                className="flex-1 bg-surface border border-outline-variant py-2.5 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low cursor-pointer">
+                Cancel
+              </button>
+              <button onClick={confirmDelete}
+                className="flex-1 bg-error text-white py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 cursor-pointer">
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

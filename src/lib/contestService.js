@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, query, where, onSnapshot } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from './firebase'
 import { getAllQuestionsCached } from './cache'
 import { getLevel } from './gamification'
@@ -243,4 +243,8 @@ export function validateBetForUsers(allUsers, minBet) {
     ...u,
     canBet: (u.xp || 0) >= minBet,
   }))
+}
+
+export async function deleteContest(contestId) {
+  await deleteDoc(doc(db, 'contests', contestId))
 }

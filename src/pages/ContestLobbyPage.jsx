@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getAllUsersCached } from '../lib/cache'
-import { getContestRealtime, startContest } from '../lib/contestService'
+import { getContestRealtime, startContest, deleteContest } from '../lib/contestService'
 
 export default function ContestLobbyPage() {
   const { id } = useParams()
@@ -13,6 +13,8 @@ export default function ContestLobbyPage() {
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState(null)
+  const [showDelete, setShowDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -41,6 +43,18 @@ export default function ContestLobbyPage() {
     } catch (e) {
       setError(e.message || 'Failed to start')
       setStarting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (deleting) return
+    setDeleting(true)
+    try {
+      await deleteContest(id)
+      navigate('/contests', { replace: true })
+    } catch {
+      setDeleting(false)
+      setShowDelete(false)
     }
   }
 
@@ -127,10 +141,44 @@ export default function ContestLobbyPage() {
           </div>
         )}
 
+        {isOrganizer && contest.status === 'setup' && (
+          <div className="flex gap-2 mt-3">
+            <button onClick={() => { setShowDelete(true) }} disabled={deleting}
+              className="flex-1 flex items-center justify-center gap-1 border border-error/30 text-error py-2.5 rounded-xl text-xs font-semibold hover:bg-error/5 transition-all cursor-pointer disabled:opacity-40">
+              <span className="material-symbols-outlined text-[15px]">delete</span>
+              Delete
+            </button>
+            <button onClick={() => navigate('/contest/create')}
+              className="flex-1 flex items-center justify-center gap-1 border border-primary/30 text-primary py-2.5 rounded-xl text-xs font-semibold hover:bg-primary/5 transition-all cursor-pointer">
+              <span className="material-symbols-outlined text-[15px]">add</span>
+              Create New
+            </button>
+          </div>
+        )}
+
         <button onClick={() => navigate('/contests')} className="mt-3 text-xs text-on-surface-variant hover:text-on-surface cursor-pointer">
           Back to Contests
         </button>
       </div>
+
+      {showDelete && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => setShowDelete(false)}>
+          <div className="bg-surface rounded-xl p-6 max-w-sm w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-on-surface mb-2">Delete Contest?</h3>
+            <p className="text-sm text-on-surface-variant mb-4">This cannot be undone. All invites and data will be removed.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDelete(false)}
+                className="flex-1 bg-surface border border-outline-variant py-2.5 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-low cursor-pointer">
+                Cancel
+              </button>
+              <button onClick={handleDelete} disabled={deleting}
+                className="flex-1 bg-error text-white py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50">
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
