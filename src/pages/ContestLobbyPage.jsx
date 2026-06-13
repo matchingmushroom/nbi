@@ -61,7 +61,10 @@ export default function ContestLobbyPage() {
   if (loading) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant animate-pulse">Loading lobby...</p></div>
   if (!contest) return <div className="h-full flex items-center justify-center p-4"><p className="text-on-surface-variant">Contest not found</p></div>
 
-  const eligibleCount = participants.filter(([, p]) => (p.xpAtJoin || 0) >= contest.minBet).length
+  const eligibleCount = participants.filter(([uid]) => {
+    const userData = allUsers.find((u) => u.uid === uid)
+    return (userData?.xp || 0) >= contest.minBet
+  }).length
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto flex flex-col items-center justify-center min-h-full">
