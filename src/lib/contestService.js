@@ -155,8 +155,21 @@ export async function submitContestEntry(contestId, userId, answers, timeTaken) 
   })
 
   const updated = await getContest(contestId)
-  const allSubmitted = Object.values(updated.participants).every((p) => p.status === 'submitted' || !p.eligible)
-  if (allSubmitted) await endContest(contestId)
+
+  if (!updated.firstSubmittedAt) {
+    await updateDoc(doc(db, 'contests', contestId), {
+      firstSubmittedAt: new Date().toISOString(),
+    })
+    return { firstSubmitter: true }
+  }
+
+  const elapsed = Date.now() - new Date(updated.firstSubmittedAt).getTime()
+  if (elapsed >= 10000) {
+    await endContest(contestId)
+    return { ended: true }
+  }
+
+  return { firstSubmitter: false, ended: false }
 }
 
 export async function endContest(contestId) {
