@@ -91,7 +91,7 @@ function NotificationBell({ profile, navigate, dropdownUp }) {
       </button>
 
       {showDropdown && (
-        <div className={`absolute right-0 ${dropdownUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-80 bg-surface border border-outline-variant rounded-xl shadow-xl z-50 overflow-hidden`}>
+        <div className={`absolute ${dropdownUp ? 'left-full bottom-full mb-1' : 'right-0 top-full mt-1'} w-80 bg-surface border border-outline-variant rounded-xl shadow-xl z-50 overflow-hidden`}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
             <h3 className="text-xs font-semibold text-on-surface uppercase tracking-wider">Notifications</h3>
             {unreadCount > 0 && (
