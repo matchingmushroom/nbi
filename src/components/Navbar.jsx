@@ -1,5 +1,7 @@
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { getNotificationsRealtime, getUnreadCountRealtime, markAsRead, markAllAsRead } from '../lib/notificationService'
 
 const studentLinks = [
   { to: '/dashboard', icon: 'dashboard', label: 'Home' },
@@ -29,6 +31,99 @@ const moderatorLinks = [
   { to: '/admin/courses', icon: 'school', label: 'Courses' },
   { to: '/profile', icon: 'person', label: 'Profile' },
 ]
+
+function NotificationBell({ profile, navigate }) {
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notifications, setNotifications] = useState([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    if (!profile?.uid) return
+    const unsubCount = getUnreadCountRealtime(profile.uid, setUnreadCount)
+    const unsubList = getNotificationsRealtime(profile.uid, setNotifications)
+    return () => { unsubCount(); unsubList() }
+  }, [profile?.uid])
+
+  useEffect(() => {
+    const onClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false)
+    }
+    if (showDropdown) document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [showDropdown])
+
+  const handleClick = async (n) => {
+    if (!n.read) await markAsRead(n.id)
+    setShowDropdown(false)
+    if (n.data?.path) navigate(n.data.path)
+  }
+
+  const handleMarkAll = async () => {
+    await markAllAsRead(profile?.uid)
+    setShowDropdown(false)
+  }
+
+  const getIcon = (type) => {
+    if (type === 'contest_invite') return 'mail'
+    if (type === 'contest_start') return 'play_arrow'
+    if (type === 'contest_result') return 'emoji_events'
+    return 'notifications'
+  }
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button onClick={() => setShowDropdown(!showDropdown)}
+        className="relative p-1.5 rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer text-on-surface-variant hover:text-on-surface">
+        <span className="material-symbols-outlined text-[22px]">notifications</span>
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 bg-error text-white text-[9px] font-bold min-w-[16px] h-4 flex items-center justify-center rounded-full px-1 leading-none border-2 border-surface">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {showDropdown && (
+        <div className="absolute right-0 top-full mt-1 w-80 bg-surface border border-outline-variant rounded-xl shadow-xl z-50 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
+            <h3 className="text-xs font-semibold text-on-surface uppercase tracking-wider">Notifications</h3>
+            {unreadCount > 0 && (
+              <button onClick={handleMarkAll} className="text-[10px] text-primary font-semibold hover:underline cursor-pointer">Mark all read</button>
+            )}
+          </div>
+          <div className="max-h-80 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs text-on-surface-variant">No notifications</div>
+            ) : (
+              notifications.map((n) => (
+                <button key={n.id} onClick={() => handleClick(n)}
+                  className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-surface-container-low transition-colors cursor-pointer border-b border-outline-variant/30 last:border-0 ${
+                    !n.read ? 'bg-primary-fixed/5' : ''
+                  }`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                    n.type === 'contest_result' ? 'bg-amber-100 text-amber-600' :
+                    n.type === 'contest_start' ? 'bg-green-100 text-green-600' :
+                    'bg-blue-100 text-blue-600'
+                  }`}>
+                    <span className="material-symbols-outlined text-[16px]" style={{fontVariationSettings: "'FILL' 1"}}>{getIcon(n.type)}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs ${!n.read ? 'font-bold text-on-surface' : 'font-medium text-on-surface'}`}>{n.title}</p>
+                    <p className="text-[11px] text-on-surface-variant mt-0.5 line-clamp-2">{n.body}</p>
+                    <p className="text-[9px] text-on-surface-variant/60 mt-1">
+                      {n.createdAt ? new Date(n.createdAt).toLocaleDateString() : ''}
+                    </p>
+                  </div>
+                  {!n.read && <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function Navbar() {
   const { profile, logout } = useAuth()
@@ -73,20 +168,23 @@ export default function Navbar() {
           ))}
         </nav>
         <div className="px-4 mt-auto space-y-2">
-          <button onClick={() => navigate('/profile')} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-on-surface-variant border-t border-outline-variant pt-4 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer text-left">
-            <div className="relative shrink-0">
-              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
-                {(profile?.displayName || profile?.email || '?')[0].toUpperCase()}
+          <div className="flex items-center justify-between pt-4 border-t border-outline-variant">
+            <NotificationBell profile={profile} navigate={navigate} />
+            <button onClick={() => navigate('/profile')} className="flex items-center gap-2 px-1 py-1 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer text-left">
+              <div className="relative shrink-0">
+                <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
+                  {(profile?.displayName || profile?.email || '?')[0].toUpperCase()}
+                </div>
+                {profile?.level > 1 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-warning text-white text-[8px] font-bold px-1 py-0.5 rounded-full leading-none">Lv{profile.level}</span>
+                )}
               </div>
-              {profile?.level > 1 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-warning text-white text-[8px] font-bold px-1 py-0.5 rounded-full leading-none">Lv{profile.level}</span>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-on-surface truncate">{profile?.displayName || 'User'}</p>
-              <p className="text-xs truncate">{profile?.role === 'moderator' ? 'moderator' : profile?.role} · {profile?.xp || 0} XP</p>
-            </div>
-          </button>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-on-surface text-xs truncate">{profile?.displayName || 'User'}</p>
+                <p className="text-[10px] truncate text-on-surface-variant">{profile?.role === 'moderator' ? 'moderator' : profile?.role} · {profile?.xp || 0} XP</p>
+              </div>
+            </button>
+          </div>
           <button
             onClick={handleLogout}
             className="w-full py-2.5 bg-primary text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer"
@@ -100,6 +198,7 @@ export default function Navbar() {
       <header className="md:hidden flex items-center justify-between px-4 h-14 bg-surface border-b border-outline-variant sticky top-0 z-40">
         <h1 className="font-['Hanken_Grotesk'] text-lg font-bold text-primary">BankMastery</h1>
         <div className="flex items-center gap-2">
+          <NotificationBell profile={profile} navigate={navigate} />
           <button onClick={() => navigate('/profile')} className="relative cursor-pointer">
             <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
               {(profile?.displayName || profile?.email || '?')[0].toUpperCase()}

@@ -2,6 +2,7 @@ import { doc, getDoc, setDoc, updateDoc, collection, getDocs, query, where, onSn
 import { db } from './firebase'
 import { getAllQuestionsCached } from './cache'
 import { getLevel } from './gamification'
+import { createBulkNotifications, createNotification } from './notificationService'
 
 export async function getContest(id) {
   const snap = await getDoc(doc(db, 'contests', id))
@@ -68,6 +69,15 @@ export async function createContest(organizer, { title, sourceType, sourceValue,
     participants,
     results: { winnerId: null, winnerName: null, prizeAmount: 0, rankings: [] },
   })
+
+  await createBulkNotifications(
+    invitedUserIds,
+    'contest_invite',
+    'Contest Invitation',
+    `${organizer.displayName || organizer.email} invited you to "${title}" (${minBet} XP bet)`,
+    { path: `/contest/lobby/${ref.id}` }
+  )
+
   return ref.id
 }
 
@@ -104,6 +114,14 @@ export async function startContest(contestId, allUsers) {
     participants,
     potAmount: contest.minBet * eligibleCount,
   })
+
+  await createBulkNotifications(
+    userIds.filter((uid) => participants[uid]?.eligible),
+    'contest_start',
+    'Contest Started!',
+    `"${contest.title}" has started! Go to play now.`,
+    { path: `/contest/play/${contestId}` }
+  )
 }
 
 export async function submitContestEntry(contestId, userId, answers, timeTaken) {
@@ -210,6 +228,14 @@ export async function endContest(contestId) {
       rankings,
     },
   })
+
+  await createBulkNotifications(
+    eligibleIds,
+    'contest_result',
+    'Contest Results Available',
+    `"${contest.title}" is complete! ${winner.displayName} won ${prizeAmount} XP.`,
+    { path: `/contest/results/${contestId}` }
+  )
 }
 
 export function validateBetForUsers(allUsers, minBet) {
