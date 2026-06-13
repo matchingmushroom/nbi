@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getAllUsersCached } from '../lib/cache'
@@ -10,17 +10,23 @@ export default function ContestLobbyPage() {
   const navigate = useNavigate()
   const [contest, setContest] = useState(null)
   const [allUsers, setAllUsers] = useState([])
+  const [usersLoaded, setUsersLoaded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [manualReady, setManualReady] = useState(false)
+  const [countdown, setCountdown] = useState(15)
   const [error, setError] = useState(null)
   const [showDelete, setShowDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const handleStartRef = useRef(null)
+  const timerStartedRef = useRef(false)
 
   useEffect(() => {
     const init = async () => {
       const users = await getAllUsersCached()
       setAllUsers(users)
+      setUsersLoaded(true)
     }
     init()
     const unsub = getContestRealtime(id, (c) => {
@@ -42,13 +48,29 @@ export default function ContestLobbyPage() {
 
   // Auto-start when all participants have joined
   useEffect(() => {
-    if (!contest || contest.status !== 'setup' || starting) return
+    if (!contest || contest.status !== 'setup' || starting || !usersLoaded) return
     const participants = contest.participants || {}
     const allJoined = Object.values(participants).every((p) => p.status === 'joined')
     if (allJoined && Object.keys(participants).length >= 1) {
-      handleStart()
+      handleStartRef.current?.()
     }
-  }, [contest, starting])
+  }, [contest, starting, usersLoaded])
+
+  // 15-second timer for manual start
+  useEffect(() => {
+    if (!contest || contest.status !== 'setup') return
+    const joinedNonOrganizer = Object.entries(contest.participants || {}).some(
+      ([uid, p]) => uid !== contest.organizerId && p.status === 'joined'
+    )
+    if (!joinedNonOrganizer) { timerStartedRef.current = false; setManualReady(false); setCountdown(15); return }
+    if (timerStartedRef.current) return
+    timerStartedRef.current = true
+    setManualReady(false)
+    setCountdown(15)
+    const cd = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000)
+    const tm = setTimeout(() => setManualReady(true), 15000)
+    return () => { clearInterval(cd); clearTimeout(tm) }
+  }, [contest])
 
   const isOrganizer = contest?.organizerId === profile?.uid
   const participants = contest ? Object.entries(contest.participants || {}) : []
@@ -69,12 +91,14 @@ export default function ContestLobbyPage() {
     setStarting(true)
     setError(null)
     try {
-      await startContest(id, allUsers)
+      const users = await getAllUsersCached()
+      await startContest(id, users)
     } catch (e) {
       setError(e.message || 'Failed to start')
       setStarting(false)
     }
   }
+  handleStartRef.current = handleStart
 
   const handleDelete = async () => {
     if (deleting) return
@@ -98,6 +122,8 @@ export default function ContestLobbyPage() {
 
   const myStatus = contest.participants?.[profile?.uid]?.status
   const hasJoined = myStatus === 'joined'
+  const someJoined = participants.some(([uid, p]) => uid !== contest?.organizerId && p.status === 'joined')
+  const allJoined = Object.values(contest.participants || {}).every((p) => p.status === 'joined')
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto flex flex-col items-center justify-center min-h-full">
@@ -173,6 +199,30 @@ export default function ContestLobbyPage() {
             className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all shadow-lg shadow-amber-500/20 cursor-pointer">
             {joining ? 'Joining...' : 'Join Contest'}
           </button>
+        ) : isOrganizer ? (
+          allJoined ? (
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+              <p className="text-sm text-on-surface font-semibold">All players joined! Starting...</p>
+            </div>
+          ) : someJoined ? (
+            <>
+              <button onClick={handleStart}
+                disabled={eligibleCount < 2 || (!allJoined && !manualReady)}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all shadow-lg shadow-amber-500/20 cursor-pointer">
+                {eligibleCount < 2
+                  ? 'Need at least 2 eligible players'
+                  : manualReady || allJoined
+                    ? 'Start Contest'
+                    : `Start available in ${countdown}s`}
+              </button>
+              <p className="text-xs text-on-surface-variant mt-2">Contest will auto-start when all players join.</p>
+            </>
+          ) : (
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+              <p className="text-sm text-on-surface font-semibold">Waiting for players to join...</p>
+              <p className="text-xs text-on-surface-variant mt-1">Share the contest link to invite others.</p>
+            </div>
+          )
         ) : (
           <div className="bg-success/10 border border-success/20 rounded-xl p-4">
             <p className="text-sm text-on-surface font-semibold">You've joined! Waiting for others...</p>
