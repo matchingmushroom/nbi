@@ -75,7 +75,7 @@ export async function createContest(organizer, { title, sourceType, sourceValue,
     'contest_invite',
     'Contest Invitation',
     `${organizer.displayName || organizer.email} invited you to "${title}" (${minBet} XP bet)`,
-    { path: `/contest/lobby/${ref.id}` }
+    { path: `/contest/play/${ref.id}` }
   )
 
   return ref.id

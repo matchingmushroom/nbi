@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getNotificationsRealtime, getUnreadCountRealtime, markAsRead, markAllAsRead } from '../lib/notificationService'
+import { onSnapshot, collection, query, where } from 'firebase/firestore'
+import { db } from '../lib/firebase'
+import { markAsRead, markAllAsRead } from '../lib/notificationService'
 
 const studentLinks = [
   { to: '/dashboard', icon: 'dashboard', label: 'Home' },
@@ -40,9 +42,14 @@ function NotificationBell({ profile, navigate }) {
 
   useEffect(() => {
     if (!profile?.uid) return
-    const unsubCount = getUnreadCountRealtime(profile.uid, setUnreadCount)
-    const unsubList = getNotificationsRealtime(profile.uid, setNotifications)
-    return () => { unsubCount(); unsubList() }
+    const q = query(collection(db, 'notifications'), where('userId', '==', profile.uid))
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      data.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+      setNotifications(data.slice(0, 20))
+      setUnreadCount(data.filter((n) => !n.read).length)
+    })
+    return unsub
   }, [profile?.uid])
 
   useEffect(() => {
