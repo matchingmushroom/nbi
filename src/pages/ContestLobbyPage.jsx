@@ -91,8 +91,7 @@ export default function ContestLobbyPage() {
     setStarting(true)
     setError(null)
     try {
-      const users = await getAllUsersCached()
-      await startContest(id, users)
+      await startContest(id, allUsers)
     } catch (e) {
       setError(e.message || 'Failed to start')
       setStarting(false)
