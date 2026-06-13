@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getAllUsersCached } from '../lib/cache'
-import { getContestRealtime, startContest, deleteContest } from '../lib/contestService'
+import { getContestRealtime, joinContest, startContest, deleteContest } from '../lib/contestService'
 
 export default function ContestLobbyPage() {
   const { id } = useParams()
@@ -11,6 +11,7 @@ export default function ContestLobbyPage() {
   const [contest, setContest] = useState(null)
   const [allUsers, setAllUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [joining, setJoining] = useState(false)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState(null)
   const [showDelete, setShowDelete] = useState(false)
@@ -31,8 +32,37 @@ export default function ContestLobbyPage() {
     return unsub
   }, [id, navigate])
 
+  // Auto-join the organizer when lobby loads
+  useEffect(() => {
+    if (!contest || contest.status !== 'setup') return
+    if (contest.organizerId === profile?.uid && contest.participants?.[profile.uid]?.status === 'invited') {
+      joinContest(id, profile.uid).catch(() => {})
+    }
+  }, [contest, id, profile])
+
+  // Auto-start when all participants have joined
+  useEffect(() => {
+    if (!contest || contest.status !== 'setup' || starting) return
+    const participants = contest.participants || {}
+    const allJoined = Object.values(participants).every((p) => p.status === 'joined')
+    if (allJoined && Object.keys(participants).length >= 1) {
+      handleStart()
+    }
+  }, [contest, starting])
+
   const isOrganizer = contest?.organizerId === profile?.uid
   const participants = contest ? Object.entries(contest.participants || {}) : []
+
+  const handleJoin = async () => {
+    if (joining) return
+    setJoining(true)
+    try {
+      await joinContest(id, profile?.uid)
+    } catch (e) {
+      setError(e.message || 'Failed to join')
+    }
+    setJoining(false)
+  }
 
   const handleStart = async () => {
     if (starting) return
@@ -66,6 +96,9 @@ export default function ContestLobbyPage() {
     return (userData?.xp || 0) >= contest.minBet
   }).length
 
+  const myStatus = contest.participants?.[profile?.uid]?.status
+  const hasJoined = myStatus === 'joined'
+
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto flex flex-col items-center justify-center min-h-full">
       <div className="glass-strong rounded-2xl p-6 md:p-8 w-full border border-white/40 text-center">
@@ -94,6 +127,7 @@ export default function ContestLobbyPage() {
               const userData = allUsers.find((u) => u.uid === uid) || {}
               const xp = userData.xp || 0
               const eligible = xp >= contest.minBet
+              const joined = p.status === 'joined'
               return (
                 <div key={uid}
                   className={`flex items-center gap-3 p-3 rounded-xl ${eligible ? 'bg-surface border border-outline-variant' : 'bg-error/5 border border-error/20'}`}>
@@ -108,9 +142,7 @@ export default function ContestLobbyPage() {
                     <p className="text-[11px] text-on-surface-variant">{xp} XP available</p>
                   </div>
                   {!eligible && <span className="text-[10px] text-error font-semibold whitespace-nowrap">Insufficient XP</span>}
-                  {eligible && uid !== profile?.uid && !p.eligible === false && (
-                    <span className="material-symbols-outlined text-success text-[18px]" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>
-                  )}
+                  {joined && <span className="flex items-center gap-1 text-[10px] text-success font-semibold"><span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>Joined</span>}
                 </div>
               )
             })}
@@ -132,15 +164,19 @@ export default function ContestLobbyPage() {
           </div>
         </div>
 
-        {isOrganizer ? (
-          <button onClick={handleStart} disabled={starting || eligibleCount < 2}
+        {starting ? (
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+            <p className="text-sm text-on-surface font-semibold">Starting contest...</p>
+          </div>
+        ) : !hasJoined ? (
+          <button onClick={handleJoin} disabled={joining}
             className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all shadow-lg shadow-amber-500/20 cursor-pointer">
-            {starting ? 'Starting...' : eligibleCount < 2 ? 'Need at least 2 eligible players' : 'Start Contest'}
+            {joining ? 'Joining...' : 'Join Contest'}
           </button>
         ) : (
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-            <p className="text-sm text-on-surface font-semibold">Waiting for organizer to start the contest...</p>
-            <p className="text-xs text-on-surface-variant mt-1">Stay on this page — you'll be redirected automatically.</p>
+          <div className="bg-success/10 border border-success/20 rounded-xl p-4">
+            <p className="text-sm text-on-surface font-semibold">You've joined! Waiting for others...</p>
+            <p className="text-xs text-on-surface-variant mt-1">Contest will start automatically when all players join.</p>
           </div>
         )}
 

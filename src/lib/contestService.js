@@ -80,6 +80,12 @@ export async function createContest(organizer, { title, sourceType, sourceValue,
   return ref.id
 }
 
+export async function joinContest(contestId, userId) {
+  await updateDoc(doc(db, 'contests', contestId), {
+    [`participants.${userId}.status`]: 'joined',
+  })
+}
+
 export async function startContest(contestId, allUsers) {
   const contest = await getContest(contestId)
   if (!contest || contest.status !== 'setup') throw new Error('Contest cannot be started')
@@ -96,7 +102,7 @@ export async function startContest(contestId, allUsers) {
       displayName: userData.displayName || userData.email || 'Unknown',
       email: userData.email || '',
       xpAtJoin: xp,
-      status: 'invited',
+      status: 'joined',
       answers: null,
       score: 0,
       timeTaken: 0,
