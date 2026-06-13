@@ -53,7 +53,7 @@ export async function getQuizSettings() {
     data.moduleAccess = { ...DEFAULTS.moduleAccess, ...(snap.data().moduleAccess || {}) }
     data.quizAccess = { ...DEFAULTS.quizAccess, ...(snap.data().quizAccess || {}) }
   }
-  setCache('quizSettings', data)
+  setCache('quizSettings', data, 300000)
   return data
 }
 

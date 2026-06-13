@@ -31,7 +31,7 @@ export async function getAllCourses() {
     }
   })
   const result = Object.values(courses).sort((a, b) => a.courseId.localeCompare(b.courseId))
-  setCache('allCourses', result)
+  setCache('allCourses', result, 600000)
   return result
 }
 

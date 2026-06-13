@@ -1,8 +1,7 @@
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query, where, onSnapshot } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query, where, onSnapshot, increment } from 'firebase/firestore'
 import { db } from './firebase'
 import { getAllQuestionsCached } from './cache'
-import { getLevel } from './gamification'
-import { createBulkNotifications, createNotification } from './notificationService'
+import { createBulkNotifications } from './notificationService'
 
 export async function getContest(id) {
   const snap = await getDoc(doc(db, 'contests', id))
@@ -146,24 +145,26 @@ export async function submitContestEntry(contestId, userId, answers, timeTaken) 
   })
   const score = finalAnswers.filter((a) => a.isCorrect).length
 
-  await updateDoc(doc(db, 'contests', contestId), {
+  const now = new Date().toISOString()
+  const updates = {
     [`participants.${userId}.answers`]: finalAnswers,
     [`participants.${userId}.score`]: score,
     [`participants.${userId}.timeTaken`]: timeTaken,
-    [`participants.${userId}.submittedAt`]: new Date().toISOString(),
+    [`participants.${userId}.submittedAt`]: now,
     [`participants.${userId}.status`]: 'submitted',
-  })
+  }
 
-  const updated = await getContest(contestId)
+  if (!contest.firstSubmittedAt) {
+    updates.firstSubmittedAt = now
+  }
 
-  if (!updated.firstSubmittedAt) {
-    await updateDoc(doc(db, 'contests', contestId), {
-      firstSubmittedAt: new Date().toISOString(),
-    })
+  await updateDoc(doc(db, 'contests', contestId), updates)
+
+  if (!contest.firstSubmittedAt) {
     return { firstSubmitter: true }
   }
 
-  const elapsed = Date.now() - new Date(updated.firstSubmittedAt).getTime()
+  const elapsed = Date.now() - new Date(contest.firstSubmittedAt).getTime()
   if (elapsed >= 10000) {
     await endContest(contestId)
     return { ended: true }
@@ -208,25 +209,13 @@ export async function endContest(contestId) {
   const winner = rankings[0]
   const prizeAmount = minBet * (eligibleCount - 1)
 
-  const updates = []
-  rankings.forEach((r) => {
-    if (r.userId === winner.userId) {
-      r.xpChange = prizeAmount
-    } else {
-      r.xpChange = -minBet
-    }
+  const updates = rankings.map((r) => {
+    const xpChange = r.userId === winner.userId ? prizeAmount : -minBet
+    r.xpChange = xpChange
+    return updateDoc(doc(db, 'users', r.userId), {
+      xp: increment(xpChange),
+    })
   })
-
-  for (const r of rankings) {
-    const userRef = doc(db, 'users', r.userId)
-    const userSnap = await getDoc(userRef)
-    if (!userSnap.exists()) continue
-    const currentXp = userSnap.data().xp || 0
-    let newXp = currentXp + r.xpChange
-    if (newXp < 0) newXp = 0
-    const newLevel = getLevel(newXp)
-    updates.push(updateDoc(userRef, { xp: newXp, level: newLevel }))
-  }
 
   await Promise.all(updates)
 

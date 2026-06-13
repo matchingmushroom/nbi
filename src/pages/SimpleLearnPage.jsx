@@ -4,13 +4,13 @@ import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import {
-  getAllCourses, getCourseDays, enrollInCourse,
+  getCourseDays, enrollInCourse,
   markDayRead, submitReview, getLearningProgress,
   getCertificationQuestions, getCourseScore,
   isFullyComplete, needsReview, accumulateReviewScore,
 } from '../lib/learnService'
 import { getQuizSettings, canAccessPremium, getEnrollmentLimit, checkQuizAccess } from '../lib/quizSettings'
-import { resetCourseProgress } from '../lib/steakService'
+import { resetCourseProgress, getAllCourses } from '../lib/steakService'
 import { awardLearningXP } from '../lib/gamification'
 import ProctoredQuizRunner from '../components/ProctoredQuizRunner'
 import Certificate from '../components/Certificate'
