@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getAllQuestionsCached } from '../lib/cache'
-import { getContestRealtime, submitContestEntry, endContest } from '../lib/contestService'
+import { getContestRealtime, submitContestEntry } from '../lib/contestService'
 
 export default function ContestPlayPage() {
   const { id } = useParams()
@@ -15,7 +15,6 @@ export default function ContestPlayPage() {
   const [timeLeft, setTimeLeft] = useState(null)
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [graceCountdown, setGraceCountdown] = useState(null)
   const [error, setError] = useState(null)
   const startTimeRef = useRef(null)
   const submittedRef = useRef(false)
@@ -73,21 +72,11 @@ export default function ContestPlayPage() {
     const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000)
     const finalAnswers = questions.map((_, i) => answers[i] || { selected: null })
     try {
-      const result = await submitContestEntry(id, profile?.uid, finalAnswers, timeTaken)
-      if (result?.firstSubmitter) {
-        setGraceCountdown(10)
-      }
+      await submitContestEntry(id, profile?.uid, finalAnswers, timeTaken)
     } catch {}
     setSubmitted(true)
     setSubmitting(false)
   }
-
-  useEffect(() => {
-    if (graceCountdown === null) return
-    if (graceCountdown <= 0) { endContest(id); setGraceCountdown(null); return }
-    const iv = setInterval(() => setGraceCountdown((c) => c - 1), 1000)
-    return () => clearInterval(iv)
-  }, [graceCountdown, id])
 
   const q = questions[currentIndex]
   const total = questions.length
@@ -101,20 +90,9 @@ export default function ContestPlayPage() {
           <span className="material-symbols-outlined text-success text-[32px]" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>
         </div>
         <h2 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface mb-1">Submitted!</h2>
-        {graceCountdown !== null ? (
-          <>
-            <p className="text-sm text-on-surface-variant mb-1">Grace period — waiting for others...</p>
-            <p className="font-['Hanken_Grotesk'] text-3xl font-bold text-primary mb-4">{graceCountdown}s</p>
-            <div className="w-full bg-surface-container-low rounded-full h-1.5 mb-2">
-              <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${(graceCountdown / 10) * 100}%` }} />
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-on-surface-variant mb-4">Waiting for results...</p>
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          </>
-        )}
+        <p className="text-sm text-on-surface-variant mb-4">Waiting for others to finish...</p>
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-xs text-on-surface-variant mt-4">You'll be redirected to results once all players submit.</p>
       </div>
     </div>
   )

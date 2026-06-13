@@ -152,31 +152,25 @@ export async function submitContestEntry(contestId, userId, answers, timeTaken) 
   const score = finalAnswers.filter((a) => a.isCorrect).length
 
   const now = new Date().toISOString()
-  const updates = {
+  await updateDoc(doc(db, 'contests', contestId), {
     [`participants.${userId}.answers`]: finalAnswers,
     [`participants.${userId}.score`]: score,
     [`participants.${userId}.timeTaken`]: timeTaken,
     [`participants.${userId}.submittedAt`]: now,
     [`participants.${userId}.status`]: 'submitted',
-  }
+  })
 
-  if (!contest.firstSubmittedAt) {
-    updates.firstSubmittedAt = now
-  }
+  const updated = await getContest(contestId)
+  const allSubmitted = Object.keys(updated.participants)
+    .filter((uid) => updated.participants[uid].eligible !== false)
+    .every((uid) => updated.participants[uid].status === 'submitted')
 
-  await updateDoc(doc(db, 'contests', contestId), updates)
-
-  if (!contest.firstSubmittedAt) {
-    return { firstSubmitter: true }
-  }
-
-  const elapsed = Date.now() - new Date(contest.firstSubmittedAt).getTime()
-  if (elapsed >= 10000) {
+  if (allSubmitted) {
     await endContest(contestId)
     return { ended: true }
   }
 
-  return { firstSubmitter: false, ended: false }
+  return { ended: false }
 }
 
 export async function endContest(contestId) {
