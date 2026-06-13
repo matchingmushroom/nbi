@@ -332,7 +332,7 @@ export default function CreateContestPage() {
             )}
           </div>
 
-          <button onClick={handleCreate} disabled={!canProceedStep3 || creating || eligibleUsers.filter((u) => selectedUsers.has(u.uid) && !u.canBet).length > 0}
+          <button onClick={handleCreate} disabled={!canProceedStep3 || creating}
             className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-xl font-bold text-sm mt-4 hover:opacity-90 disabled:opacity-40 transition-all shadow-lg shadow-amber-500/20 cursor-pointer">
             {creating ? 'Creating...' : `Create Contest — ${minBet * (selectedUsers.size + 1)} XP Pot`}
           </button>
