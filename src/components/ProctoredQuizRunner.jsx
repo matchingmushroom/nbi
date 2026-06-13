@@ -37,8 +37,6 @@ export default function ProctoredQuizRunner({ questions, config, onFinish, proct
 
   const onAutoSubmit = useCallback(() => {
     if (submittedRef.current) return
-    submittedRef.current = true
-    setSubmitted(true)
     handleSubmitRef.current?.(true)
   }, [])
 
@@ -78,7 +76,7 @@ export default function ProctoredQuizRunner({ questions, config, onFinish, proct
       invalidateCache('allResults')
       if (uid) invalidateCachePrefix('results_' + uid)
     } catch {}
-    if (!proctored) onFinish?.(finalScore, questions.length)
+    onFinish?.(finalScore, questions.length)
   }, [profile, user, config, questions, onFinish, refreshProfile, proctored, proctoring.violationsRef])
 
   const handleSubmit = useCallback(async (isAuto) => {
@@ -120,7 +118,6 @@ export default function ProctoredQuizRunner({ questions, config, onFinish, proct
 
   useEffect(() => {
     if (phase !== 'exam' || timeLeft > 0 || submittedRef.current) return
-    submittedRef.current = true
     handleSubmitRef.current?.(true)
   }, [phase, timeLeft])
 
