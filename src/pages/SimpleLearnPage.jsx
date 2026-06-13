@@ -89,6 +89,16 @@ export default function SimpleLearnPage() {
   const handleEnroll = async (cid) => {
     if (!profile?.uid) return
     try {
+      const existing = learning?.enrolledCourses?.[cid]
+      if (existing?.courseStatus === 'CERTIFIED') {
+        const certAt = existing.certifiedAt ? new Date(existing.certifiedAt) : null
+        const sixMonths = certAt && (Date.now() - certAt.getTime()) >= 15552000000
+        if (!sixMonths) {
+          alert('You completed this course less than 6 months ago. Re-enrollment will be available after 6 months from your certification date.')
+          return
+        }
+        await resetCourseProgress(profile.uid, cid)
+      }
       const s = await getQuizSettings()
       if (s.premiumCourses?.includes(cid) && !canAccessPremium(profile)) {
         alert('This course is premium and requires StudentX access.')
@@ -231,6 +241,7 @@ export default function SimpleLearnPage() {
           course.finalExamRaw = Math.min(80, Math.round(pct * 80))
           if (pct >= 0.5) {
             course.courseStatus = 'CERTIFIED'
+            course.certifiedAt = new Date().toISOString()
           } else {
             const attempts = (course.certAttempts || 0) + 1
             course.certAttempts = attempts
@@ -261,7 +272,7 @@ export default function SimpleLearnPage() {
     const daysSince = Math.floor((new Date() - enrolled) / 86400000)
     calendarUnlocked = Math.max(1, daysSince + 1)
   }
-  const effUnlocked = bypassLock ? 999 : Math.min(progress?.unlockedDay || 1, calendarUnlocked)
+  const effUnlocked = bypassLock || progress?.courseStatus === 'CERTIFIED' ? 999 : Math.min(progress?.unlockedDay || 1, calendarUnlocked)
   const fullyCompleted = days.filter((d) => isFullyComplete(d.day, readDays, reviewedDays, days.length, progress?.courseStatus)).length
 
   const certWindowEnd = progress?.certificationWindowEndsAt ? new Date(progress.certificationWindowEndsAt) : null
@@ -318,11 +329,11 @@ export default function SimpleLearnPage() {
               let icon = String(day)
               let clickable = false
               if (done) {
-                cls = isCertified ? 'bg-success/70 text-white cursor-default' : 'bg-success/70 text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'
-                icon = '✓'; clickable = !isCertified
+                cls = 'bg-success/70 text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'
+                icon = '✓'; clickable = true
               } else if (readOnly) {
-                cls = isCertified ? 'bg-[#00288e] text-white cursor-default' : 'bg-[#00288e] text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'
-                icon = '✓'; clickable = !isCertified
+                cls = 'bg-[#00288e] text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'
+                icon = '✓'; clickable = true
               } else if (locked) { cls = 'bg-outline-variant/30 text-on-surface-variant/40 cursor-default'; icon = '🔒' }
               else if (isNext) { cls = 'bg-primary text-white ring-2 ring-primary ring-offset-2 cursor-pointer hover:opacity-90 active:scale-[0.92] animate-glow-pulse'; clickable = true }
               else if (!locked) { cls = 'bg-primary text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'; clickable = true }
@@ -726,9 +737,20 @@ export default function SimpleLearnPage() {
                     {c.dayCount} day{c.dayCount !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <button onClick={() => enrolled ? enterCourse(c.courseId) : handleEnroll(c.courseId)}
-                  className={`mt-4 w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer active:scale-[0.95] ${enrolled ? 'bg-primary text-on-primary hover:opacity-90 flex items-center justify-center gap-1.5' : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30'}`}>
-                  {enrolled ? (
+                <button onClick={() => {
+                  if (enrolled?.courseStatus === 'CERTIFIED') {
+                    const certAt = enrolled.certifiedAt ? new Date(enrolled.certifiedAt) : null
+                    const sixMonths = certAt && (Date.now() - certAt.getTime()) >= 15552000000
+                    if (sixMonths && confirm('Your previous certification is older than 6 months. Re-enroll to restart the course?')) {
+                      handleEnroll(c.courseId); return
+                    }
+                  }
+                  enrolled ? enterCourse(c.courseId) : handleEnroll(c.courseId)
+                }}
+                  className={`mt-4 w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer active:scale-[0.95] ${enrolled?.courseStatus === 'CERTIFIED' ? 'bg-success/15 text-success border border-success/30 hover:bg-success/25' : enrolled ? 'bg-primary text-on-primary hover:opacity-90 flex items-center justify-center gap-1.5' : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30'}`}>
+                  {enrolled?.courseStatus === 'CERTIFIED' ? (
+                    <span className="flex items-center justify-center gap-1.5"><span className="material-symbols-outlined text-[16px]">verified</span>Course Completed</span>
+                  ) : enrolled ? (
                     <span className="flex items-center justify-center gap-1.5"><span className="material-symbols-outlined text-[16px]">arrow_forward</span>Continue</span>
                   ) : 'Enroll'}
                 </button>
