@@ -73,12 +73,12 @@ export default function CreateContestPage() {
   }, [profile])
 
   const eligibleUsers = useMemo(() => {
-    if (minBet < 10) return allUsers.map((u) => ({ ...u, canBet: false, reason: 'Minimum bet is 10' }))
+    if (minBet < 1) return allUsers.map((u) => ({ ...u, canBet: false, reason: 'Minimum bet is 1' }))
     return validateBetForUsers(allUsers, minBet)
   }, [allUsers, minBet])
 
   const canProceedStep2 = sourceType && sourceValue
-  const canProceedStep3 = selectedUsers.size > 0 && title.trim().length >= 3 && minBet >= 10
+  const canProceedStep3 = selectedUsers.size >= 1 && title.trim().length >= 3 && minBet >= 1
 
   const handleCreate = async () => {
     if (!canProceedStep3 || creating) return
@@ -303,11 +303,11 @@ export default function CreateContestPage() {
             <div>
               <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-1.5">Minimum Bet (XP)</label>
               <div className="flex items-center gap-3">
-                <input type="number" min={10} value={minBet} onChange={(e) => setMinBet(Math.max(10, parseInt(e.target.value) || 10))}
+                <input type="number" min={1} value={minBet} onChange={(e) => setMinBet(Math.max(1, parseInt(e.target.value) || 1))}
                   className="w-24 px-4 py-3 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-bold text-center focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
                 <span className="text-sm text-on-surface-variant">XP per player</span>
               </div>
-              {minBet < 10 && <p className="text-[11px] text-error mt-1">Minimum bet is 10 XP</p>}
+              {minBet < 1 && <p className="text-[11px] text-error mt-1">Minimum bet is 1 XP</p>}
             </div>
 
             <div className="bg-primary/5 rounded-xl p-4 space-y-2">
