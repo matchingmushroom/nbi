@@ -281,7 +281,7 @@ export default function CreateContestPage() {
             </p>
           </div>
 
-          <button onClick={() => setStep(3)} disabled={!canProceedStep3}
+          <button onClick={() => setStep(3)} disabled={selectedUsers.size < 1}
             className="w-full bg-primary text-on-primary py-3 rounded-xl font-semibold text-sm hover:opacity-90 disabled:opacity-40 transition-all cursor-pointer">
             Continue to Bet & Create
           </button>
