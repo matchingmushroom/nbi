@@ -82,7 +82,8 @@ export async function enrollInCourse(userId, courseId) {
   const ref = doc(db, 'users', userId)
   const snap = await getDoc(ref)
   const userData = snap.data()
-  const learning = userData?.learning || { enrolledCourses: {} }
+  const learning = userData?.learning || {}
+  learning.enrolledCourses = learning.enrolledCourses || {}
   if (learning.enrolledCourses?.[courseId]) return learning
 
   learning.enrolledCourses[courseId] = {
@@ -106,7 +107,8 @@ export async function markDayRead(userId, courseId, day, totalDays) {
   const snap = await getDoc(ref)
   if (!snap.exists()) return { error: 'User not found' }
   const userData = snap.data()
-  const learning = userData.learning || { enrolledCourses: {} }
+  const learning = userData.learning || {}
+  learning.enrolledCourses = learning.enrolledCourses || {}
   const course = learning.enrolledCourses?.[courseId]
   if (!course) return { error: 'Not enrolled' }
 
@@ -135,7 +137,8 @@ export async function submitReview(userId, courseId, prevDay) {
   const snap = await getDoc(ref)
   if (!snap.exists()) return { error: 'User not found' }
   const userData = snap.data()
-  const learning = userData.learning || { enrolledCourses: {} }
+  const learning = userData.learning || {}
+  learning.enrolledCourses = learning.enrolledCourses || {}
   const course = learning.enrolledCourses?.[courseId]
   if (!course) return { error: 'Not enrolled' }
 
@@ -154,7 +157,8 @@ export async function accumulateReviewScore(userId, courseId, score) {
   const snap = await getDoc(ref)
   if (!snap.exists()) return { error: 'User not found' }
   const userData = snap.data()
-  const learning = userData.learning || { enrolledCourses: {} }
+  const learning = userData.learning || {}
+  learning.enrolledCourses = learning.enrolledCourses || {}
   const course = learning.enrolledCourses?.[courseId]
   if (!course) return { error: 'Not enrolled' }
 

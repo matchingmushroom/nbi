@@ -60,7 +60,8 @@ export async function resetCourseProgress(userId, courseId) {
   const snap = await getDoc(ref)
   if (!snap.exists()) return { error: 'User not found' }
   const userData = snap.data()
-  const learning = userData.learning || { enrolledCourses: {}, learningXp: 0 }
+  const learning = userData.learning || {}
+  learning.enrolledCourses = learning.enrolledCourses || {}
   if (!learning.enrolledCourses?.[courseId]) return { error: 'User not enrolled in this course' }
 
   const batch = writeBatch(db)

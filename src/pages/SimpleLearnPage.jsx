@@ -51,8 +51,9 @@ export default function SimpleLearnPage() {
     if (!profile?.uid) return
     const snap = await getDoc(doc(db, 'users', profile.uid))
     const learn = snap.exists()
-      ? (snap.data().learning || { enrolledCourses: {}, learningXp: 0 })
-      : { enrolledCourses: {}, learningXp: 0 }
+      ? (snap.data().learning || {})
+      : {}
+    learn.enrolledCourses = learn.enrolledCourses || {}
     setLearning(learn)
     if (cid) setProgress(getLearningProgress(learn, cid))
   }
