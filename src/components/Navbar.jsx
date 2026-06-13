@@ -34,7 +34,7 @@ const moderatorLinks = [
   { to: '/profile', icon: 'person', label: 'Profile' },
 ]
 
-function NotificationBell({ profile, navigate }) {
+function NotificationBell({ profile, navigate, dropdownUp }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
@@ -91,7 +91,7 @@ function NotificationBell({ profile, navigate }) {
       </button>
 
       {showDropdown && (
-        <div className="absolute right-0 top-full mt-1 w-80 bg-surface border border-outline-variant rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className={`absolute right-0 ${dropdownUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-80 bg-surface border border-outline-variant rounded-xl shadow-xl z-50 overflow-hidden`}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
             <h3 className="text-xs font-semibold text-on-surface uppercase tracking-wider">Notifications</h3>
             {unreadCount > 0 && (
@@ -176,7 +176,7 @@ export default function Navbar() {
         </nav>
         <div className="px-4 mt-auto space-y-2">
           <div className="flex items-center justify-between pt-4 border-t border-outline-variant">
-            <NotificationBell profile={profile} navigate={navigate} />
+            <NotificationBell profile={profile} navigate={navigate} dropdownUp />
             <button onClick={() => navigate('/profile')} className="flex items-center gap-2 px-1 py-1 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer text-left">
               <div className="relative shrink-0">
                 <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
