@@ -103,12 +103,15 @@ export default function ProctoredQuizRunner({ questions, config, onFinish, proct
   }, [proctored, proctoring, answers, questions, saveResult, config])
   handleSubmitRef.current = handleSubmit
 
+  const startProctoringRef = useRef(proctoring.startProctoring)
+  startProctoringRef.current = proctoring.startProctoring
+
   useEffect(() => {
     if (phase !== 'exam' || submittedRef.current) return
     startTimeRef.current = Date.now()
     setTimeLeft((config.timerMinutes || 30) * 60)
-    if (proctored) proctoring.startProctoring()
-  }, [phase, proctored, proctoring])
+    if (proctored) startProctoringRef.current()
+  }, [phase, proctored])
 
   useEffect(() => {
     if (phase !== 'exam' || submittedRef.current) return
@@ -290,7 +293,10 @@ export default function ProctoredQuizRunner({ questions, config, onFinish, proct
             <span className="material-symbols-outlined text-[18px]">{proctoring.micReady ? 'check_circle' : 'mic'}</span>
             {proctoring.micReady ? 'Microphone Connected' : 'Enable Microphone'}
           </button>
-          <button onClick={() => setPhase('exam')} disabled={!proctoring.camReady || !proctoring.micReady}
+          <button onClick={() => {
+              document.documentElement.requestFullscreen?.() || document.documentElement.webkitRequestFullscreen?.()
+              setPhase('exam')
+            }} disabled={!proctoring.camReady || !proctoring.micReady}
             className="w-full bg-gradient-to-r from-primary to-blue-500 text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all shadow-lg shadow-primary/20 cursor-pointer">
             Start Certification Quiz
           </button>

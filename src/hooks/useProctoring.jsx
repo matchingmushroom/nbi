@@ -35,6 +35,7 @@ export default function useProctoring({ active, onAutoSubmit }) {
   const coveredSecRef = useRef(0)
   const tabWarnRef = useRef(0)
   const fsWarnRef = useRef(0)
+  const fsEnteredRef = useRef(false)
   const submittedRef = useRef(false)
   const violationsRef = useRef([])
 
@@ -208,10 +209,13 @@ export default function useProctoring({ active, onAutoSubmit }) {
   useEffect(() => {
     if (!active) return
     const iv = setInterval(() => {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        handleFullscreenExit()
-        document.documentElement.requestFullscreen?.() || document.documentElement.webkitRequestFullscreen?.()
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        fsEnteredRef.current = true
+        return
       }
+      if (!fsEnteredRef.current) return
+      handleFullscreenExit()
+      document.documentElement.requestFullscreen?.() || document.documentElement.webkitRequestFullscreen?.()
     }, 3000)
     return () => clearInterval(iv)
   }, [active, handleFullscreenExit])
@@ -222,7 +226,6 @@ export default function useProctoring({ active, onAutoSubmit }) {
     startMic()
     startFaceDetection()
     startAudioMonitor()
-    setTimeout(() => { try { document.documentElement.requestFullscreen?.() || document.documentElement.webkitRequestFullscreen?.() } catch {} }, 500)
   }, [startCamera, startMic, startFaceDetection, startAudioMonitor])
 
   const stopProctoring = useCallback(() => {
