@@ -13,6 +13,11 @@ import ModeQuizPage from './pages/ModeQuizPage'
 import FinalQuizPage from './pages/FinalQuizPage'
 import PreAssessmentPage from './pages/PreAssessmentPage'
 import MockTestQuizPage from './pages/MockTestQuizPage'
+import ContestListPage from './pages/ContestListPage'
+import CreateContestPage from './pages/CreateContestPage'
+import ContestLobbyPage from './pages/ContestLobbyPage'
+import ContestPlayPage from './pages/ContestPlayPage'
+import ContestResultsPage from './pages/ContestResultsPage'
 import ResultsPage from './pages/ResultsPage'
 import ResultDetailPage from './pages/ResultDetailPage'
 import LeaderboardPage from './pages/LeaderboardPage'
@@ -47,6 +52,11 @@ function App() {
                       <Route path="/quiz/final" element={<FinalQuizPage />} />
                       <Route path="/quiz/pre-assessment" element={<PreAssessmentPage />} />
                       <Route path="/quiz/mock-test" element={<MockTestQuizPage />} />
+                      <Route path="/contests" element={<ContestListPage />} />
+                      <Route path="/contest/create" element={<CreateContestPage />} />
+                      <Route path="/contest/lobby/:id" element={<ContestLobbyPage />} />
+                      <Route path="/contest/play/:id" element={<ContestPlayPage />} />
+                      <Route path="/contest/results/:id" element={<ContestResultsPage />} />
                       <Route path="/results" element={<ResultsPage />} />
                       <Route path="/results/:id" element={<ResultDetailPage />} />
                       <Route path="/mylearn" element={<SimpleLearnPage />} />

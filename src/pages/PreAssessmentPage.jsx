@@ -1,37 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, addDoc } from 'firebase/firestore'
+import { collection, addDoc, getDocs } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { getQuizSettings, checkQuizAccess } from '../lib/quizSettings'
-import { getAllQuestionsCached } from '../lib/cache'
 import { calcQuizXP, updateGamification } from '../lib/gamification'
 import { invalidateCache, invalidateCachePrefix } from '../lib/cache'
-
-const TAB_SWITCH_MAX = 4
-const FULLSCREEN_EXIT_MAX = 2
-const NO_FACE_MAX_SEC = 30
-const MULTI_FACE_MAX_SEC = 15
-const FACE_CHECK_INTERVAL = 2000
-const AUDIO_CHECK_INTERVAL = 1000
-const AUDIO_THRESHOLD = 40
+import useProctoring from '../hooks/useProctoring'
 
 export default function PreAssessmentPage() {
   const navigate = useNavigate()
   const { profile, user, refreshProfile } = useAuth()
   const [phase, setPhase] = useState('loading')
-  const videoRef = useRef(null)
-  const streamRef = useRef(null)
-  const audioCtxRef = useRef(null)
-  const audioSourceRef = useRef(null)
-  const analyserRef = useRef(null)
-  const faceIntervalRef = useRef(null)
-  const audioIntervalRef = useRef(null)
-  const timerRef = useRef(null)
-  const [camReady, setCamReady] = useState(false)
-  const [micReady, setMicReady] = useState(false)
-  const [modelsLoaded, setModelsLoaded] = useState(false)
-  const modelsLoadedRef = useRef(false)
 
   const [questions, setQuestions] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -41,20 +21,19 @@ export default function PreAssessmentPage() {
   const [submitting, setSubmitting] = useState(false)
   const [scoreResult, setScoreResult] = useState(null)
 
-  const violationsRef = useRef([])
-  const [violations, setViolations] = useState([])
-  const [faceStatus, setFaceStatus] = useState({ count: 0, looking: true })
-  const [noiseLevel, setNoiseLevel] = useState(0)
-  const [showWarning, setShowWarning] = useState(null)
-  const noFaceSecRef = useRef(0)
-  const multiFaceSecRef = useRef(0)
   const [submitted, setSubmitted] = useState(false)
   const submittedRef = useRef(false)
   const startTimeRef = useRef(null)
   const handleSubmitRef = useRef(null)
 
-  const tabWarnRef = useRef(0)
-  const fsWarnRef = useRef(0)
+  const onAutoSubmit = useCallback(() => {
+    if (submittedRef.current) return
+    submittedRef.current = true
+    setSubmitted(true)
+    handleSubmitRef.current?.(true)
+  }, [])
+
+  const proctoring = useProctoring({ active: phase === 'exam', onAutoSubmit })
 
   const getOptionText = useCallback((q, letter) => {
     if (!q) return ''
@@ -62,89 +41,13 @@ export default function PreAssessmentPage() {
     return map[letter] || ''
   }, [])
 
-  const logViolation = useCallback((type) => {
-    if (submittedRef.current) return
-    violationsRef.current = [...violationsRef.current, { type, timestamp: new Date().toISOString() }]
-    setViolations(violationsRef.current)
-  }, [])
-
-  const showWarningOverlay = useCallback((type, count, max) => {
-    setShowWarning({ type, count, max })
-    setTimeout(() => setShowWarning(null), 3000)
-  }, [])
-
-  const autoSubmit = useCallback(async () => {
-    if (submittedRef.current) return
-    submittedRef.current = true
-    setSubmitted(true)
-    handleSubmitRef.current?.(true)
-  }, [])
-
-  const handleTabSwitch = useCallback(() => {
-    logViolation('tab_switch')
-    tabWarnRef.current++
-    showWarningOverlay('Tab switch detected', tabWarnRef.current, TAB_SWITCH_MAX)
-    if (tabWarnRef.current >= TAB_SWITCH_MAX) {
-      autoSubmit()
-    }
-  }, [logViolation, showWarningOverlay, autoSubmit])
-
-  const handleFullscreenExit = useCallback(() => {
-    logViolation('fullscreen_exit')
-    fsWarnRef.current++
-    showWarningOverlay('Fullscreen exited', fsWarnRef.current, FULLSCREEN_EXIT_MAX)
-    if (fsWarnRef.current >= FULLSCREEN_EXIT_MAX) {
-      autoSubmit()
-    }
-  }, [logViolation, showWarningOverlay, autoSubmit])
-
-  const checkFullscreen = useCallback(() => {
-    if (phase !== 'exam') return
-    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-      handleFullscreenExit()
-      document.documentElement.requestFullscreen?.() || document.documentElement.webkitRequestFullscreen?.()
-    }
-  }, [phase, handleFullscreenExit])
-
-  useEffect(() => {
-    if (phase !== 'exam') return
-    const iv = setInterval(checkFullscreen, 3000)
-    return () => clearInterval(iv)
-  }, [phase, checkFullscreen])
-
-  useEffect(() => {
-    if (phase !== 'exam') return
-    const onVis = () => { if (document.hidden) handleTabSwitch() }
-    const onBlur = () => handleTabSwitch()
-    document.addEventListener('visibilitychange', onVis)
-    window.addEventListener('blur', onBlur)
-    return () => {
-      document.removeEventListener('visibilitychange', onVis)
-      window.removeEventListener('blur', onBlur)
-    }
-  }, [phase, handleTabSwitch])
-
-  useEffect(() => {
-    if (phase !== 'exam') return
-    const onKey = (e) => {
-      if (e.ctrlKey && ['c', 'v', 'p', 'x', 'a', 's'].includes(e.key.toLowerCase())) e.preventDefault()
-      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['i', 'j'].includes(e.key.toLowerCase()))) e.preventDefault()
-    }
-    const onCtx = (e) => e.preventDefault()
-    document.addEventListener('keydown', onKey)
-    document.addEventListener('contextmenu', onCtx)
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.removeEventListener('contextmenu', onCtx)
-    }
-  }, [phase])
-
   useEffect(() => {
     const init = async () => {
       try {
         const settings = await getQuizSettings()
         if (!checkQuizAccess(profile, 'preassessment', settings)) { navigate('/quiz/select'); return }
-        const all = await getAllQuestionsCached()
+        const snap = await getDocs(collection(db, 'questions'))
+        const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
         const bookPhysical = all.filter((q) => (q.mode === 'Book' || q.mode === 'Physical') && q.difficulty === 'Expert' && q.module !== 'Mock Test')
         if (bookPhysical.length < settings.preassessmentQuestionCount) {
           setPhase('error')
@@ -159,129 +62,6 @@ export default function PreAssessmentPage() {
     }
     init()
   }, [])
-
-  const startCamera = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-      streamRef.current = stream
-      if (videoRef.current) videoRef.current.srcObject = stream
-      setCamReady(true)
-    } catch { setCamReady(false) }
-  }, [])
-
-  const startMic = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      const src = ctx.createMediaStreamSource(stream)
-      const analyser = ctx.createAnalyser()
-      analyser.fftSize = 256
-      src.connect(analyser)
-      audioCtxRef.current = ctx
-      audioSourceRef.current = src
-      analyserRef.current = analyser
-      setMicReady(true)
-    } catch { setMicReady(false) }
-  }, [])
-
-  const startFaceDetection = useCallback(async () => {
-    try {
-      const faceapi = await import('@vladmandic/face-api')
-      await faceapi.nets.tinyFaceDetector.loadFromUri('/models')
-      await faceapi.nets.faceLandmark68Net.loadFromUri('/models')
-      modelsLoadedRef.current = true
-      setModelsLoaded(true)
-
-      const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
-
-      faceIntervalRef.current = setInterval(async () => {
-        if (!videoRef.current || !videoRef.current.videoWidth) return
-        try {
-          const detections = await faceapi.detectAllFaces(videoRef.current, options).withFaceLandmarks()
-          const count = detections.length
-          setFaceStatus((prev) => ({ ...prev, count }))
-
-          if (count === 0) {
-            noFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
-            if (noFaceSecRef.current >= NO_FACE_MAX_SEC) {
-              logViolation('no_face')
-              noFaceSecRef.current = 0
-              if (!submittedRef.current) autoSubmit()
-            }
-          } else {
-            noFaceSecRef.current = 0
-          }
-
-          if (count > 1) {
-            multiFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
-            if (multiFaceSecRef.current >= MULTI_FACE_MAX_SEC) {
-              logViolation('multiple_faces')
-              multiFaceSecRef.current = 0
-              if (!submittedRef.current) autoSubmit()
-            }
-          } else {
-            multiFaceSecRef.current = 0
-          }
-
-          if (count > 0) {
-            const landmarks = detections[0].landmarks
-            const leftEye = landmarks.getLeftEye()
-            const rightEye = landmarks.getRightEye()
-            const eyeCenterY = (leftEye.reduce((s, p) => s + p.y, 0) / leftEye.length + rightEye.reduce((s, p) => s + p.y, 0) / rightEye.length) / 2
-            const nose = landmarks.getNose()
-            const noseY = nose.reduce((s, p) => s + p.y, 0) / nose.length
-            const looking = Math.abs(eyeCenterY - noseY) < 15
-            setFaceStatus((prev) => ({ ...prev, looking }))
-          }
-        } catch {}
-      }, FACE_CHECK_INTERVAL)
-    } catch {}
-  }, [logViolation, autoSubmit])
-
-  const stopProctoring = () => {
-    clearInterval(faceIntervalRef.current)
-    clearInterval(audioIntervalRef.current)
-    clearInterval(timerRef.current)
-    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
-    if (audioCtxRef.current) audioCtxRef.current.close()
-    try { document.exitFullscreen?.() } catch {}
-  }
-
-  const startAudioMonitor = useCallback(() => {
-    audioIntervalRef.current = setInterval(() => {
-      const analyser = analyserRef.current
-      if (!analyser) return
-      const dataArray = new Uint8Array(analyser.frequencyBinCount)
-      analyser.getByteTimeDomainData(dataArray)
-      const rms = Math.sqrt(dataArray.reduce((sum, val) => sum + (val - 128) ** 2, 0) / dataArray.length)
-      setNoiseLevel(Math.round(rms))
-      if (rms > AUDIO_THRESHOLD) {
-        logViolation('loud_noise')
-      }
-    }, AUDIO_CHECK_INTERVAL)
-  }, [logViolation])
-
-  useEffect(() => {
-    if (phase !== 'exam') return
-    const iv = setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000)
-    return () => clearInterval(iv)
-  }, [phase])
-
-  useEffect(() => {
-    if (phase !== 'exam' || timeLeft > 0) return
-    handleSubmit(true)
-  }, [phase, timeLeft])
-
-  useEffect(() => {
-    if (phase !== 'exam') return
-    startTimeRef.current = Date.now()
-    startCamera()
-    startMic()
-    startFaceDetection()
-    startAudioMonitor()
-    setTimeout(() => { try { document.documentElement.requestFullscreen?.() || document.documentElement.webkitRequestFullscreen?.() } catch {} }, 500)
-    return stopProctoring
-  }, [phase, startCamera, startMic, startFaceDetection, startAudioMonitor])
 
   const handleSelect = (letter) => {
     if (submitted) return
@@ -300,11 +80,29 @@ export default function PreAssessmentPage() {
 
   const goTo = (idx) => { if (!submitted) setCurrentIndex(idx) }
 
+  useEffect(() => {
+    if (phase !== 'exam') return
+    const iv = setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000)
+    return () => clearInterval(iv)
+  }, [phase])
+
+  useEffect(() => {
+    if (phase !== 'exam' || timeLeft > 0) return
+    handleSubmit(true)
+  }, [phase, timeLeft])
+
+  useEffect(() => {
+    if (phase !== 'exam') return
+    startTimeRef.current = Date.now()
+    proctoring.startProctoring()
+    return proctoring.stopProctoring
+  }, [phase])
+
   const handleSubmit = useCallback(async (isAuto) => {
     if (submittedRef.current) return
     submittedRef.current = true
     setSubmitting(true)
-    stopProctoring()
+    proctoring.stopProctoring()
     const finalAnswers = questions.map((q, i) => answers[i] || { questionId: q.id || q.question, question: q.question, selected: null, correct: q.correctAnswer, isCorrect: false })
     const finalScore = finalAnswers.filter((a) => a.isCorrect).length
     const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000)
@@ -320,8 +118,8 @@ export default function PreAssessmentPage() {
       completedAt: new Date().toISOString(),
       timeTaken,
       xpEarned: calcQuizXP('preassessment', finalScore, finalAnswers, questions),
-      proctorLog: violationsRef.current,
-      proctorWarnings: violationsRef.current.length,
+      proctorLog: proctoring.violationsRef.current,
+      proctorWarnings: proctoring.violationsRef.current.length,
       proctorAutoSubmit: isAuto,
     }
     try {
@@ -334,11 +132,11 @@ export default function PreAssessmentPage() {
       invalidateCache('allResults')
       if (uid) invalidateCachePrefix('results_' + uid)
     } catch {}
-    setScoreResult({ score: finalScore, total: questions.length, percentage: result.percentage, xpEarned: result.xpEarned, proctorLog: violationsRef.current, isAuto })
+    setScoreResult({ score: finalScore, total: questions.length, percentage: result.percentage, xpEarned: result.xpEarned, proctorLog: proctoring.violationsRef.current, isAuto })
     setPhase('result')
     setSubmitting(false)
     setSubmitted(true)
-  }, [profile, user, questions, answers, refreshProfile])
+  }, [profile, user, questions, answers, refreshProfile, proctoring])
   handleSubmitRef.current = handleSubmit
 
   const formatTime = (s) => {
@@ -383,28 +181,28 @@ export default function PreAssessmentPage() {
         </div>
 
         <div className="space-y-3">
-          <button onClick={startCamera} disabled={camReady}
+          <button onClick={proctoring.startCamera} disabled={proctoring.camReady}
             className="w-full flex items-center justify-center gap-2 bg-primary/5 border border-primary/20 rounded-xl py-3 text-sm font-semibold text-primary disabled:opacity-50 transition-all cursor-pointer">
-            <span className="material-symbols-outlined text-[18px]">{camReady ? 'check_circle' : 'videocam'}</span>
-            {camReady ? 'Webcam Connected' : 'Enable Webcam'}
+            <span className="material-symbols-outlined text-[18px]">{proctoring.camReady ? 'check_circle' : 'videocam'}</span>
+            {proctoring.camReady ? 'Webcam Connected' : 'Enable Webcam'}
           </button>
-          <button onClick={startMic} disabled={micReady}
+          <button onClick={proctoring.startMic} disabled={proctoring.micReady}
             className="w-full flex items-center justify-center gap-2 bg-primary/5 border border-primary/20 rounded-xl py-3 text-sm font-semibold text-primary disabled:opacity-50 transition-all cursor-pointer">
-            <span className="material-symbols-outlined text-[18px]">{micReady ? 'check_circle' : 'mic'}</span>
-            {micReady ? 'Microphone Connected' : 'Enable Microphone'}
+            <span className="material-symbols-outlined text-[18px]">{proctoring.micReady ? 'check_circle' : 'mic'}</span>
+            {proctoring.micReady ? 'Microphone Connected' : 'Enable Microphone'}
           </button>
           <button
             onClick={() => setPhase('exam')}
-            disabled={!camReady || !micReady}
+            disabled={!proctoring.camReady || !proctoring.micReady}
             className="w-full bg-gradient-to-r from-red-600 to-rose-500 text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all shadow-lg shadow-red-500/20 cursor-pointer">
             Start Pre-Assessment Test
           </button>
           <button onClick={() => navigate('/quiz/select')} className="w-full text-xs text-on-surface-variant hover:text-on-surface py-2 cursor-pointer">Cancel</button>
         </div>
       </div>
-      {camReady && (
+      {proctoring.camReady && (
         <div className="mt-4 w-full max-w-xs mx-auto rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg">
-          <video ref={videoRef} autoPlay muted playsInline className="w-full h-32 object-cover" />
+          <video ref={proctoring.videoRef} autoPlay muted playsInline className="w-full h-32 object-cover" />
         </div>
       )}
     </div>
@@ -464,8 +262,8 @@ export default function PreAssessmentPage() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${violations.length > 0 ? 'bg-error animate-pulse' : 'bg-success'}`} />
-            <span className="text-[10px] text-on-surface-variant">{violations.length} warnings</span>
+            <span className={`w-2 h-2 rounded-full ${proctoring.violations.length > 0 ? 'bg-error animate-pulse' : 'bg-success'}`} />
+            <span className="text-[10px] text-on-surface-variant">{proctoring.violations.length} warnings</span>
           </div>
           <div className="font-['Hanken_Grotesk'] text-base font-bold text-on-surface tabular-nums">{formatTime(timeLeft)}</div>
           <button onClick={() => { if (!submitted && window.confirm('Submit your test?')) handleSubmit(false) }}
@@ -564,46 +362,9 @@ export default function PreAssessmentPage() {
         </div>
       </div>
 
-      {/* Webcam PiP */}
-      <div className="fixed bottom-4 right-4 z-40 w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl glass-dark">
-        <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-black/50 px-2 py-0.5 rounded-full text-[9px] text-white">
-          <span className={`w-1.5 h-1.5 rounded-full ${faceStatus.count > 0 ? 'bg-success' : 'bg-error'}`} />
-          {faceStatus.count > 0 ? `${faceStatus.count} face${faceStatus.count > 1 ? 's' : ''}` : 'No face'}
-        </div>
-      </div>
-
-      {/* Warning Overlay */}
-      {showWarning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setShowWarning(null)}>
-          <div className="glass-dark rounded-2xl p-6 max-w-sm w-full mx-4 text-center border border-white/20 shadow-2xl">
-            <div className="w-12 h-12 rounded-full bg-error/20 flex items-center justify-center mx-auto mb-3">
-              <span className="material-symbols-outlined text-error text-[28px]">warning</span>
-            </div>
-            <h3 className="text-base font-bold text-on-surface mb-1 capitalize">{showWarning.type}</h3>
-            <p className="text-sm text-on-surface-variant mb-3">Warning {showWarning.count} of {showWarning.max}</p>
-            <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
-              <div className="h-full bg-error rounded-full transition-all" style={{ width: `${(showWarning.count / showWarning.max) * 100}%` }} />
-            </div>
-            {showWarning.count >= showWarning.max && (
-              <p className="text-xs text-error font-semibold mt-3">Auto-submitting...</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Audio indicator */}
-      {noiseLevel > 0 && (
-        <div className="fixed bottom-4 left-4 z-40 glass-dark rounded-full px-3 py-1.5 border border-white/20 flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings: noiseLevel > AUDIO_THRESHOLD ? "'FILL' 1" : "'FILL' 0"}}>
-            {noiseLevel > AUDIO_THRESHOLD ? 'mic' : 'mic_none'}
-          </span>
-          <div className="w-12 h-1.5 bg-white/20 rounded-full overflow-hidden">
-            <div className={`h-full rounded-full transition-all ${noiseLevel > AUDIO_THRESHOLD ? 'bg-error' : 'bg-success'}`}
-              style={{ width: `${Math.min(100, (noiseLevel / 80) * 100)}%` }} />
-          </div>
-        </div>
-      )}
+      <proctoring.ProctorPiP />
+      <proctoring.WarningOverlay />
+      <proctoring.AudioIndicator />
     </div>
   )
 }

@@ -5,12 +5,14 @@ const studentLinks = [
   { to: '/dashboard', icon: 'dashboard', label: 'Home' },
   { to: '/mylearn', icon: 'school', label: 'Learn' },
   { to: '/quiz/select', icon: 'list_alt', label: 'Exam' },
+  { to: '/contests', icon: 'emoji_events', label: 'Contest' },
   { to: '/leaderboard', icon: 'leaderboard', label: 'Rank' },
   { to: '/profile', icon: 'person', label: 'Profile' },
 ]
 
 const adminLinks = [
   { to: '/dashboard', icon: 'dashboard', label: 'Home' },
+  { to: '/contests', icon: 'emoji_events', label: 'Contest' },
   { to: '/admin/users', icon: 'group', label: 'Users' },
   { to: '/admin/questions', icon: 'quiz', label: 'Questions' },
   { to: '/admin/courses', icon: 'school', label: 'Courses' },
@@ -22,6 +24,7 @@ const moderatorLinks = [
   { to: '/dashboard', icon: 'dashboard', label: 'Home' },
   { to: '/mylearn', icon: 'school', label: 'Learn' },
   { to: '/quiz/select', icon: 'list_alt', label: 'Exam' },
+  { to: '/contests', icon: 'emoji_events', label: 'Contest' },
   { to: '/admin/questions', icon: 'quiz', label: 'Questions' },
   { to: '/admin/courses', icon: 'school', label: 'Courses' },
   { to: '/profile', icon: 'person', label: 'Profile' },

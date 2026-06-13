@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { BADGES, getLevelProgress, getXPForNextLevel } from '../lib/gamification'
 import { formatDate } from '../lib/utils'
 import { getAllUsersCached, getAllResultsCached, getUserResultsCached } from '../lib/cache'
+import { getAllCompletedContests } from '../lib/contestService'
 import { getAllCourses } from '../lib/steakService'
 import { getCourseScore } from '../lib/learnService'
 import Certificate from '../components/Certificate'
@@ -20,6 +21,7 @@ export default function LeaderboardPage() {
   const [allCourses, setAllCourses] = useState([])
   const [showCertFor, setShowCertFor] = useState(null)
   const [tab, setTab] = useState('results')
+  const [contestWins, setContestWins] = useState([])
 
   const completedCourses = useMemo(() => {
     if (!profile?.learning?.enrolledCourses) return []
@@ -116,6 +118,39 @@ export default function LeaderboardPage() {
         myResults.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))
         setResults(myResults)
       }
+
+      // Contest leaderboard
+      try {
+        const completed = await getAllCompletedContests()
+        const winCount = {}
+        const prizeTotal = {}
+        const partCount = {}
+        completed.forEach((c) => {
+          const r = c.results
+          if (!r) return
+          r.rankings?.forEach((entry) => {
+            const uid = entry.userId
+            if (!winCount[uid]) { winCount[uid] = 0; prizeTotal[uid] = 0; partCount[uid] = 0 }
+            partCount[uid]++
+            if (entry.xpChange > 0) { winCount[uid]++; prizeTotal[uid] += entry.xpChange }
+          })
+        })
+        const contestEntries = Object.keys(winCount).map((uid) => {
+          const data = allUsers.find((u) => u.uid === uid) || {}
+          return {
+            userId: uid,
+            displayName: data.displayName || data.email || 'Unknown',
+            wins: winCount[uid],
+            totalPrize: prizeTotal[uid],
+            totalContests: partCount[uid],
+            level: data.level || 1,
+            xp: data.xp || 0,
+            badges: data.badges || [],
+            streak: data.streak || 0,
+          }
+        }).sort((a, b) => b.wins - a.wins || b.totalPrize - a.totalPrize)
+        setContestWins(contestEntries)
+      } catch {}
 
       setLoading(false)
     }
@@ -257,7 +292,8 @@ export default function LeaderboardPage() {
         {[
           { key: 'results', label: 'My Results', icon: 'insights', badge: results.length + completedCourses.length },
           { key: 'achievement', label: 'My Achievement', icon: 'stars', badge: myRank > 0 ? `#${myRank}` : null },
-          { key: 'leaderboard', label: 'Leaderboard', icon: 'leaderboard', badge: `${entries.length} ranked` },
+          { key: 'leaderboard', label: 'Final Mock', icon: 'leaderboard', badge: `${entries.length} ranked` },
+          { key: 'contest', label: 'Contest', icon: 'emoji_events', badge: contestWins.length > 0 ? `${contestWins.length}` : null },
         ].map((t) => (
           <button key={t.key}
             onClick={() => setTab(t.key)}
@@ -407,7 +443,7 @@ export default function LeaderboardPage() {
         </div>
       )}
 
-      {/* Tab: Leaderboard */}
+      {/* Tab: Leaderboard (Final Mock) */}
       {tab === 'leaderboard' && (
         <div className="bg-surface border border-outline-variant rounded-xl p-4">
           {entries.length === 0 ? (
@@ -470,6 +506,76 @@ export default function LeaderboardPage() {
                         <p className={`text-xs font-semibold ${entry.percentage >= 80 ? 'text-success' : entry.percentage >= 60 ? 'text-warning' : 'text-error'}`}>
                           {entry.percentage}%
                         </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Contest */}
+      {tab === 'contest' && (
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+          {contestWins.length === 0 ? (
+            <div className="text-center py-8 text-on-surface-variant">
+              <span className="material-symbols-outlined text-[36px] mb-2">emoji_events</span>
+              <p className="text-sm font-medium">No contest results yet.</p>
+              <p className="text-xs mt-1">Be the first to create or join a contest!</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {contestWins.map((entry, i) => {
+                const isMe = entry.userId === profile?.uid
+                return (
+                  <div key={entry.userId}
+                    className={`bg-surface border rounded-xl p-4 shadow-sm ${
+                      i < 3 ? 'border-amber-300' : isMe ? 'border-primary border-2' : 'border-outline-variant'
+                    }`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 flex justify-center shrink-0">{getMedal(i + 1)}</div>
+                      <div className="relative shrink-0">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                          i === 0 ? 'bg-amber-500' : i === 1 ? 'bg-gray-400' : i === 2 ? 'bg-orange-500' : isMe ? 'bg-primary' : 'bg-primary/60'
+                        }`}>
+                          {entry.displayName.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="absolute -bottom-1 -right-1 bg-warning text-white text-[8px] font-bold px-1 py-0.5 rounded-full leading-none border border-white">
+                          Lv{entry.level}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold text-on-surface truncate">{entry.displayName}</p>
+                          {isMe && <span className="text-[8px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">You</span>}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <div className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-amber-500 text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>emoji_events</span>
+                            <span className="text-xs font-bold text-on-surface">{entry.wins} win{entry.wins !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-warning text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>stars</span>
+                            <span className="text-xs font-semibold text-warning">+{entry.totalPrize} XP</span>
+                          </div>
+                          <span className="text-[10px] text-on-surface-variant">{entry.totalContests} contest{entry.totalContests !== 1 ? 's' : ''}</span>
+                        </div>
+                        {entry.badges?.length > 0 && (
+                          <div className="flex items-center gap-1 mt-1">
+                            {BADGES.filter(b => entry.badges.includes(b.id)).slice(0, 4).map((b) => (
+                              <span key={b.id} className="material-symbols-outlined text-primary text-[14px]" style={{fontVariationSettings: "'FILL' 1"}} title={b.name}>{b.icon}</span>
+                            ))}
+                            {entry.badges.length > 4 && (
+                              <span className="text-[9px] text-on-surface-variant font-medium">+{entry.badges.length - 4}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <p className={`text-lg font-bold ${entry.wins > 0 ? 'text-amber-500' : 'text-on-surface-variant'}`}>{entry.wins}</p>
+                        <p className="text-[10px] text-on-surface-variant">wins</p>
                       </div>
                     </div>
                   </div>
