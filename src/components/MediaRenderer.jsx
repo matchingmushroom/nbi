@@ -1,8 +1,21 @@
 import { useState } from 'react'
 
+function getGoogleDriveFileId(url) {
+  const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/)
+  return match ? match[1] : null
+}
+
+function resolveGoogleDriveUrl(url, type) {
+  const fileId = getGoogleDriveFileId(url)
+  if (!fileId) return url
+  if (type === 'video') return `https://drive.google.com/file/d/${fileId}/preview`
+  return `https://drive.google.com/uc?export=view&id=${fileId}`
+}
+
 function detectType(url) {
   if (!url) return null
   const u = url.toLowerCase()
+  if (u.includes('drive.google.com')) return 'gdrive'
   if (u.match(/\.(png|jpg|jpeg|gif|webp|svg|bmp|ico)(\?|#|$)/) || u.includes('image'))
     return 'image'
   if (u.match(/\.(mp4|webm|ogg|mov|avi|mkv)(\?|#|$)/) || u.includes('video'))
@@ -29,11 +42,12 @@ export default function MediaRenderer({ url, type: explicitType, className = '' 
   const type = explicitType || detectType(url)
   if (!url || !type) return null
 
-  if (type === 'image') {
+  if (type === 'image' || type === 'gdrive') {
+    const src = resolveGoogleDriveUrl(url, 'image')
     return (
       <>
         <img
-          src={url}
+          src={src}
           alt="Course media"
           loading="lazy"
           onClick={() => setLightbox(true)}
@@ -43,7 +57,7 @@ export default function MediaRenderer({ url, type: explicitType, className = '' 
         {lightbox && (
           <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 cursor-zoom-out"
             onClick={() => setLightbox(false)}>
-            <img src={url} alt="Course media" className="max-w-full max-h-full rounded-xl object-contain" />
+            <img src={src} alt="Course media" className="max-w-full max-h-full rounded-xl object-contain" />
           </div>
         )}
       </>
@@ -51,6 +65,17 @@ export default function MediaRenderer({ url, type: explicitType, className = '' 
   }
 
   if (type === 'youtube' || type === 'video') {
+    const fileId = getGoogleDriveFileId(url)
+    if (fileId) {
+      return (
+        <div className={`relative my-3 rounded-xl overflow-hidden ${className}`} style={{ paddingBottom: '56.25%' }}>
+          <iframe src={resolveGoogleDriveUrl(url, 'video')} title="Video"
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen />
+        </div>
+      )
+    }
     const embedUrl = getYoutubeEmbed(url) || getVimeoEmbed(url)
     if (embedUrl) {
       return (
@@ -59,7 +84,7 @@ export default function MediaRenderer({ url, type: explicitType, className = '' 
             className="absolute inset-0 w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen />
-        </div>
+          </div>
       )
     }
     return (
