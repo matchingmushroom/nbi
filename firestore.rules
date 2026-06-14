@@ -18,9 +18,11 @@ service cloud.firestore {
       allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Notifications — own notifications only
+    // Notifications — own read/update/delete; any authenticated user can create (contest invites, results, etc.)
     match /notifications/{notificationId} {
-      allow read, write: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
     // Contests — any authenticated user can read (leaderboard needs all completed contests); only organizer can update/delete
