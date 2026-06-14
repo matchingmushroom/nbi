@@ -83,7 +83,15 @@ export default function SimpleLearnPage() {
     setDays(d)
     await fetchLearning(cid)
     setView(VIEWS.DASHBOARD)
-    if (startDay) startReading(startDay)
+    if (startDay) {
+      const dd = d.find((day) => day.day === startDay)
+      if (dd) {
+        setCurrentDay(startDay)
+        setDayData(dd)
+        setSlideIndex(0)
+        setView(VIEWS.READING)
+      }
+    }
   }
 
   const handleEnroll = async (cid) => {
