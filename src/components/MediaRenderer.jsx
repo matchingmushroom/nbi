@@ -9,7 +9,7 @@ function resolveGoogleDriveUrl(url, type) {
   const fileId = getGoogleDriveFileId(url)
   if (!fileId) return url
   if (type === 'video') return `https://drive.google.com/file/d/${fileId}/preview`
-  return `https://drive.google.com/uc?export=view&id=${fileId}`
+  return `https://lh3.googleusercontent.com/d/${fileId}`
 }
 
 function detectType(url) {
@@ -51,6 +51,10 @@ export default function MediaRenderer({ url, type: explicitType, className = '' 
           alt="Course media"
           loading="lazy"
           onClick={() => setLightbox(true)}
+          onError={(e) => {
+            const fid = getGoogleDriveFileId(url)
+            if (fid) e.target.src = `https://drive.google.com/uc?export=view&id=${fid}`
+          }}
           className={`max-w-full rounded-xl cursor-zoom-in object-contain my-3 ${className}`}
           style={{ maxHeight: '400px' }}
         />
