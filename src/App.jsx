@@ -29,6 +29,7 @@ import AdminAnalyticsPage from './pages/AdminAnalyticsPage'
 import AdminCoursesPage from './pages/AdminCoursesPage'
 import AdminCourseUploadPage from './pages/AdminCourseUploadPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
+import AdminDayEditor from './pages/AdminDayEditor'
 
 function App() {
   return (
@@ -69,6 +70,7 @@ function App() {
                       <Route path="/admin/questions" element={<ModeratorRoute><AdminQuestionsPage /></ModeratorRoute>} />
                       <Route path="/admin/courses" element={<ModeratorRoute><AdminCoursesPage /></ModeratorRoute>} />
                       <Route path="/admin/upload-course" element={<AdminRoute><AdminCourseUploadPage /></AdminRoute>} />
+                      <Route path="/admin/courses/:courseId/days" element={<ModeratorRoute><AdminDayEditor /></ModeratorRoute>} />
                       <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
                       <Route path="/admin/analytics" element={<AdminRoute><AdminAnalyticsPage /></AdminRoute>} />
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />

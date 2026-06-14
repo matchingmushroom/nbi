@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /courses/{courseId}/media/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.token.role in ['admin', 'moderator'];
+      allow delete: if request.auth != null
+        && request.auth.token.role in ['admin', 'moderator'];
+    }
+
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.token.role == 'admin';
+    }
+  }
+}

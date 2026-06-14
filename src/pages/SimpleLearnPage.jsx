@@ -16,6 +16,7 @@ import { awardLearningXP } from '../lib/gamification'
 import { calculateNextReview, INITIAL_SRS } from '../lib/srsService'
 import ProctoredQuizRunner from '../components/ProctoredQuizRunner'
 import Certificate from '../components/Certificate'
+import MediaRenderer from '../components/MediaRenderer'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -672,6 +673,9 @@ export default function SimpleLearnPage() {
                 {curr.content || 'No content available.'}
               </ReactMarkdown>
             </div>
+            {curr.imageUrl && <MediaRenderer url={curr.imageUrl} type="image" />}
+            {curr.videoUrl && <MediaRenderer url={curr.videoUrl} type="video" />}
+            {curr.audioUrl && <MediaRenderer url={curr.audioUrl} type="audio" />}
           </div>
         </div>
         {totalSlides > 1 && (

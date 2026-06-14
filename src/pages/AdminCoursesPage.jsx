@@ -239,6 +239,16 @@ export default function AdminCoursesPage() {
                 )}
                 {!isModerator && (
                   <button
+                    onClick={() => navigate(`/admin/courses/${course.courseId}/days`)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-on-surface-variant hover:text-primary hover:bg-[#f0f3ff] rounded-lg transition-colors cursor-pointer"
+                    title="Edit course content"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                    Edit Days
+                  </button>
+                )}
+                {!isModerator && (
+                  <button
                     onClick={() => handleStarToggle(course.courseId)}
                     disabled={premiumSaving === course.courseId}
                     className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"

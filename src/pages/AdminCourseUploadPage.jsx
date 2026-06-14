@@ -4,6 +4,7 @@ import { collection, writeBatch, doc, setDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { invalidateCachePrefix } from '../lib/cache'
 
+const MEDIA_COLS = ['imageUrl', 'videoUrl', 'audioUrl']
 const BASE_COLS = ['courseId', 'courseTitle', 'day', 'conceptId', 'postNumber', 'title', 'category', 'estimatedReadingTime', 'shortExplanation']
 const Q_FIELDS = ['q1_text', 'q1_optionA', 'q1_optionB', 'q1_optionC', 'q1_optionD', 'q1_correctAnswer', 'q1_explanation',
   'q2_text', 'q2_optionA', 'q2_optionB', 'q2_optionC', 'q2_optionD', 'q2_correctAnswer', 'q2_explanation',
@@ -35,6 +36,9 @@ function parseRow(r, i) {
     category: r.category?.trim() || '',
     estimatedReadingTime: r.estimatedReadingTime?.trim() || '',
     content: r.shortExplanation?.trim() || '',
+    imageUrl: r.imageUrl?.trim() || '',
+    videoUrl: r.videoUrl?.trim() || '',
+    audioUrl: r.audioUrl?.trim() || '',
     questions: qs,
   }
 }
@@ -84,7 +88,7 @@ export default function AdminCourseUploadPage() {
         if (!groups[key]) {
           groups[key] = { ...r, posts: [], questions: r.questions }
         }
-        groups[key].posts.push({ postNumber: r.postNumber, title: r.title, content: r.content })
+        groups[key].posts.push({ postNumber: r.postNumber, title: r.title, content: r.content, imageUrl: r.imageUrl, videoUrl: r.videoUrl, audioUrl: r.audioUrl })
         if (r.questions.length > 0) groups[key].questions = r.questions
       })
 
@@ -181,7 +185,7 @@ export default function AdminCourseUploadPage() {
         onClick={() => inputRef.current?.click()}>
         <span className="material-symbols-outlined text-[48px] text-on-surface-variant mb-3">upload_file</span>
         <p className="text-sm text-on-surface-variant mb-1">Drag and drop a CSV file, or click to browse</p>
-        <p className="text-xs text-on-surface-variant/60 mb-4">Columns: courseId, courseTitle, day, conceptId, postNumber, title, category, estimatedReadingTime, shortExplanation + q1–q3 fields</p>
+        <p className="text-xs text-on-surface-variant/60 mb-4">Columns: courseId, courseTitle, day, conceptId, postNumber, title, category, estimatedReadingTime, shortExplanation + q1–q3 + optional imageUrl, videoUrl, audioUrl</p>
         <input ref={inputRef} type="file" accept=".csv" onChange={handleFile} className="hidden" />
         <span className="inline-block bg-primary text-on-primary px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer">
           Select CSV File
