@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, query, where, arrayUnion, increment } from 'firebase/firestore'
+import { collection, getDocs, doc, getDoc, setDoc, query, where } from 'firebase/firestore'
 import { db } from './firebase'
 import { invalidateCache } from './cache'
 
@@ -19,7 +19,6 @@ export async function getCertificationQuestions(courseId, courseTitle) {
     if (settingsSnap.exists()) {
       const linked = settingsSnap.data().courseLinkedQuizzes?.[courseId] || []
       for (const link of linked) {
-        // try mode field first (most common), then module field
         let found = false
         try {
           const snap = await getDocs(query(qCol, where('mode', '==', link.mode), where('chapter', '==', link.chapter)))
@@ -48,19 +47,24 @@ export async function getCertificationQuestions(courseId, courseTitle) {
 
 export async function enrollInCourse(userId, courseId) {
   const ref = doc(db, 'users', userId)
-  await setDoc(ref, {
-    [`learning.enrolledCourses.${courseId}`]: {
-      enrolledAt: new Date().toISOString().split('T')[0],
-      readDays: [],
-      reviewedDays: [],
-      unlockedDay: 1,
-      dailyReviewRaw: 0,
-      courseStatus: 'ENROLLED',
-      certificationWindowEndsAt: null,
-      certAttempts: 0,
-      certNextAttemptAt: null,
-    }
-  }, { merge: true })
+  const snap = await getDoc(ref)
+  const userData = snap.data()
+  const learning = userData?.learning || {}
+  learning.enrolledCourses = learning.enrolledCourses || {}
+  if (learning.enrolledCourses?.[courseId]) return
+
+  learning.enrolledCourses[courseId] = {
+    enrolledAt: new Date().toISOString().split('T')[0],
+    readDays: [],
+    reviewedDays: [],
+    unlockedDay: 1,
+    dailyReviewRaw: 0,
+    courseStatus: 'ENROLLED',
+    certificationWindowEndsAt: null,
+    certAttempts: 0,
+    certNextAttemptAt: null,
+  }
+  await setDoc(ref, { learning }, { merge: true })
   invalidateCache('allUsers')
 }
 
@@ -68,66 +72,66 @@ export async function markDayRead(userId, courseId, day, totalDays) {
   const ref = doc(db, 'users', userId)
   const snap = await getDoc(ref)
   if (!snap.exists()) return { error: 'User not found' }
-  const learning = snap.data().learning || {}
-  let course = (learning.enrolledCourses || {})[courseId]
-
-  // Bootstrap enrollment if missing (defense-in-depth against write-path issues)
-  if (!course) {
-    course = {
-      enrolledAt: new Date().toISOString().split('T')[0],
-      readDays: [],
-      reviewedDays: [],
-      unlockedDay: 1,
-      dailyReviewRaw: 0,
-      courseStatus: 'ENROLLED',
-    }
-  }
+  const userData = snap.data()
+  const learning = userData.learning || {}
+  learning.enrolledCourses = learning.enrolledCourses || {}
+  const course = learning.enrolledCourses?.[courseId]
+  if (!course) return { error: 'Not enrolled' }
 
   const conceptId = `day_${String(day).padStart(2, '0')}`
   if (course.readDays?.includes(conceptId)) return { error: 'Already read' }
 
-  const newReadDays = [...(course.readDays || []), conceptId]
-  course.readDays = newReadDays
+  course.readDays = [...new Set([...(course.readDays || []), conceptId])]
   course.unlockedDay = Math.max(course.unlockedDay || 1, day + 1)
 
-  if (newReadDays.length >= totalDays) {
+  if (course.readDays.length >= totalDays) {
     course.courseStatus = 'LESSONS_COMPLETED'
     if (!course.certificationWindowEndsAt) {
-      course.certificationWindowEndsAt = new Date(Date.now() + 604800000).toISOString()
+      const end = new Date()
+      end.setDate(end.getDate() + 7)
+      course.certificationWindowEndsAt = end.toISOString()
     }
   }
 
-  await setDoc(ref, {
-    [`learning.enrolledCourses.${courseId}`]: course,
-  }, { merge: true })
+  await setDoc(ref, { learning }, { merge: true })
   invalidateCache('allUsers')
   return { success: true, conceptId }
 }
 
 export async function submitReview(userId, courseId, prevDay) {
   const ref = doc(db, 'users', userId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return { error: 'User not found' }
+  const userData = snap.data()
+  const learning = userData.learning || {}
+  learning.enrolledCourses = learning.enrolledCourses || {}
+  const course = learning.enrolledCourses?.[courseId]
+  if (!course) return { error: 'Not enrolled' }
+
   const conceptId = `day_${String(prevDay).padStart(2, '0')}`
-  try {
-    await updateDoc(ref, {
-      [`learning.enrolledCourses.${courseId}.reviewedDays`]: arrayUnion(conceptId),
-    })
-  } catch {
-    return { error: 'Not enrolled' }
-  }
+  if (course.reviewedDays?.includes(conceptId)) return { error: 'Already reviewed' }
+
+  course.reviewedDays = [...new Set([...(course.reviewedDays || []), conceptId])]
+
+  await setDoc(ref, { learning }, { merge: true })
   invalidateCache('allUsers')
   return { success: true, conceptId }
 }
 
 export async function accumulateReviewScore(userId, courseId, score) {
   const ref = doc(db, 'users', userId)
-  try {
-    await updateDoc(ref, {
-      [`learning.enrolledCourses.${courseId}.dailyReviewRaw`]: increment(score),
-      [`learning.enrolledCourses.${courseId}.lastReviewDate`]: new Date().toISOString().split('T')[0],
-    })
-  } catch {
-    return { error: 'Not enrolled' }
-  }
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return { error: 'User not found' }
+  const userData = snap.data()
+  const learning = userData.learning || {}
+  learning.enrolledCourses = learning.enrolledCourses || {}
+  const course = learning.enrolledCourses?.[courseId]
+  if (!course) return { error: 'Not enrolled' }
+
+  course.dailyReviewRaw = (course.dailyReviewRaw || 0) + score
+  course.lastReviewDate = new Date().toISOString().split('T')[0]
+
+  await setDoc(ref, { learning }, { merge: true })
   invalidateCache('allUsers')
   return { success: true }
 }
