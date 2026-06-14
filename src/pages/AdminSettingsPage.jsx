@@ -29,8 +29,23 @@ const ATTEMPT_FIELDS = [
 const TABS = [
   { key: 'quiz', label: 'Quiz Config', icon: 'quiz' },
   { key: 'access', label: 'Access', icon: 'lock' },
+  { key: 'nav', label: 'Navigation', icon: 'explore' },
   { key: 'linking', label: 'Linking', icon: 'link' },
   { key: 'tools', label: 'Tools', icon: 'construction' },
+]
+
+const NAV_SECTIONS = [
+  { key: 'home', label: 'Home' },
+  { key: 'learn', label: 'Learn' },
+  { key: 'exam', label: 'Exam' },
+  { key: 'contest', label: 'Contest' },
+  { key: 'rank', label: 'Rank' },
+  { key: 'profile', label: 'Profile' },
+  { key: 'users', label: 'Users (Admin)' },
+  { key: 'questions', label: 'Questions (Mod+)' },
+  { key: 'courses', label: 'Courses (Mod+)' },
+  { key: 'settings', label: 'Settings (Admin)' },
+  { key: 'analytics', label: 'Analytics (Admin)' },
 ]
 
 export default function AdminSettingsPage() {
@@ -355,6 +370,62 @@ export default function AdminSettingsPage() {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Tab: Navigation */}
+      {tab === 'nav' && (
+        <div className="bg-surface border border-outline-variant rounded-xl p-4 md:p-5 space-y-4">
+          <h2 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Navigation Access Control</h2>
+          <p className="text-xs text-on-surface-variant -mt-2">
+            Control which roles can see each section in the navigation sidebar. Uncheck a role to hide that section.
+          </p>
+          <div className="overflow-x-auto -mx-4 md:mx-0">
+            <table className="w-full text-sm min-w-[320px]">
+              <thead>
+                <tr className="border-b border-outline-variant">
+                  <th className="text-left py-2 pr-3 pl-4 md:pl-0 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Section</th>
+                  <th className="text-center py-2 px-1.5 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Student</th>
+                  <th className="text-center py-2 px-1.5 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">StudentX</th>
+                  <th className="text-center py-2 px-1.5 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Mod</th>
+                  <th className="text-center py-2 px-1.5 md:pr-0 font-semibold text-on-surface-variant text-xs uppercase tracking-wider">Admin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {NAV_SECTIONS.map((ns) => {
+                  const access = settings.navAccess || {}
+                  const secAccess = access[ns.key] || {}
+                  return (
+                    <tr key={ns.key} className="border-b border-outline-variant/50">
+                      <td className="py-2.5 pr-3 pl-4 md:pl-0 font-medium text-on-surface text-xs sm:text-sm">{ns.label}</td>
+                      {['student', 'studentx', 'moderator', 'admin'].map((role) => {
+                        const checked = secAccess[role] !== false
+                        return (
+                          <td key={role} className="text-center py-2.5 px-1.5">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setSettings((prev) => {
+                                  const na = { ...(prev.navAccess || {}) }
+                                  const sa = { ...(na[ns.key] || {}) }
+                                  sa[role] = !checked
+                                  na[ns.key] = sa
+                                  return { ...prev, navAccess: na }
+                                })
+                              }}
+                              className="w-4 h-4 accent-primary cursor-pointer"
+                            />
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[10px] text-on-surface-variant">Note: Roles that cannot access a section won't see it in the sidebar at all.</p>
         </div>
       )}
 

@@ -4,6 +4,21 @@ import { useAuth } from '../context/AuthContext'
 import { onSnapshot, collection, query, where } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { markAsRead, markAllAsRead } from '../lib/notificationService'
+import { getQuizSettings } from '../lib/quizSettings'
+
+const NAV_MAP = {
+  dashboard: 'home', '/dashboard': 'home',
+  mylearn: 'learn', '/mylearn': 'learn',
+  'quiz/select': 'exam', '/quiz/select': 'exam',
+  contests: 'contest', '/contests': 'contest',
+  leaderboard: 'rank', '/leaderboard': 'rank',
+  profile: 'profile', '/profile': 'profile',
+  'admin/users': 'users', '/admin/users': 'users',
+  'admin/questions': 'questions', '/admin/questions': 'questions',
+  'admin/courses': 'courses', '/admin/courses': 'courses',
+  'admin/settings': 'settings', '/admin/settings': 'settings',
+  'admin/analytics': 'analytics', '/admin/analytics': 'analytics',
+}
 
 const studentLinks = [
   { to: '/dashboard', icon: 'dashboard', label: 'Home' },
@@ -136,9 +151,24 @@ export default function Navbar() {
   const { profile, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const [navAccess, setNavAccess] = useState(null)
   const isAdmin = profile?.role === 'admin'
   const isModerator = profile?.role === 'moderator'
-  const links = isAdmin ? adminLinks : isModerator ? moderatorLinks : studentLinks
+
+  useEffect(() => {
+    getQuizSettings().then((s) => setNavAccess(s.navAccess || {}))
+  }, [])
+
+  const role = profile?.role || 'student'
+  const allLinks = isAdmin ? adminLinks : isModerator ? moderatorLinks : studentLinks
+  const links = navAccess
+    ? allLinks.filter((l) => {
+        const key = NAV_MAP[l.to] || null
+        if (!key) return true
+        const sec = navAccess[key]
+        return sec?.[role] !== false
+      })
+    : allLinks
 
   const handleLogout = async () => {
     await logout()

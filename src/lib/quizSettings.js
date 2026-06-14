@@ -44,6 +44,19 @@ const DEFAULTS = {
   moduleAccess: {
     "Mock Test": { student: false, studentx: true, moderator: true, admin: true },
   },
+  navAccess: {
+    home: { student: true, studentx: true, moderator: true, admin: true },
+    learn: { student: true, studentx: true, moderator: true, admin: true },
+    exam: { student: true, studentx: true, moderator: true, admin: true },
+    contest: { student: true, studentx: true, moderator: true, admin: true },
+    rank: { student: true, studentx: true, moderator: true, admin: true },
+    profile: { student: true, studentx: true, moderator: true, admin: true },
+    users: { student: false, studentx: false, moderator: false, admin: true },
+    questions: { student: false, studentx: false, moderator: true, admin: true },
+    courses: { student: false, studentx: false, moderator: true, admin: true },
+    settings: { student: false, studentx: false, moderator: false, admin: true },
+    analytics: { student: false, studentx: false, moderator: false, admin: true },
+  },
 }
 
 export async function getQuizSettings() {
@@ -64,6 +77,12 @@ export async function getQuizSettings() {
     data.quizAccess = {}
     for (const key of new Set([...Object.keys(DEFAULTS.quizAccess), ...Object.keys(savedQuizAccess)])) {
       data.quizAccess[key] = { ...(DEFAULTS.quizAccess[key] || {}), ...(savedQuizAccess[key] || {}) }
+    }
+    // Deep merge navAccess
+    const savedNavAccess = snap.data().navAccess || {}
+    data.navAccess = {}
+    for (const key of new Set([...Object.keys(DEFAULTS.navAccess), ...Object.keys(savedNavAccess)])) {
+      data.navAccess[key] = { ...(DEFAULTS.navAccess[key] || {}), ...(savedNavAccess[key] || {}) }
     }
   }
   setCache('quizSettings', data, 300000)
