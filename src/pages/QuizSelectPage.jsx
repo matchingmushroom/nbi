@@ -47,10 +47,14 @@ export default function QuizSelectPage() {
       const chaptersByModule = {}
       const modes = {}
 
+      const hasMockTestAccess = checkQuizAccess(profile, 'mockTest', s)
+
       qs.forEach((q) => {
         if (q.module === 'Course' && q.mode === 'Certification') return
-        if (q.module?.trim() === 'Mock Test') return
-        if (q.chapter === 'Mock Test' || q.chapter === 'IED Mock Test') return
+        if (!hasMockTestAccess) {
+          if (q.module?.trim() === 'Mock Test') return
+          if (q.chapter === 'Mock Test' || q.chapter === 'IED Mock Test') return
+        }
         const mod = q.module || 'General'
         const ch = q.chapter || 'Unknown'
         const mode = q.mode || 'Unknown'
@@ -62,8 +66,6 @@ export default function QuizSelectPage() {
           chaptersByModule[mod][ch] = (chaptersByModule[mod][ch] || 0) + 1
         }
       })
-      // Remove "Unknown" mode (not a real mode — null/undefined fields)
-      delete modes['Unknown']
 
       setItems({ modules, chaptersByModule, modes })
       setLoading(false)
