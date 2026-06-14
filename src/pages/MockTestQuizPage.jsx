@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { pickByDifficulty } from '../lib/utils'
-import { getQuizSettings, checkModuleAccess } from '../lib/quizSettings'
+import { getQuizSettings, checkQuizAccess } from '../lib/quizSettings'
 import { getAllQuestionsCached } from '../lib/cache'
 import QuizRunner from '../components/QuizRunner'
 
@@ -18,7 +18,7 @@ export default function MockTestQuizPage() {
   useEffect(() => {
     const fetch = async () => {
       const settings = await getQuizSettings()
-      if (!checkModuleAccess(profile, 'Mock Test', settings)) { navigate('/quiz/select'); return }
+      if (!checkQuizAccess(profile, 'mockTest', settings)) { navigate('/quiz/select'); return }
       const all = await getAllQuestionsCached()
       const filtered = all.filter((q) => q.module === 'Mock Test' && !(q.module === 'Course' && q.mode === 'Certification'))
       if (filtered.length < 1) { navigate('/quiz/select'); return }

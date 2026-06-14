@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getQuizSettings, saveQuizSettings, checkModuleAccess } from '../lib/quizSettings'
+import { getQuizSettings, saveQuizSettings } from '../lib/quizSettings'
 import { getAllCourses, cleanupOrphanedCourses } from '../lib/steakService'
 import { getAllQuestionsCached } from '../lib/cache'
 
@@ -261,7 +261,8 @@ export default function AdminSettingsPage() {
                   {[
                     { key: 'chapter', label: 'Chapter Test' },
                     { key: 'module', label: 'Module Test' },
-                    { key: 'mode', label: 'Mock Test' },
+                    { key: 'mode', label: 'Mode Test' },
+                    { key: 'mockTest', label: 'Mock Test' },
                     { key: 'final', label: 'Final Mock Test' },
                     { key: 'preassessment', label: 'Pre-Assessment' },
                     { key: 'certification', label: 'Course Cert' },

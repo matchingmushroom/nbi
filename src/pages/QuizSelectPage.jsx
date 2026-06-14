@@ -270,7 +270,7 @@ export default function QuizSelectPage() {
           </button>
         ))}
         {/* Mock Test */}
-        {checkModuleAccess(profile, 'Mock Test', settings) && (
+        {checkQuizAccess(profile, 'mockTest', settings) && (
           <button
             onClick={() => navigate('/quiz/mock-test')}
             className="w-full glass-strong border border-white/40 p-5 rounded-xl hover:shadow-md transition-all flex items-center gap-4 text-left active:scale-[0.98] cursor-pointer"

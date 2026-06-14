@@ -37,6 +37,7 @@ const DEFAULTS = {
     final: { student: true, studentx: true, moderator: true, admin: true },
     preassessment: { student: true, studentx: true, moderator: true, admin: true },
     certification: { student: true, studentx: true, moderator: true, admin: true },
+    mockTest: { student: false, studentx: true, moderator: true, admin: true },
   },
   moduleAccess: {
     "Mock Test": { student: false, studentx: true, moderator: true, admin: true },
@@ -50,8 +51,18 @@ export async function getQuizSettings() {
   const snap = await getDoc(ref)
   const data = snap.exists() ? { ...DEFAULTS, ...snap.data() } : DEFAULTS
   if (snap.exists()) {
-    data.moduleAccess = { ...DEFAULTS.moduleAccess, ...(snap.data().moduleAccess || {}) }
-    data.quizAccess = { ...DEFAULTS.quizAccess, ...(snap.data().quizAccess || {}) }
+    // Deep merge moduleAccess: per-module defaults preserved when saved data has partial entries
+    const savedModuleAccess = snap.data().moduleAccess || {}
+    data.moduleAccess = {}
+    for (const key of new Set([...Object.keys(DEFAULTS.moduleAccess), ...Object.keys(savedModuleAccess)])) {
+      data.moduleAccess[key] = { ...(DEFAULTS.moduleAccess[key] || {}), ...(savedModuleAccess[key] || {}) }
+    }
+    // Deep merge quizAccess: same treatment
+    const savedQuizAccess = snap.data().quizAccess || {}
+    data.quizAccess = {}
+    for (const key of new Set([...Object.keys(DEFAULTS.quizAccess), ...Object.keys(savedQuizAccess)])) {
+      data.quizAccess[key] = { ...(DEFAULTS.quizAccess[key] || {}), ...(savedQuizAccess[key] || {}) }
+    }
   }
   setCache('quizSettings', data, 300000)
   return data

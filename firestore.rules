@@ -2,16 +2,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users — own write only; any authenticated user can read (needed for leaderboard, contest eligibility)
+    // Users — own write or admin write; any authenticated user can read (needed for leaderboard, contest eligibility)
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && (
+        request.auth.uid == userId ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
 
-    // Results — any authenticated user can read (leaderboard needs all results); create restricted to own
+    // Results — any authenticated user can read (leaderboard needs all results); create restricted to own; admin can delete (course reset)
     match /results/{resultId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Notifications — own notifications only
@@ -26,23 +30,26 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && resource.data.organizerId == request.auth.uid;
     }
 
-    // Questions — any authenticated user (needed for quizzes)
+    // Questions — any authenticated user can read; admin/moderator can write
     match /questions/{questionId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'moderator'];
     }
 
-    // Courses / micro_learning — any authenticated user
+    // Courses / micro_learning — any authenticated user can read; admin can write
     match /courses/{courseId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     match /micro_learning/{dayId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Quiz settings — any authenticated user (stored at config/quizSettings)
+    // Quiz settings — any authenticated user can read; admin can write (stored at config/quizSettings)
     match /config/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Badges — any authenticated user

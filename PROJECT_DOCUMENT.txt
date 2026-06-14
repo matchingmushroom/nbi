@@ -1,0 +1,699 @@
+================================================================================
+  PROJECT DOCUMENT: BankMastery (NBI Exam Quiz App)
+================================================================================
+  GitHub: https://github.com/matchingmushroom/nbi
+  Stack:  Vite + React 19 + TailwindCSS 4 + Firebase (Auth, Firestore)
+  Deploy: GitHub Pages (via gh-pages)
+
+================================================================================
+1. GOAL
+================================================================================
+
+A single-page web application for aspirants of the "Nigeria Banking
+Institution (NBI)" exam.  The app provides:
+
+  • Chapter / Module / Mode / Mock practice quizzes
+  • Proctored final mock tests and pre-assessments
+  • A full micro-learning course system (read → review → certify)
+  • A gamification engine (XP, 12 levels, 12 badges, streaks)
+  • A multi-player contest system with XP betting
+  • Admin and moderator dashboards for content and user management
+  • In-app notifications for contest events
+
+================================================================================
+2. TECHNOLOGY STACK
+================================================================================
+
+  Frontend:
+    – React 19.2 with Vite 8
+    – react-router-dom 7.17 (HashRouter)
+    – TailwindCSS 4.3 + @tailwindcss/vite
+    – react-icons 5.6
+    – react-markdown 10.1 + remark-gfm + rehype-raw (lesson content)
+
+  Data / Backend:
+    – Firebase 12.14 (Auth, Firestore)
+    – Persistent local cache (IndexedDB) via Firestore SDK
+
+  Media / PDF:
+    – html2canvas + jspdf (certificate download as PNG or PDF)
+
+  Proctoring:
+    – @vladmandic/face-api (TinyFaceDetector, faceLandmark68Net)
+    – Web Audio API (RMS noise detection)
+    – Canvas pixel-brightness check (camera-covering detection)
+
+  Other:
+    – papaparse (CSV parsing for question/course upload)
+    – gh-pages (deployment)
+
+================================================================================
+3. ARCHITECTURE
+================================================================================
+
+The app is a single React SPA using HashRouter (GitHub Pages compatible).
+
+  ┌─────────────────────────────────────────────────────────┐
+  │  AuthContext (Firebase Auth + Firestore user CRUD)      │
+  │  ┌───────────────────────────────────────────────────┐  │
+  │  │  App.jsx (HashRouter + route definitions)          │  │
+  │  │  ┌──────────┐ ┌──────────┐ ┌──────────────────┐  │  │
+  │  │  │ Navbar   │ │ Content  │ │ Pages (routed)    │  │  │
+  │  │  │ (sidebar │ │ (md:ml-64│ │  - Quiz Pages     │  │  │
+  │  │  │  +bottom │ │  padding)│ │  - Learn Pages    │  │  │
+  │  │  │  nav)    │ │          │ │  - Contest Pages  │  │  │
+  │  │  │          │ │          │ │  - Admin Pages    │  │  │
+  │  │  │          │ │          │ │  - Leaderboard    │  │  │
+  │  │  └──────────┘ └──────────┘ └──────────────────┘  │  │
+  │  └───────────────────────────────────────────────────┘  │
+  └─────────────────────────────────────────────────────────┘
+
+  Service Layer (src/lib/):
+    – firebase.js         – Firebase init + Firestore (persistent cache)
+    – cache.js            – localStorage cache with TTL (reduces Firestore reads)
+    – steakService.js     – Course CRUD (courses + micro_learning)
+    – learnService.js     – Enrollment, reading, review, certification
+    – quizSettings.js     – Quiz config, access control, attempt limits
+    – gamification.js     – XP, levels, streaks, badges, missions
+    – contestService.js   – Contest lifecycle (create → play → complete)
+    – notificationService.js – In-app push notifications
+    – missions.js         – Daily mission definitions
+
+  Hook Layer (src/hooks/):
+    – useProctoring.jsx   – Camera/mic/fullscreen/tab proctoring
+    – useSound.js         – Sound effect playback
+
+  Component Layer (src/components/):
+    – QuizRunner.jsx      – Standard (non-proctored) quiz UI
+    – ProctoredQuizRunner.jsx – Proctored quiz (landing → exam → result)
+    – QuestionCard.jsx    – Single question with 4 options
+    – OptionButton.jsx    – Individual option button
+    – Timer.jsx           – Countdown timer with warnings
+    – Navbar.jsx          – Responsive navigation + notification bell
+    – Certificate.jsx     – Canvas-generated PDF certificate
+    – CSVUploader.jsx     – CSV drag-and-drop upload for questions
+    – ConfettiEffect.jsx  – Confetti on achievements
+
+================================================================================
+4. DIRECTORY STRUCTURE
+================================================================================
+
+  /
+  ├── firestore.rules          – Firestore security rules
+  ├── package.json             – Dependencies & scripts
+  ├── vite.config.js           – Vite configuration
+  ├── public/                  – Static assets
+  └── src/
+      ├── main.jsx             – Entry point
+      ├── index.css            – Tailwind + custom CSS
+      ├── App.jsx              – Router + AuthProvider wrapper
+      ├── context/
+      │   └── AuthContext.jsx  – Auth state, profile CRUD
+      ├── lib/
+      │   ├── firebase.js      – Firebase init
+      │   ├── cache.js         – localStorage cache layer
+      │   ├── utils.js         – shuffle, pickByDifficulty, formatDate
+      │   ├── steakService.js  – Course management
+      │   ├── learnService.js  – Micro-learning engine
+      │   ├── quizSettings.js  – Quiz configuration
+      │   ├── gamification.js  – XP, levels, streaks, badges
+      │   ├── contestService.js – Contest engine
+      │   ├── notificationService.js – In-app notifications
+      │   └── missions.js      – Daily missions
+      ├── hooks/
+      │   ├── useProctoring.jsx – Proctoring hook
+      │   └── useSound.js      – Sound effects
+      ├── components/
+      │   ├── Navbar.jsx
+      │   ├── ProtectedRoute.jsx
+      │   ├── AdminRoute.jsx
+      │   ├── ModeratorRoute.jsx
+      │   ├── QuizRunner.jsx
+      │   ├── ProctoredQuizRunner.jsx
+      │   ├── QuestionCard.jsx
+      │   ├── OptionButton.jsx
+      │   ├── Timer.jsx
+      │   ├── ConfettiEffect.jsx
+      │   ├── Certificate.jsx
+      │   └── CSVUploader.jsx
+      └── pages/
+          ├── LoginPage.jsx
+          ├── DashboardPage.jsx
+          ├── QuizSelectPage.jsx
+          ├── ChapterQuizPage.jsx
+          ├── ModuleQuizPage.jsx
+          ├── ModeQuizPage.jsx
+          ├── FinalQuizPage.jsx
+          ├── PreAssessmentPage.jsx
+          ├── MockTestQuizPage.jsx
+          ├── ContestListPage.jsx
+          ├── CreateContestPage.jsx
+          ├── ContestLobbyPage.jsx
+          ├── ContestPlayPage.jsx
+          ├── ContestResultsPage.jsx
+          ├── ResultsPage.jsx
+          ├── ResultDetailPage.jsx
+          ├── LeaderboardPage.jsx
+          ├── ProfilePage.jsx
+          ├── SimpleLearnPage.jsx
+          ├── AdminUsersPage.jsx
+          ├── AdminQuestionsPage.jsx
+          ├── AdminCoursesPage.jsx
+          ├── AdminCourseUploadPage.jsx
+          ├── AdminAnalyticsPage.jsx
+          └── AdminSettingsPage.jsx
+
+================================================================================
+5. ROUTING (react-router-dom v7, HashRouter)
+================================================================================
+
+  Route                          Page                 Guard
+  ────────────────────────────────────────────────────────────────────────
+  /login                         LoginPage           (public)
+  /dashboard                     DashboardPage       auth
+  /quiz/select                   QuizSelectPage      auth
+  /quiz/chapter/:chapterName     ChapterQuizPage     auth
+  /quiz/module/:moduleName       ModuleQuizPage      auth
+  /quiz/mode/:modeName           ModeQuizPage        auth
+  /quiz/final                    FinalQuizPage       auth
+  /quiz/pre-assessment           PreAssessmentPage   auth
+  /quiz/mock-test                MockTestQuizPage    auth
+  /contests                      ContestListPage     auth
+  /contest/create                CreateContestPage   auth
+  /contest/lobby/:id             ContestLobbyPage    auth
+  /contest/play/:id              ContestPlayPage     auth
+  /contest/results/:id           ContestResultsPage  auth
+  /results                       → redirect to /leaderboard
+  /results/:id                   ResultDetailPage    auth
+  /mylearn                       SimpleLearnPage     auth
+  /leaderboard                   LeaderboardPage     auth
+  /profile                       ProfilePage         auth
+  /admin/users                   AdminUsersPage      admin
+  /admin/questions               AdminQuestionsPage  moderator+
+  /admin/courses                 AdminCoursesPage    admin
+  /admin/course-upload           AdminCourseUploadPage admin
+  /admin/analytics               AdminAnalyticsPage  admin
+  /admin/settings                AdminSettingsPage   admin
+  *                              → redirect to /dashboard
+
+  Route guard components:
+    – ProtectedRoute: Redirects to /login if unauthenticated
+    – AdminRoute: Redirects to /dashboard if role !== admin
+    – ModeratorRoute: Redirects to /dashboard if role not in [admin, moderator]
+
+================================================================================
+6. AUTHENTICATION & AUTHORIZATION
+================================================================================
+
+  6.1 Authentication (Firebase Email/Password)
+    – Anonymous auth is DISABLED in Firebase Console
+    – First registered user gets role 'admin'; all others get 'student'
+    – Auth state is managed by AuthContext which listens to onAuthStateChanged
+    – User profiles stored in Firestore collection: users/{uid}
+
+  6.2 Roles
+    Role        Level  Capabilities
+    ──────────────────────────────────────────────────────────────────
+    student     0      Take quizzes, enroll courses, play contests,
+                       earn XP/badges (subject to access control)
+    studentx    1      Same as student + premium content, enrollment
+                       limit of 5 (vs 2 for student)
+    moderator   2      Manage questions (view/edit), manage courses
+                       (visibility, title), access all quiz types
+    admin       3      Full access: user CRUD, question CRUD, course
+                       CRUD, settings, analytics, level recalculation
+
+    Roles are stored in users/{uid}.role field.
+
+  6.3 Access Control (src/lib/quizSettings.js)
+    – Quiz access control: config/quizSettings stores which roles can
+      access each quiz type. Controlled via AdminSettingsPage "Access" tab.
+    – Module access control: config/quizSettings stores which roles can
+      access each module name.
+    – Attempt limits: per-user overrides stored in users/{uid} or defaults
+      in quizSettings.
+    – Premium content: studentx, admin, moderator can access; student cannot.
+    – Enrollment limits: student = 2, studentx/admin/moderator = 5 (or
+      configured in settings).
+    – Daily learning lock: when enabled, students must complete learning
+      activities before taking quizzes (bypassed for admin/moderator or
+      when bypassDailyLearningLock is true in settings).
+
+================================================================================
+7. DATA MODEL (FIRESTORE COLLECTIONS)
+================================================================================
+
+  7.1 users/{uid}
+    Fields: displayName, email, role, xp, level, streak, lastActiveDate,
+            badges[], learning (sub-object with enrolledCourses containing
+            courseId → {courseStatus, readDays, reviewedDays, unlockedDay,
+            enrolledAt, certifiedAt, finalExamRaw, ...}), attemptLimits
+            (per-type override), bypassDailyLearning (boolean)
+
+  7.2 questions/{questionId}
+    Fields: chapter, module, mode, question, options (array of 4), answer
+            (0-3), difficulty (Beginner/Intermediate/Expert), courseId
+            (optional, for course-linked quizzes)
+
+  7.3 results/{resultId}
+    Fields: userId, score, totalQuestions, answers, timeTaken, xpEarned,
+            quizType, chapter (optional), module (optional), mode (optional),
+            courseId (optional), date, phase (proctoring violations),
+            combo (max combo), finalExamRaw (for course cert)
+
+  7.4 courses/{courseId}
+    Fields: courseId, courseTitle, visible (boolean), premium (boolean)
+
+  7.5 micro_learning/{dayId}
+    Fields: courseId, courseTitle, day, date, post (array of lesson
+            objects with text/type), questions (array of 3 review Qs)
+
+  7.6 config/quizSettings
+    Fields: questionCounts, timerMinutes, attemptLimits, quizAccess,
+            moduleAccess, premiumCourses, premiumQuizChapters,
+            bypassDailyLearningLock, studentEnrollmentLimit,
+            studentxEnrollmentLimit, courseLinkedQuizzes, ... etc.
+
+  7.7 contests/{contestId}
+    Fields: title, organizerId, sourceType (chapter/module/mode/mockTest),
+            sourceValue, minBet (XP), status (setup/active/completed),
+            createdAt, participants (map: userId → {displayName, xp,
+            eligible, status (invited/joined/submitted/exited), answers,
+            score, timeTaken, submittedAt}), questions (array of 10 Qs
+            with options), winner (userId), eligibleParticipantCount,
+            invitedUserIds (array), timerEndAt (timestamp)
+
+  7.8 notifications/{notificationId}
+    Fields: userId, type, title, body, data (object with path for
+            navigation), read (boolean), createdAt (timestamp)
+
+  7.9 badges/{badgeId}
+    Fields: id, name, icon (emoji), description
+
+  7.10 streaks/{streakId}
+    Fields: userId, currentStreak, lastActiveDate
+
+  7.11 missions (hardcoded in src/lib/missions.js, not stored in
+       Firestore). 3 daily missions: take 1 quiz, score ≥60%, take 3
+       quizzes. Reset daily based on lastActiveDate.
+
+================================================================================
+8. CORE FEATURES & PROCESS FLOWS
+================================================================================
+
+  8.1 Quiz System
+    ──────────────────────────────────────────────────────────────────
+    Four quiz types:
+      – Chapter Quiz:   Questions filtered by { chapter: chapterName }
+      – Module Quiz:    Questions filtered by { module: moduleName }
+      – Mode Quiz:      Questions filtered by { mode: modeName }
+      – Mock Test:      15 questions from Mock Test module
+      – Final Mock:     60% Book + 40% Physical, proctored
+      – Pre-Assessment: 20 Expert questions, proctored
+
+    Process:
+      1. QuizSelectPage → pick type
+      2. Load questions from getAllQuestionsCached()
+      3. Apply difficulty split (pickByDifficulty):
+         - Chapter/Module/Mode: 5% Beginner, 10% Intermediate, rest Expert
+         - Final: 60% Book / 40% Physical, each with same difficulty split
+         - Pre-Assessment: 20 Expert (10 Book + 10 Physical)
+         - Mock Test: 1 Beginner + 2 Intermediate + 12 Expert
+      4. Standard quizzes → QuizRunner component
+         Proctored quizzes → ProctoredQuizRunner component
+      5. On finish → addDoc(results) → updateGamification (XP, level,
+         streak, badges) → refreshProfile
+
+  8.2 Proctoring System (src/hooks/useProctoring.jsx)
+    ──────────────────────────────────────────────────────────────────
+    Used by: FinalMockQuiz, PreAssessment, Course Certification Quiz
+    Monitors:
+      – Webcam: face detection (face-api TinyFaceDetector), camera
+        covering detection (canvas pixel-brightness), multi-face alert
+      – Microphone: RMS noise level (threshold 40)
+      – Fullscreen: polling for fullscreen exit; auto re-enter
+      – Tab switches: visibilitychange event (max 4 violations)
+      – Keyboard: blocks Ctrl+C/V/P/X/A/S, F12, Ctrl+Shift+I/J,
+        right-click context menu
+    Violation thresholds:
+      – Tab switches > 4 → auto-submit
+      – Fullscreen exits > 2 → auto-submit
+      – No face detected > 5s → warning, auto-submit if persistent
+      – Multiple faces > 5s → warning, auto-submit if persistent
+    UI components returned by hook:
+      – ProctorPiP: draggable webcam PiP overlay with face status
+      – WarningOverlay: animated warning modal with progress bar
+      – AudioIndicator: noise level bar
+
+  8.3 Micro-Learning System (src/lib/learnService.js)
+    ──────────────────────────────────────────────────────────────────
+    Pages: SimpleLearnPage (unified single-page flow)
+    States:
+      – Catalog: Show available courses, enroll button
+      – Dashboard: Grid of day tiles (read/review/complete/locked)
+      – Reading: Markdown lesson with multi-slide carousel + swipe
+      – Review: 3 daily review questions with instant feedback
+      – Reward: Score celebration with XP toast
+      – Certification: 30-min proctored quiz; 50% pass mark; 2 attempts
+        with 1-day cooldown; sets courseStatus = 'CERTIFIED'
+    Scoring:
+      – Daily review: 10 points max per day, 0.5 per correct answer
+        randomized
+      – Final exam: score / total * 80 (max 80 points)
+      – totalScore = dailyTotal + finalExamScore (max 100)
+      – CERTIFIED if final exam ≥ 50%
+    Re-enrollment: blocked if certified < 6 months ago
+    Enrollment limit: 2 for student, 5 for studentx
+
+  8.4 Contest System (src/lib/contestService.js)
+    ──────────────────────────────────────────────────────────────────
+    Lifecycle:
+      setup → (all join) → active → (all submit) → completed
+
+    Steps:
+      1. CREATE – Organizer selects:
+         - Question source (chapter/module/mode/mockTest)
+         - Invited players (min 1, checks XP eligibility)
+         - Min bet (≥1 XP)
+      2. LOBBY – Real-time listener via getContestRealtime()
+         - Organizer auto-joins on lobby load
+         - Auto-starts when all invited users have joined
+         - 15s countdown for manual start (organizer only, enabled
+           after timer if at least 1 non-organizer joined)
+      3. PLAY – 10 questions, 10-minute timer
+         - All questions pre-loaded in contest doc
+         - Submit via submitContestEntry()
+         - When all eligible participants have submitted → auto
+           endContest()
+      4. RESULTS – Winner + rankings
+         - Tiebreaker: score DESC → timeTaken ASC → submittedAt ASC
+         - Winner gets: minBet × (n - 1) XP
+         - Losers lose: minBet XP
+         - XP transfer uses firestore.increment() for atomicity
+      5. LEADERBOARD – Contest tab on LeaderboardPage
+         - Aggregates all completed contests
+         - Ranks users by total wins
+
+  8.5 Gamification (src/lib/gamification.js)
+    ──────────────────────────────────────────────────────────────────
+    XP per quiz:
+      – Chapter: score × 10
+      – Module:  score × 15
+      – Mode:    score × 20
+      – Final:   score × 25
+      – Pre-Assessment: score × 10
+      – Certification: score × 20
+      – Expert bonus: +1 XP per correct Expert answer
+
+    Learning XP:
+      – lesson_read: 2 XP
+      – review_correct: 1 XP per correct answer
+      – review_complete: 3 XP bonus
+
+    Levels:
+      0→100, 100→300, 300→600, 600→1000, 1000→2000,
+      2000→4000, 4000→8000, 8000→15000, 15000→30000,
+      30000→100000, 100000→500000, 500000→1000000
+
+    Badges (12 total):
+      e.g., "First Quiz", "Perfect Score", "Streak Master",
+      "Level Up", "Quiz Master", "Course Champion", "XP Hunter",
+      "Top Scorer", "Dedicated Learner", "Century", "Contest Winner",
+      "Contest Champion"
+
+    Streaks: Tracks consecutive days with any quiz or learning activity.
+      Multiplier: 1x (<3d), 1.5x (3d), 2x (7d), 2.5x (14d)
+      (Note: multiplier not currently applied to XP calc but defined)
+
+    Daily Missions:
+      1. Take 1 quiz → 50 XP bonus
+      2. Score ≥60% → 50 XP bonus
+      3. Take 3 quizzes → 50 XP bonus
+
+  8.6 In-App Notifications (src/lib/notificationService.js)
+    ──────────────────────────────────────────────────────────────────
+    Uses Firestore collection: notifications/{notificationId}
+    Notification types:
+      – contest_invite, contest_started, contest_completed,
+        contest_results
+    Navbar bell icon shows unread count via onSnapshot
+    Dropdown shows last 20 notifications with "Mark read" / "Mark all read"
+    Tapping notification navigates via the data.path field
+
+  8.7 Client Cache Layer (src/lib/cache.js)
+    ──────────────────────────────────────────────────────────────────
+    Purpose: Reduce Firestore reads for static/semi-static data
+    Mechanism: localStorage with TTL
+    Cache keys prefixed: bm_
+    TTLs:
+      – allQuestions: 10 min (LONG)
+      – allResults:   2 min (SHORT)
+      – allUsers:     5 min (MEDIUM)
+      – allCourses:  10 min (LONG)
+      – quizSettings: 5 min (MEDIUM)
+    Functions:
+      – getCached(key): read + check expiry
+      – setCache(key, data, ttl): write with timestamp
+      – invalidateCache(key): remove one key
+      – invalidateCachePrefix(prefix): remove all keys starting with
+        prefix (used after course mutations)
+      – getAllQuestionsCached(): fetch + cache
+      – getAllResultsCached(): fetch + cache
+      – getAllUsersCached(): fetch + cache
+      – getUserResultsCached(userId): fetch + cache
+
+    Additionally, Firestore itself uses persistentLocalCache() (IndexedDB)
+    for offline support and cross-session caching. This means Firestore
+    queries are served from IndexedDB on page reload without a network
+    request, as long as the cache hasn't been garbage-collected by the
+    browser.
+
+  8.8 Admin Pages
+    ──────────────────────────────────────────────────────────────────
+    AdminUsersPage.jsx:
+      – User list with role badges (student/studentx/moderator/admin)
+      – Edit user (name, email, role)
+      – Delete user document
+      – Set per-type attempt limits (overrides)
+      – Toggle bypassDailyLearning
+      – Reset course progress for a user
+
+    AdminQuestionsPage.jsx:
+      – Question table with search + chapter filter
+      – Edit/delete individual questions
+      – Batch delete by chapter/module/mode
+      – "Delete Hidden" (delete all questions not in current filter)
+      – CSV upload (opens CSVUploader modal)
+
+    AdminCoursesPage.jsx:
+      – Course list with visibility toggle, title edit, delete,
+        premium star toggle
+      – Reset course progress for a specific user+course
+
+    AdminCourseUploadPage.jsx:
+      – Drag-and-drop CSV upload
+      – CSV columns: courseId, courseTitle, day, date, post (JSON
+        array of lesson objects), questions (JSON array of 3 review Qs)
+      – Creates batch writes to micro_learning + courses collections
+
+    AdminAnalyticsPage.jsx:
+      – Summary stats (total users, tests, avg score)
+      – "Recalculate Levels" tool (syncs all users to correct level
+        for their XP)
+      – Per-user table with expandable rows showing all results,
+        badges, XP progress bar
+
+    AdminSettingsPage.jsx:
+      – 4-tab layout:
+        1. Quiz Config – question counts, timer minutes, attempt
+           limits per quiz type
+        2. Access – daily learning lock, enrollment limits, role-based
+           quiz/module access control
+        3. Linking – course-linked quizzes configuration
+        4. Tools – orphaned course cleanup (removes enrollment entries
+           for courses that no longer exist)
+
+================================================================================
+9. FIRESTORE SECURITY RULES (firestore.rules)
+================================================================================
+
+  rules_version = '2';
+
+  match /databases/{database}/documents {
+    // Users – own write only; any auth can read (leaderboard needs all)
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Results – any auth can read; create restricted to own userId
+    match /results/{resultId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Notifications – own notifications only
+    match /notifications/{notificationId} {
+      allow read, write: if request.auth != null
+                         && resource.data.userId == request.auth.uid;
+    }
+
+    // Contests – any auth read; create any auth; update/delete organizer
+    match /contests/{contestId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null
+                            && resource.data.organizerId == request.auth.uid;
+    }
+
+    // Questions, Courses, Micro_learning, Config – any auth can read/write
+    // (write protection relies on client-side UI guards)
+    match /questions/{questionId}   { allow read, write: if request.auth != null; }
+    match /courses/{courseId}       { allow read, write: if request.auth != null; }
+    match /micro_learning/{dayId}   { allow read, write: if request.auth != null; }
+    match /config/{docId}           { allow read, write: if request.auth != null; }
+
+    // Badges, Streaks – any auth can read
+    match /badges/{badgeId}  { allow read: if request.auth != null; }
+    match /streaks/{streakId} { allow read: if request.auth != null; }
+
+    // Catch-all deny
+    match /{document=**} { allow read, write: if false; }
+  }
+
+  IMPORTANT: After changing firestore.rules, you MUST re-publish via
+  Firebase Console → Firestore → Rules → Publish.
+
+================================================================================
+10. SCRIPTS (package.json)
+================================================================================
+
+  npm run dev        – Start Vite dev server (localhost)
+  npm run build      – Production build to dist/
+  npm run preview    – Preview production build
+  npm run deploy     – Deploy to GitHub Pages (npm run build + gh-pages -d dist)
+  npm run lint       – Run ESLint
+
+  Deployment:
+    1. Commit and push to GitHub
+    2. Run "npm run deploy"
+    3. GitHub Pages hosts from the gh-pages branch
+    4. Must use HashRouter (BrowserRouter breaks on page refresh)
+
+================================================================================
+11. KEY IMPLEMENTATION DETAILS
+================================================================================
+
+  11.1 Question Difficulty Splitting
+    – src/lib/utils.js → pickByDifficulty()
+    - Takes an array of questions and a target count
+    - Splits into Beginner / Intermediate / Expert
+    - Picks requested count from each difficulty pool
+    - Shuffles final array
+    - If a pool is exhausted, fills from remaining pools
+
+  11.2 Contest XP Payout
+    – Only eligible participants (those who joined + could afford bet)
+      participate in payout
+    – Winner: +minBet × (eligibleCount - 1)
+    – Losers: -minBet
+    – Uses writeBatch + firestore.increment() for atomicity
+    – XP cannot go below 0
+
+  11.3 Course Certification Scoring
+    – Daily review max: 10 points per day (0.5 per correct, randomized)
+    – Final exam max: 80 points (score / total × 80)
+    – Overall max: 100 points
+    – Pass requirement: final exam ≥ 50% (i.e., rawScore / total ≥ 0.5)
+    – Certification attempt: 2 max, 1-day cooldown between attempts
+    – Re-enrollment blocked if certified < 6 months ago
+
+  11.4 Proctoring Fullscreen Bug (Resolved)
+    – Issue: Fullscreen requested in setTimeout (not in user gesture)
+      → browser silently denies → polling loop counts exits
+      → auto-submits after 2 violations
+    – Fix:
+      a. fsEnteredRef added to only count exits after successful entry
+      b. Fullscreen request moved to synchronous click handler
+      c. useEffect deps stabilized to [phase, proctored] with refs
+
+  11.5 6-Month Re-enrollment
+    – In SimpleLearnPage.jsx, before enrollInCourse():
+      Check if user was certified < 6 months ago
+      If yes, show message: "You can retake this course after
+      6 months from the date of your previous certification."
+      If no, allow enrollment + reset course progress
+
+  11.6 Persistent Local Cache
+    – In src/lib/firebase.js, Firestore initialized with:
+        persistentLocalCache()
+    – This enables IndexedDB caching, so Firestore queries can be
+      served from cache on page reload (reducing reads)
+    – Used alongside the custom localStorage cache (src/lib/cache.js)
+      for a two-tier caching system
+
+================================================================================
+12. FILE DESCRIPTIONS (Quick Reference)
+================================================================================
+
+  File                          Purpose
+  ──────────────────────────────────────────────────────────────────────
+  src/main.jsx                  React entry; renders <App />
+  src/index.css                 Tailwind directives + custom styles
+  src/App.jsx                   HashRouter + all routes
+  src/context/AuthContext.jsx   Auth state provider + user CRUD
+  src/lib/firebase.js           Firebase init + Firestore with cache
+  src/lib/cache.js              localStorage cache with TTL
+  src/lib/utils.js              shuffle, pickByDifficulty, formatDate
+  src/lib/steakService.js       Course CRUD (courses + micro_learning)
+  src/lib/learnService.js       Enrollment, reading, review, certification
+  src/lib/quizSettings.js       Quiz config, access control, attempt limits
+  src/lib/gamification.js       XP, levels, streaks, badges, daily missions
+  src/lib/contestService.js     Contest lifecycle (create → complete)
+  src/lib/notificationService.js In-app notification CRUD + real-time
+  src/lib/missions.js           Daily mission definitions
+  src/hooks/useProctoring.jsx   Webcam/mic/fullscreen/tab monitoring
+  src/hooks/useSound.js         Sound effect playback
+  src/components/Navbar.jsx     Sidebar (desk) + bottom nav (mobile) + bell
+  src/components/ProtectedRoute.jsx  Auth guard → redirect to /login
+  src/components/AdminRoute.jsx      Admin guard → redirect to /dashboard
+  src/components/ModeratorRoute.jsx  Admin+mod guard → redirect
+  src/components/QuizRunner.jsx      Standard quiz UI (non-proctored)
+  src/components/ProctoredQuizRunner.jsx  Proctored quiz UI
+  src/components/QuestionCard.jsx    Single Q with 4 options
+  src/components/OptionButton.jsx    Option button styling
+  src/components/Timer.jsx           Countdown timer
+  src/components/ConfettiEffect.jsx  Confetti animation
+  src/components/Certificate.jsx     Canvas certificate generator
+  src/components/CSVUploader.jsx     CSV drag-and-drop upload
+  src/pages/LoginPage.jsx            Login/register/reset-password
+  src/pages/DashboardPage.jsx        Home (student or admin view)
+  src/pages/QuizSelectPage.jsx       Test type picker
+  src/pages/ChapterQuizPage.jsx      Chapter test loader
+  src/pages/ModuleQuizPage.jsx       Module test loader
+  src/pages/ModeQuizPage.jsx         Mode test loader
+  src/pages/FinalQuizPage.jsx        Final mock test (proctored)
+  src/pages/PreAssessmentPage.jsx    Pre-assessment (proctored)
+  src/pages/MockTestQuizPage.jsx     Mock test (15 Qs)
+  src/pages/ContestListPage.jsx      List user's contests
+  src/pages/CreateContestPage.jsx    3-step contest creator
+  src/pages/ContestLobbyPage.jsx     Real-time lobby + join/start
+  src/pages/ContestPlayPage.jsx      Contest quiz submission
+  src/pages/ContestResultsPage.jsx   Contest results + rankings
+  src/pages/ResultsPage.jsx          Stub → redirect to leaderboard
+  src/pages/ResultDetailPage.jsx     Single result detail view
+  src/pages/LeaderboardPage.jsx      Results + achievements + rankings
+  src/pages/ProfilePage.jsx          Profile + XP + level + badges
+  src/pages/SimpleLearnPage.jsx      Course flow (catalog→cert)
+  src/pages/AdminUsersPage.jsx       User management
+  src/pages/AdminQuestionsPage.jsx   Question management
+  src/pages/AdminCoursesPage.jsx     Course management
+  src/pages/AdminCourseUploadPage.jsx Micro-learning CSV upload
+  src/pages/AdminAnalyticsPage.jsx   Analytics + level recalculation
+  src/pages/AdminSettingsPage.jsx    Quiz config + access + tools
+  firestore.rules                    Firestore security rules
+
+================================================================================
+END OF DOCUMENT
+================================================================================
