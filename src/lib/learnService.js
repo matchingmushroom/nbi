@@ -69,26 +69,37 @@ export async function markDayRead(userId, courseId, day, totalDays) {
   const snap = await getDoc(ref)
   if (!snap.exists()) return { error: 'User not found' }
   const learning = snap.data().learning || {}
-  const course = (learning.enrolledCourses || {})[courseId]
-  if (!course) return { error: 'Not enrolled' }
+  let course = (learning.enrolledCourses || {})[courseId]
+
+  // Bootstrap enrollment if missing (defense-in-depth against write-path issues)
+  if (!course) {
+    course = {
+      enrolledAt: new Date().toISOString().split('T')[0],
+      readDays: [],
+      reviewedDays: [],
+      unlockedDay: 1,
+      dailyReviewRaw: 0,
+      courseStatus: 'ENROLLED',
+    }
+  }
 
   const conceptId = `day_${String(day).padStart(2, '0')}`
   if (course.readDays?.includes(conceptId)) return { error: 'Already read' }
 
   const newReadDays = [...(course.readDays || []), conceptId]
-  const updates = {
-    [`learning.enrolledCourses.${courseId}.readDays`]: newReadDays,
-    [`learning.enrolledCourses.${courseId}.unlockedDay`]: Math.max(course.unlockedDay || 1, day + 1),
-  }
+  course.readDays = newReadDays
+  course.unlockedDay = Math.max(course.unlockedDay || 1, day + 1)
 
   if (newReadDays.length >= totalDays) {
-    updates[`learning.enrolledCourses.${courseId}.courseStatus`] = 'LESSONS_COMPLETED'
+    course.courseStatus = 'LESSONS_COMPLETED'
     if (!course.certificationWindowEndsAt) {
-      updates[`learning.enrolledCourses.${courseId}.certificationWindowEndsAt`] = new Date(Date.now() + 604800000).toISOString()
+      course.certificationWindowEndsAt = new Date(Date.now() + 604800000).toISOString()
     }
   }
 
-  await updateDoc(ref, updates)
+  await setDoc(ref, {
+    [`learning.enrolledCourses.${courseId}`]: course,
+  }, { merge: true })
   invalidateCache('allUsers')
   return { success: true, conceptId }
 }
