@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { analyzeFrame, resetMotionDetect } from '../lib/motionDetect'
 
 const TAB_SWITCH_MAX = 4
 const FULLSCREEN_EXIT_MAX = 2
@@ -7,20 +8,7 @@ const MULTI_FACE_MAX_SEC = 5
 const FACE_CHECK_INTERVAL = 2000
 const AUDIO_CHECK_INTERVAL = 1000
 const AUDIO_THRESHOLD = 40
-
-function isCameraCovered(video) {
-  if (!video?.videoWidth) return false
-  const c = document.createElement('canvas')
-  c.width = video.videoWidth
-  c.height = video.videoHeight
-  const ctx = c.getContext('2d')
-  if (!ctx) return false
-  ctx.drawImage(video, 0, 0)
-  const d = ctx.getImageData(0, 0, c.width, c.height).data
-  let sum = 0
-  for (let i = 0; i < d.length; i += 4) sum += d[i] + d[i+1] + d[i+2]
-  return (sum / (d.length / 4 * 3)) < 25
-}
+const FACEAPI_RETRY_INTERVAL = 30000
 
 export default function useProctoring({ active, onAutoSubmit }) {
   const videoRef = useRef(null)
@@ -38,11 +26,16 @@ export default function useProctoring({ active, onAutoSubmit }) {
   const fsEnteredRef = useRef(false)
   const submittedRef = useRef(false)
   const violationsRef = useRef([])
+  const faceapiRef = useRef(null)
+  const faceapiOptionsRef = useRef(null)
+  const faceapiStatusRef = useRef('loading')
+  const retryTimerRef = useRef(null)
+  const fallbackActiveRef = useRef(false)
 
   const [camReady, setCamReady] = useState(false)
   const [micReady, setMicReady] = useState(false)
   const [violations, setViolations] = useState([])
-  const [faceStatus, setFaceStatus] = useState({ count: 0, looking: true, covered: false })
+  const [faceStatus, setFaceStatus] = useState({ count: 0, looking: true, covered: false, mode: 'initializing' })
   const [noiseLevel, setNoiseLevel] = useState(0)
   const [showWarning, setShowWarning] = useState(null)
 
@@ -95,23 +88,83 @@ export default function useProctoring({ active, onAutoSubmit }) {
     } catch { setMicReady(false) }
   }, [])
 
-  const startFaceDetection = useCallback(async () => {
-    let faceapi = null
-    let options = null
+  const initFaceapi = useCallback(async () => {
+    if (faceapiRef.current) return true
     try {
       const mod = await import('@vladmandic/face-api')
       await mod.nets.tinyFaceDetector.loadFromUri('/models')
       await mod.nets.faceLandmark68Net.loadFromUri('/models')
-      faceapi = mod
-      options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
-    } catch {}
+      faceapiRef.current = mod
+      faceapiOptionsRef.current = new mod.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
+      faceapiStatusRef.current = 'active'
+      fallbackActiveRef.current = false
+      return true
+    } catch (e) {
+      faceapiStatusRef.current = 'failed'
+      return false
+    }
+  }, [])
 
-    faceIntervalRef.current = setInterval(async () => {
-      if (!videoRef.current || !videoRef.current.videoWidth) return
+  const runMotionDetection = useCallback(() => {
+    if (!videoRef.current || !videoRef.current.videoWidth) return null
+    const result = analyzeFrame(videoRef.current)
+    return result
+  }, [])
 
-      // Canvas brightness check (works without WebGL/WASM)
-      const covered = isCameraCovered(videoRef.current)
-      setFaceStatus((prev) => ({ ...prev, covered }))
+  const startFaceDetection = useCallback(async () => {
+    resetMotionDetect()
+    const loaded = await initFaceapi()
+    if (!loaded) {
+      retryTimerRef.current = setInterval(async () => {
+        const ok = await initFaceapi()
+        if (ok) {
+          clearInterval(retryTimerRef.current)
+          retryTimerRef.current = null
+        }
+      }, FACEAPI_RETRY_INTERVAL)
+    }
+
+    faceIntervalRef.current = setInterval(() => {
+      if (!videoRef.current || !videoRef.current.videoWidth || submittedRef.current) return
+
+      const useFallback = !faceapiRef.current || faceapiStatusRef.current !== 'active'
+      let count = 0
+      let looking = true
+      let covered = false
+      let mode = useFallback ? 'fallback' : 'faceapi'
+
+      if (useFallback) {
+        fallbackActiveRef.current = true
+        const result = runMotionDetection()
+        if (result) {
+          count = result.faceCount
+          looking = result.looking
+          covered = result.covered
+        }
+      } else {
+        fallbackActiveRef.current = false
+        covered = false
+        try {
+          const detections = faceapiRef.current.detectAllFaces(videoRef.current, faceapiOptionsRef.current).withFaceLandmarks()
+          if (detections?.then) {
+            detections.then((result) => {
+              processFaceapiResult(result)
+            }).catch(() => {
+              faceapiStatusRef.current = 'failed'
+            })
+          } else {
+            processFaceapiResult(detections)
+          }
+        } catch {
+          faceapiStatusRef.current = 'failed'
+        }
+        return
+      }
+
+      if (!useFallback) return
+
+      setFaceStatus((prev) => ({ ...prev, count, looking, covered, mode }))
+
       if (covered) {
         coveredSecRef.current += FACE_CHECK_INTERVAL / 1000
         if (coveredSecRef.current >= NO_FACE_MAX_SEC) {
@@ -125,47 +178,75 @@ export default function useProctoring({ active, onAutoSubmit }) {
         coveredSecRef.current = 0
       }
 
-      // Face-api detection (supplementary, when WebGL/WASM available)
-      if (!faceapi || !options || submittedRef.current) return
-      try {
-        const detections = await faceapi.detectAllFaces(videoRef.current, options).withFaceLandmarks()
-        const count = detections.length
-        setFaceStatus((prev) => ({ ...prev, count }))
-
-        if (count === 0) {
-          noFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
-          if (noFaceSecRef.current >= NO_FACE_MAX_SEC) {
-            logViolation('no_face')
-            noFaceSecRef.current = 0
-            if (!submittedRef.current) onAutoSubmit?.()
-          }
-        } else {
+      if (count === 0) {
+        noFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
+        if (noFaceSecRef.current >= NO_FACE_MAX_SEC) {
+          logViolation('no_face')
           noFaceSecRef.current = 0
+          if (!submittedRef.current) onAutoSubmit?.()
         }
+      } else {
+        noFaceSecRef.current = 0
+      }
 
-        if (count > 1) {
-          multiFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
-          if (multiFaceSecRef.current >= MULTI_FACE_MAX_SEC) {
-            logViolation('multiple_faces')
-            multiFaceSecRef.current = 0
-            if (!submittedRef.current) onAutoSubmit?.()
-          }
-        } else {
+      if (count > 1) {
+        multiFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
+        if (multiFaceSecRef.current >= MULTI_FACE_MAX_SEC) {
+          logViolation('multiple_faces')
           multiFaceSecRef.current = 0
+          if (!submittedRef.current) onAutoSubmit?.()
         }
+      } else {
+        multiFaceSecRef.current = 0
+      }
 
-        if (count > 0) {
-          const landmarks = detections[0].landmarks
-          const leftEye = landmarks.getLeftEye()
-          const rightEye = landmarks.getRightEye()
-          const eyeCenterY = (leftEye.reduce((s, p) => s + p.y, 0) / leftEye.length + rightEye.reduce((s, p) => s + p.y, 0) / rightEye.length) / 2
-          const nose = landmarks.getNose()
-          const noseY = nose.reduce((s, p) => s + p.y, 0) / nose.length
-          setFaceStatus((prev) => ({ ...prev, looking: Math.abs(eyeCenterY - noseY) < 15 }))
-        }
-      } catch {}
+      if (!looking && count > 0) {
+        logViolation('looking_away')
+      }
     }, FACE_CHECK_INTERVAL)
-  }, [logViolation, onAutoSubmit])
+  }, [initFaceapi, runMotionDetection, logViolation, onAutoSubmit])
+
+  function processFaceapiResult(detections) {
+    if (submittedRef.current) return
+    const count = detections.length
+    setFaceStatus((prev) => ({ ...prev, count, looking: true, covered: false, mode: 'faceapi' }))
+
+    if (count === 0) {
+      noFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
+      if (noFaceSecRef.current >= NO_FACE_MAX_SEC) {
+        logViolation('no_face')
+        noFaceSecRef.current = 0
+        if (!submittedRef.current) onAutoSubmit?.()
+      }
+    } else {
+      noFaceSecRef.current = 0
+    }
+
+    if (count > 1) {
+      multiFaceSecRef.current += FACE_CHECK_INTERVAL / 1000
+      if (multiFaceSecRef.current >= MULTI_FACE_MAX_SEC) {
+        logViolation('multiple_faces')
+        multiFaceSecRef.current = 0
+        if (!submittedRef.current) onAutoSubmit?.()
+      }
+    } else {
+      multiFaceSecRef.current = 0
+    }
+
+    if (count > 0) {
+      try {
+        const landmarks = detections[0].landmarks
+        const leftEye = landmarks.getLeftEye()
+        const rightEye = landmarks.getRightEye()
+        const eyeCenterY = (leftEye.reduce((s, p) => s + p.y, 0) / leftEye.length + rightEye.reduce((s, p) => s + p.y, 0) / rightEye.length) / 2
+        const nose = landmarks.getNose()
+        const noseY = nose.reduce((s, p) => s + p.y, 0) / nose.length
+        const looking = Math.abs(eyeCenterY - noseY) < 15
+        setFaceStatus((prev) => ({ ...prev, looking }))
+        if (!looking) logViolation('looking_away')
+      } catch {}
+    }
+  }
 
   const startAudioMonitor = useCallback(() => {
     audioIntervalRef.current = setInterval(() => {
@@ -232,6 +313,11 @@ export default function useProctoring({ active, onAutoSubmit }) {
     submittedRef.current = true
     clearInterval(faceIntervalRef.current)
     clearInterval(audioIntervalRef.current)
+    if (retryTimerRef.current) {
+      clearInterval(retryTimerRef.current)
+      retryTimerRef.current = null
+    }
+    resetMotionDetect()
     if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
     if (audioCtxRef.current) audioCtxRef.current.close()
     try { document.exitFullscreen?.() } catch {}
@@ -265,8 +351,22 @@ export default function useProctoring({ active, onAutoSubmit }) {
         <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover pointer-events-none" />
         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-black/50 px-2 py-0.5 rounded-full text-[9px] text-white pointer-events-none">
           <span className={`w-1.5 h-1.5 rounded-full ${faceStatus.covered ? 'bg-error' : faceStatus.count > 0 ? 'bg-success' : 'bg-warning'}`} />
-          {faceStatus.covered ? 'Covered' : faceStatus.count > 0 ? `${faceStatus.count} face${faceStatus.count > 1 ? 's' : ''}` : 'No face'}
+          {faceStatus.covered
+            ? 'Covered'
+            : faceStatus.count > 0
+              ? `${faceStatus.count} face${faceStatus.count > 1 ? 's' : ''}`
+              : faceStatus.mode === 'initializing' ? 'Init...' : 'No face'}
         </div>
+        {faceStatus.mode === 'fallback' && (
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-500/80 text-white text-[7px] px-1.5 py-0.5 rounded-full whitespace-nowrap pointer-events-none">
+            Basic mode
+          </div>
+        )}
+        {faceStatus.mode === 'initializing' && (
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-blue-500/80 text-white text-[7px] px-1.5 py-0.5 rounded-full whitespace-nowrap pointer-events-none animate-pulse">
+            Loading...
+          </div>
+        )}
       </div>
     )
   }
@@ -303,6 +403,6 @@ export default function useProctoring({ active, onAutoSubmit }) {
     camReady, micReady, violations, faceStatus, noiseLevel, showWarning,
     violationsRef, submittedRef, videoRef, streamRef, audioCtxRef,
     startCamera, startMic, startProctoring, stopProctoring,
-    ProctorPiP, WarningOverlay, AudioIndicator,
+    ProctorPiP, WarningOverlay, AudioIndicator, faceapiStatus: faceapiStatusRef,
   }
 }
