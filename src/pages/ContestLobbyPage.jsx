@@ -14,13 +14,10 @@ export default function ContestLobbyPage() {
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
   const [starting, setStarting] = useState(false)
-  const [manualReady, setManualReady] = useState(false)
-  const [countdown, setCountdown] = useState(15)
   const [error, setError] = useState(null)
   const [showDelete, setShowDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const handleStartRef = useRef(null)
-  const timerStartedRef = useRef(false)
 
   useEffect(() => {
     const init = async () => {
@@ -55,22 +52,6 @@ export default function ContestLobbyPage() {
       handleStartRef.current?.()
     }
   }, [contest, starting, usersLoaded])
-
-  // 15-second timer for manual start
-  useEffect(() => {
-    if (!contest || contest.status !== 'setup') return
-    const joinedNonOrganizer = Object.entries(contest.participants || {}).some(
-      ([uid, p]) => uid !== contest.organizerId && p.status === 'joined'
-    )
-    if (!joinedNonOrganizer) { timerStartedRef.current = false; setManualReady(false); setCountdown(15); return }
-    if (timerStartedRef.current) return
-    timerStartedRef.current = true
-    setManualReady(false)
-    setCountdown(15)
-    const cd = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000)
-    const tm = setTimeout(() => setManualReady(true), 15000)
-    return () => { clearInterval(cd); clearTimeout(tm) }
-  }, [contest])
 
   const isOrganizer = contest?.organizerId === profile?.uid
   const participants = contest ? Object.entries(contest.participants || {}) : []
@@ -206,13 +187,9 @@ export default function ContestLobbyPage() {
           ) : someJoined ? (
             <>
               <button onClick={handleStart}
-                disabled={eligibleCount < 2 || (!allJoined && !manualReady)}
+                disabled={eligibleCount < 2}
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all shadow-lg shadow-amber-500/20 cursor-pointer">
-                {eligibleCount < 2
-                  ? 'Need at least 2 eligible players'
-                  : manualReady || allJoined
-                    ? 'Start Contest'
-                    : `Start available in ${countdown}s`}
+                {eligibleCount < 2 ? 'Need at least 2 eligible players' : 'Start Contest'}
               </button>
               <p className="text-xs text-on-surface-variant mt-2">Contest will auto-start when all players join.</p>
             </>
