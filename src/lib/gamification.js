@@ -233,14 +233,16 @@ export async function awardLearningXP(userId, action, count = 1) {
   const userData = userSnap.data()
   const today = getToday()
   const s = updateStreak(userData)
-  const newXp = (userData.xp || 0) + xp
+  const multiplier = getStreakMultiplier(s.streak)
+  const multipliedXp = Math.round(xp * multiplier)
+  const newXp = (userData.xp || 0) + multipliedXp
   const newLevel = getLevel(newXp)
   const leveledUp = newLevel > getLevel(userData.xp || 0)
   await setDoc(userRef, { xp: newXp, level: newLevel, streak: s.streak, lastActiveDate: s.lastActiveDate }, { merge: true })
   invalidateCache('allUsers')
   return {
-    xpEarned: xp, totalXp: newXp, level: newLevel, leveledUp,
-    streak: s.streak, progress: getLevelProgress(newXp), xpToNext: getXPForNextLevel(newXp),
+    xpEarned: multipliedXp, totalXp: newXp, level: newLevel, leveledUp,
+    streak: s.streak, multiplier, progress: getLevelProgress(newXp), xpToNext: getXPForNextLevel(newXp),
   }
 }
 

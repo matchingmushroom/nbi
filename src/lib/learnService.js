@@ -63,6 +63,7 @@ export async function enrollInCourse(userId, courseId) {
     certificationWindowEndsAt: null,
     certAttempts: 0,
     certNextAttemptAt: null,
+    reviews: {},
   }
   await setDoc(ref, { learning }, { merge: true })
   invalidateCache('allUsers')

@@ -5,13 +5,15 @@ import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import {
   getCourseDays, enrollInCourse,
-  markDayRead, submitReview, getLearningProgress,
+  markDayRead, getLearningProgress,
   getCertificationQuestions, getCourseScore,
-  isFullyComplete, needsReview, accumulateReviewScore,
+  isFullyComplete, needsReview,
 } from '../lib/learnService'
 import { getQuizSettings, canAccessPremium, getEnrollmentLimit, checkQuizAccess } from '../lib/quizSettings'
 import { resetCourseProgress, getAllCourses } from '../lib/steakService'
+import { invalidateCache } from '../lib/cache'
 import { awardLearningXP } from '../lib/gamification'
+import { calculateNextReview, INITIAL_SRS } from '../lib/srsService'
 import ProctoredQuizRunner from '../components/ProctoredQuizRunner'
 import Certificate from '../components/Certificate'
 import ReactMarkdown from 'react-markdown'
@@ -45,6 +47,7 @@ export default function SimpleLearnPage() {
   const [xpToast, setXpToast] = useState(null)
   const [premiumCourses, setPremiumCourses] = useState([])
   const [quizSettings, setQuizSettings] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const touchStartX = useRef(0)
 
   const fetchLearning = async (cid) => {
@@ -136,6 +139,13 @@ export default function SimpleLearnPage() {
     }
     const effUnlocked = bypassLock ? 999 : Math.min(progress.unlockedDay || 1, calendarUnlocked)
     if (day > effUnlocked) return
+    const reviews = progress.reviews || {}
+    const srs = reviews[conceptId]
+    const isDue = srs?.nextReviewAt && new Date(srs.nextReviewAt) <= new Date()
+    if (isDue) {
+      const dd = days.find((d) => d.day === day)
+      if (dd) { startReview(day, dd); return }
+    }
     if (read) { startReading(day); return }
     if (day > 1 && needsReview(day, progress.readDays, progress.reviewedDays)) {
       const prevDayData = days.find((d) => d.day === day - 1)
@@ -197,9 +207,26 @@ export default function SimpleLearnPage() {
     }))
     setView(VIEWS.REWARD)
     setReviewResult({ score, total: 3, details, reviewedDay: currentDay })
-    const result = await submitReview(profile.uid, courseId, currentDay)
-    if (result.error) { alert(result.error); setView(VIEWS.DASHBOARD); return }
-    await accumulateReviewScore(profile.uid, courseId, score)
+    const conceptId = `day_${String(currentDay).padStart(2, '0')}`
+    const ref = doc(db, 'users', profile.uid)
+    const snap = await getDoc(ref)
+    if (!snap.exists()) { setView(VIEWS.DASHBOARD); return }
+    const userData = snap.data()
+    const learning = userData.learning || {}
+    learning.enrolledCourses = learning.enrolledCourses || {}
+    const course = learning.enrolledCourses?.[courseId]
+    if (!course) { setView(VIEWS.DASHBOARD); return }
+    course.reviews = course.reviews || {}
+    const existingSrs = course.reviews[conceptId] || INITIAL_SRS
+    const score0to3 = score
+    course.reviews[conceptId] = calculateNextReview(existingSrs, score0to3)
+    if (!course.reviewedDays?.includes(conceptId)) {
+      course.reviewedDays = [...new Set([...(course.reviewedDays || []), conceptId])]
+    }
+    course.dailyReviewRaw = (course.dailyReviewRaw || 0) + score
+    course.lastReviewDate = new Date().toISOString().split('T')[0]
+    await setDoc(ref, { learning }, { merge: true })
+    invalidateCache('allUsers')
     for (let i = 0; i < score; i++) {
       await awardLearningXP(profile.uid, 'review_correct')
     }
@@ -298,6 +325,54 @@ export default function SimpleLearnPage() {
             <span className="material-symbols-outlined text-[14px]">arrow_back</span>All courses
           </button>
         </div>
+        {(() => {
+          const now = new Date()
+          const today = now.toISOString().split('T')[0]
+          const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1)
+          const yesterdayStr = yesterday.toISOString().split('T')[0]
+          const reviews = progress?.reviews || {}
+          const dueReviewEntries = Object.entries(reviews).filter(([, r]) => r.nextReviewAt && new Date(r.nextReviewAt) <= now)
+          const dueReviewCount = dueReviewEntries.length
+          const missedYesterday = !readDays.some(d => {
+            const cid = `day_${String(d).padStart(2, '0')}`
+            return false
+          }) && progress?.lastReviewDate && progress.lastReviewDate < yesterdayStr
+          const todayUnread = nextUnread
+          let msg = '', icon = '', color = ''
+          if (progress?.courseStatus === 'CERTIFIED') {
+            msg = '✅ Course certified! Great work.'
+            icon = 'verified'; color = 'text-success'
+          } else if (fullyCompleted === days.length) {
+            msg = '📝 All done — take the certification exam!'
+            icon = 'timer'; color = 'text-primary'
+          } else if (dueReviewCount > 0) {
+            msg = `📝 ${dueReviewCount} SRS review${dueReviewCount > 1 ? 's' : ''} due — keep your knowledge fresh!`
+            icon = 'history'; color = 'text-orange-500'
+          } else if (todayUnread) {
+            msg = '📖 Read Day ' + todayUnread.day + ' — ' + (todayUnread.title || "today's lesson")
+            icon = 'menu_book'; color = 'text-primary'
+          } else {
+            msg = '✅ All caught up! Come back tomorrow.'
+            icon = 'check_circle'; color = 'text-success'
+          }
+          return (
+            <div className="glass-strong rounded-xl p-4 mb-4 animate-fade-scale-in border border-primary/10">
+              <div className="flex items-center gap-3">
+                <span className={`material-symbols-outlined text-[24px] ${color}`} style={{fontVariationSettings: "'FILL' 1"}}>{icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-on-surface">{msg}</p>
+                  {(profile?.streak || 0) > 0 && (
+                    <p className="text-[10px] text-orange-500 mt-0.5 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[12px]" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
+                      {profile.streak}-day streak
+                      {profile.streak >= 3 && <span className="text-[9px] text-orange-400 ml-1">×{(() => { if (profile.streak >= 14) return '2.5'; if (profile.streak >= 7) return '2'; if (profile.streak >= 3) return '1.5'; return '1' })()}</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })()}
         <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in">
           <div className="flex items-center justify-between">
             <div>
@@ -354,6 +429,66 @@ export default function SimpleLearnPage() {
             })}
           </div>
         </div>
+
+        {(() => {
+          const now = new Date()
+          const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1)
+          const yesterdayStr = yesterday.toISOString().split('T')[0]
+          const lastActive = progress?.lastReviewDate || ''
+          if (lastActive && lastActive < yesterdayStr && progress?.courseStatus !== 'CERTIFIED' && fullyCompleted > 0) {
+            const daysMissed = Math.floor((now.getTime() - new Date(lastActive).getTime()) / 86400000)
+            return (
+              <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in border border-warning/30 bg-warning/5">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-warning text-[22px]">alarm</span>
+                  <div>
+                    <p className="text-xs font-bold text-on-surface">You missed {daysMissed} day{daysMissed > 1 ? 's' : ''}!</p>
+                    <p className="text-[10px] text-on-surface-variant">Pick up where you left off to keep your streak alive.</p>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+          return null
+        })()}
+
+        {(() => {
+          const reviews = progress?.reviews || {}
+          const now = new Date()
+          const dueEntries = Object.entries(reviews).filter(([, r]) => r.nextReviewAt && new Date(r.nextReviewAt) <= now)
+          if (dueEntries.length === 0) return null
+          return (
+            <div className="glass rounded-xl p-4 mb-4 animate-fade-scale-in">
+              <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-3 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">history</span>
+                Due Reviews ({dueEntries.length})
+              </p>
+              <div className="space-y-2">
+                {dueEntries.slice(0, 5).map(([conceptId, r]) => {
+                  const dayNum = parseInt(conceptId.replace('day_', ''), 10)
+                  const dd = days.find((d) => d.day === dayNum)
+                  const overdue = Math.floor((now.getTime() - new Date(r.nextReviewAt).getTime()) / 86400000)
+                  return (
+                    <button key={conceptId} onClick={() => { if (dd) startReview(dayNum, dd) }}
+                      className="w-full flex items-center justify-between p-3 bg-surface-container-low rounded-xl hover:bg-surface-container-lowest transition-colors cursor-pointer text-left">
+                      <div className="flex items-center gap-2.5">
+                        <span className="material-symbols-outlined text-[16px] text-orange-500">history</span>
+                        <div>
+                          <p className="text-xs font-medium text-on-surface">{dd?.title || `Day ${dayNum}`}</p>
+                          <p className="text-[10px] text-on-surface-variant">Day {dayNum} · Due {overdue > 0 ? `${overdue}d ago` : 'today'}</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-primary font-semibold shrink-0">Review</span>
+                    </button>
+                  )
+                })}
+                {dueEntries.length > 5 && (
+                  <p className="text-[10px] text-center text-on-surface-variant pt-1">+{dueEntries.length - 5} more due</p>
+                )}
+              </div>
+            </div>
+          )
+        })()}
 
         {fullyCompleted === 0 && progress?.courseStatus === 'ENROLLED' && !bypassLock && (
           <div className="glass-strong rounded-xl p-5 mb-4 animate-fade-scale-in border border-primary/10 relative overflow-hidden">
@@ -724,10 +859,23 @@ export default function SimpleLearnPage() {
     content = (
       <div className="h-full overflow-y-auto p-4 md:p-8 max-w-5xl mx-auto animate-fade-scale-in">
         <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-on-surface mb-1">My Learning</h1>
-        <p className="text-sm text-on-surface-variant mb-6">Choose a course to start learning</p>
-        {courses.length === 0 && <p className="text-center py-12 text-on-surface-variant text-sm">No courses available yet.</p>}
+        <p className="text-sm text-on-surface-variant mb-4">Choose a course to start learning</p>
+        <div className="relative mb-6">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
+          <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search courses..."
+            aria-label="Search courses"
+            className="w-full max-w-md pl-9 pr-4 py-2.5 bg-surface border border-outline-variant rounded-xl text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" />
+        </div>
+        {(() => {
+          const q = searchQuery.toLowerCase().trim()
+          const filtered = q ? courses.filter((c) =>
+            c.courseTitle?.toLowerCase().includes(q) || c.courseId?.toLowerCase().includes(q)
+          ) : courses
+          if (filtered.length === 0) return <p className="text-center py-12 text-on-surface-variant text-sm">{q ? 'No courses match your search.' : 'No courses available yet.'}</p>
+          return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {courses.map((c, idx) => {
+          {filtered.map((c, idx) => {
             const enrolled = learning?.enrolledCourses?.[c.courseId]
             const stagger = `animate-slide-up-in animate-stagger-${Math.min(idx + 1, 5)}`
             return (
@@ -766,6 +914,7 @@ export default function SimpleLearnPage() {
             )
           })}
         </div>
+          )})()}
       </div>
     )
   } else if (view === VIEWS.DASHBOARD && courseId) {

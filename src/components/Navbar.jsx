@@ -218,7 +218,7 @@ export default function Navbar() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-on-surface text-xs truncate">{profile?.displayName || 'User'}</p>
-                <p className="text-[10px] truncate text-on-surface-variant">{profile?.role === 'moderator' ? 'moderator' : profile?.role} · {profile?.xp || 0} XP</p>
+                <p className="text-[10px] truncate text-on-surface-variant">{profile?.role === 'moderator' ? 'moderator' : profile?.role} · {profile?.xp || 0} XP{(profile?.streak || 0) > 0 && <span className="ml-1 text-orange-500">🔥{profile.streak}</span>}</p>
               </div>
             </button>
           </div>
