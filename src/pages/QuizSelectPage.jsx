@@ -61,7 +61,7 @@ export default function QuizSelectPage() {
 
         modules[mod] = (modules[mod] || 0) + 1
         modes[mode] = (modes[mode] || 0) + 1
-        if (q.mode !== 'Physical') {
+        if (q.module === 'Mock Test' || q.mode !== 'Physical') {
           if (!chaptersByModule[mod]) chaptersByModule[mod] = {}
           chaptersByModule[mod][ch] = (chaptersByModule[mod][ch] || 0) + 1
         }
