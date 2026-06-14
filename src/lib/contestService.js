@@ -30,7 +30,7 @@ export async function getAllCompletedContests() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
 
-export async function createContest(organizer, { title, sourceType, sourceValue, invitedUserIds, minBet }) {
+export async function createContest(organizer, { title, sourceType, sourceValue, invitedUserIds, minBet, questionCount = 10, timerMinutes = 10 }) {
   const all = await getAllQuestionsCached()
   let filtered = []
   if (sourceType === 'chapter') filtered = all.filter((q) => q.chapter === sourceValue && q.module !== 'Mock Test' && q.mode !== 'Certification')
@@ -38,11 +38,10 @@ export async function createContest(organizer, { title, sourceType, sourceValue,
   else if (sourceType === 'mode') filtered = all.filter((q) => q.mode === sourceValue && q.module !== 'Mock Test')
   else if (sourceType === 'mockTest') filtered = all.filter((q) => q.module === 'Mock Test')
 
-  if (filtered.length < 10) throw new Error(`Not enough questions (${filtered.length} found, need 10)`)
+  if (filtered.length < questionCount) throw new Error(`Not enough questions (${filtered.length} found, need ${questionCount})`)
 
   const shuffled = filtered.sort(() => Math.random() - 0.5)
-  const questionIds = shuffled.slice(0, 10).map((q) => q.id)
-  const timerMinutes = 10
+  const questionIds = shuffled.slice(0, questionCount).map((q) => q.id)
 
   const participants = {}
   invitedUserIds.forEach((uid) => {
@@ -61,7 +60,7 @@ export async function createContest(organizer, { title, sourceType, sourceValue,
     completedAt: null,
     questionSource: { type: sourceType, value: sourceValue },
     questionIds,
-    questionCount: 10,
+    questionCount,
     timerMinutes,
     minBet,
     potAmount: 0,

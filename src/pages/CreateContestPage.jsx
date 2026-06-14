@@ -22,6 +22,7 @@ export default function CreateContestPage() {
   const [sourceType, setSourceType] = useState(null)
   const [sourceValue, setSourceValue] = useState('')
   const [items, setItems] = useState({})
+  const [mockTestCount, setMockTestCount] = useState(0)
   const [settings, setSettings] = useState(null)
   const [allUsers, setAllUsers] = useState([])
   const [selectedUsers, setSelectedUsers] = useState(new Set())
@@ -42,9 +43,10 @@ export default function CreateContestPage() {
       const modules = {}
       const chaptersByModule = {}
       const modes = {}
+      let mtCount = 0
       qs.forEach((q) => {
         if (q.module === 'Course' && q.mode === 'Certification') return
-        if (q.module === 'Mock Test') return
+        if (q.module === 'Mock Test') { mtCount++; return }
         const mod = q.module || 'General'
         const ch = q.chapter || 'Unknown'
         const mode = q.mode || 'Unknown'
@@ -55,6 +57,7 @@ export default function CreateContestPage() {
           chaptersByModule[mod][ch] = (chaptersByModule[mod][ch] || 0) + 1
         }
       })
+      setMockTestCount(mtCount)
 
       if (!canAccessPremium(profile) && s.premiumQuizChapters?.length) {
         const banned = new Set(s.premiumQuizChapters)
@@ -91,6 +94,8 @@ export default function CreateContestPage() {
         sourceValue,
         invitedUserIds: Array.from(selectedUsers),
         minBet,
+        questionCount: settings?.contestQuestionCount || 10,
+        timerMinutes: settings?.contestTimerMinutes || 10,
       })
       navigate(`/contest/lobby/${id}`)
     } catch (e) {
@@ -207,7 +212,7 @@ export default function CreateContestPage() {
 
           {sourceType === 'mockTest' && (
             <div className="bg-surface-container-low rounded-xl p-4 mb-6">
-              <p className="text-sm text-on-surface">15 Mock Test questions will be used (10 will be selected randomly)</p>
+              <p className="text-sm text-on-surface">{mockTestCount} Mock Test questions available ({settings?.contestQuestionCount || 10} will be selected randomly)</p>
               <button onClick={() => setSourceValue('Mock Test')}
                 className={`mt-3 w-full p-3 rounded-lg text-center font-semibold transition-all cursor-pointer ${
                   sourceValue === 'Mock Test' ? 'bg-primary text-on-primary' : 'bg-surface border border-outline-variant text-on-surface hover:border-primary/30'

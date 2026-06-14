@@ -14,6 +14,8 @@ const FIELDS = [
   { key: 'finalTimerMinutes', label: 'Final Mock Timer (min)', desc: 'Default: 100' },
   { key: 'certificationQuestionCount', label: 'Certification Questions', desc: 'Default: 20' },
   { key: 'certificationTimerMinutes', label: 'Certification Timer (min)', desc: 'Default: 30' },
+  { key: 'contestQuestionCount', label: 'Contest Questions', desc: 'Default: 10' },
+  { key: 'contestTimerMinutes', label: 'Contest Timer (min)', desc: 'Default: 10' },
 ]
 
 const ATTEMPT_FIELDS = [

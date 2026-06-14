@@ -21,6 +21,8 @@ const DEFAULTS = {
   finalLinkedCourse: '',
   certificationQuestionCount: 20,
   certificationTimerMinutes: 30,
+  contestQuestionCount: 10,
+  contestTimerMinutes: 10,
   certificationAttemptLimit: 0,
   courseLinkedQuizzes: {},
   preassessmentQuestionCount: 20,
