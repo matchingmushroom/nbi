@@ -3,7 +3,8 @@ import { collection, getDocs, doc, deleteDoc, setDoc, writeBatch } from 'firebas
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { getAllQuestionsCached, invalidateCache } from '../lib/cache'
-import { FiEdit2, FiTrash2, FiX, FiCheckSquare } from 'react-icons/fi'
+import { FiEdit2, FiTrash2, FiX, FiCheckSquare, FiDownload } from 'react-icons/fi'
+import Papa from 'papaparse'
 import CSVUploader from '../components/CSVUploader'
 
 export default function AdminQuestionsPage() {
@@ -113,6 +114,31 @@ export default function AdminQuestionsPage() {
 
   const hidden = questions.filter((q) => !filtered.includes(q))
 
+  const handleDownloadCSV = () => {
+    const data = questions.map((q, i) => ({
+      SN: i + 1,
+      chapter: q.chapter || '',
+      question: q.question || '',
+      'option-a': q.optionA || '',
+      'option-b': q.optionB || '',
+      'option-c': q.optionC || '',
+      'option-d': q.optionD || '',
+      'correct-answer': q.correctAnswer || '',
+      explanation: q.explanation || '',
+      difficulty: q.difficulty || '',
+      module: q.module || '',
+      mode: q.mode || '',
+    }))
+    const csv = Papa.unparse(data)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'questions.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const handleDeleteHidden = async () => {
     if (hidden.length === 0) return
     if (!confirm(`Delete ${hidden.length} question${hidden.length !== 1 ? 's' : ''} not shown in the current view? This cannot be undone.`)) return
@@ -142,6 +168,13 @@ export default function AdminQuestionsPage() {
           <p className="text-on-surface-variant text-sm mt-1">{questions.length} total questions</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownloadCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface rounded-xl text-sm font-semibold hover:bg-surface-container-high transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <FiDownload size={16} />
+            Download CSV
+          </button>
           <button
             onClick={() => setShowUpload(true)}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer"
