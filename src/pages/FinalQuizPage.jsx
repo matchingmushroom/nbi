@@ -11,6 +11,7 @@ export default function FinalQuizPage() {
   const { profile } = useAuth()
   const [questions, setQuestions] = useState(null)
   const [config, setConfig] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     const fetch = async () => {
@@ -22,7 +23,10 @@ export default function FinalQuizPage() {
       const min = Math.round(total * 0.3)
       const all = await getAllQuestionsCached()
       const accessible = all.filter((q) => q.module === 'PreTest' && checkModuleAccess(profile, q.module, settings))
-      if (accessible.length < min) { navigate('/quiz/select'); return }
+      if (accessible.length < min) {
+        setError(`Not enough PreTest questions to start. Found ${accessible.length}, need at least ${min}. Upload questions with Module = "PreTest" via Admin → Questions.`)
+        return
+      }
 
       const split = getDifficultySplit(total, 'final')
       const picked = pickByDifficulty(accessible, split)
@@ -37,6 +41,18 @@ export default function FinalQuizPage() {
     }
     fetch()
   }, [navigate])
+
+  if (error) return (
+    <div className="h-full flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-surface border border-outline-variant rounded-xl p-6 text-center">
+        <p className="text-sm text-on-surface mb-4">{error}</p>
+        <button onClick={() => navigate('/quiz/select')}
+          className="px-6 py-2.5 bg-primary text-on-primary rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer">
+          Back to Test Types
+        </button>
+      </div>
+    </div>
+  )
 
   if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Preparing Mock Pre-Test...</p></div>
 
