@@ -11,7 +11,7 @@ const Q_FIELDS = ['q1_text', 'q1_optionA', 'q1_optionB', 'q1_optionC', 'q1_optio
   'q3_text', 'q3_optionA', 'q3_optionB', 'q3_optionC', 'q3_optionD', 'q3_correctAnswer', 'q3_explanation']
 
 function parseRow(r, i) {
-  if (!r.courseId || !r.day) return null
+  if (!r.courseId) return null
   const qs = []
   for (let qi = 1; qi <= 3; qi++) {
     const text = r[`q${qi}_text`]
@@ -26,11 +26,26 @@ function parseRow(r, i) {
       explanation: r[`q${qi}_explanation`]?.trim() || '',
     })
   }
+  const day = parseInt(r.day) || (i + 1)
+  const moduleOrder = parseInt(r.moduleOrder) || 0
+  const chapterOrder = parseInt(r.chapterOrder) || 0
+  const conceptOrder = parseInt(r.conceptOrder) || 0
+  const conceptId = r.conceptId?.trim() ||
+    (moduleOrder && chapterOrder && conceptOrder
+      ? `${moduleOrder}-${chapterOrder}-${conceptOrder}`
+      : `day_${String(day).padStart(2, '0')}`)
   return {
     courseId: r.courseId?.trim() || '',
     courseTitle: r.courseTitle?.trim() || '',
-    day: parseInt(r.day) || (i + 1),
-    conceptId: r.conceptId || `day_${String(parseInt(r.day) || i + 1).padStart(2, '0')}`,
+    day,
+    moduleId: r.moduleId?.trim() || '',
+    moduleOrder,
+    moduleTitle: r.moduleTitle?.trim() || '',
+    chapterId: r.chapterId?.trim() || '',
+    chapterOrder,
+    chapterTitle: r.chapterTitle?.trim() || '',
+    conceptId,
+    conceptOrder,
     postNumber: parseInt(r.postNumber) || 1,
     title: r.title?.trim() || '',
     category: r.category?.trim() || '',
@@ -100,7 +115,14 @@ export default function AdminCourseUploadPage() {
           courseId: rows[0].courseId,
           courseTitle: rows[0].courseTitle,
           day: g.day,
+          moduleId: g.moduleId,
+          moduleOrder: g.moduleOrder,
+          moduleTitle: g.moduleTitle,
+          chapterId: g.chapterId,
+          chapterOrder: g.chapterOrder,
+          chapterTitle: g.chapterTitle,
           conceptId: g.conceptId,
+          conceptOrder: g.conceptOrder,
           title: g.title,
           category: g.category,
           estimatedReadingTime: g.estimatedReadingTime,
@@ -145,17 +167,21 @@ export default function AdminCourseUploadPage() {
             <thead className="bg-surface-container-low sticky top-0">
               <tr>
                 <th className="p-2 text-left">Day</th>
-                <th className="p-2 text-left">Post#</th>
-                <th className="p-2 text-left">Title</th>
+                <th className="p-2 text-left">Module</th>
+                <th className="p-2 text-left">Chapter</th>
+                <th className="p-2 text-left">Concept</th>
+                <th className="p-2 text-left">Posts</th>
                 <th className="p-2 text-left">Questions</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i} className="border-t border-outline-variant">
-                  <td className="p-2">Day {r.day}</td>
-                  <td className="p-2">{r.postNumber}</td>
+                  <td className="p-2">{r.day}</td>
+                  <td className="p-2 max-w-[100px] truncate">{r.moduleTitle || r.moduleId || '—'}</td>
+                  <td className="p-2 max-w-[100px] truncate">{r.chapterTitle || r.chapterId || '—'}</td>
                   <td className="p-2 max-w-[200px] truncate">{r.title}</td>
+                  <td className="p-2">1</td>
                   <td className="p-2">{r.questions.length}</td>
                 </tr>
               ))}
@@ -185,7 +211,7 @@ export default function AdminCourseUploadPage() {
         onClick={() => inputRef.current?.click()}>
         <span className="material-symbols-outlined text-[48px] text-on-surface-variant mb-3">upload_file</span>
         <p className="text-sm text-on-surface-variant mb-1">Drag and drop a CSV file, or click to browse</p>
-        <p className="text-xs text-on-surface-variant/60 mb-4">Columns: courseId, courseTitle, day, conceptId, postNumber, title, category, estimatedReadingTime, shortExplanation + q1–q3 + optional imageUrl, videoUrl, audioUrl</p>
+        <p className="text-xs text-on-surface-variant/60 mb-4">Columns: courseId, courseTitle, day, conceptId, postNumber, title, category, estimatedReadingTime, shortExplanation + q1–q3 + optional moduleId/moduleOrder/moduleTitle, chapterId/chapterOrder/chapterTitle, conceptOrder, imageUrl, videoUrl, audioUrl (day/conceptId auto-generated if left blank)</p>
         <input ref={inputRef} type="file" accept=".csv" onChange={handleFile} className="hidden" />
         <span className="inline-block bg-primary text-on-primary px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] cursor-pointer">
           Select CSV File

@@ -401,33 +401,67 @@ export default function SimpleLearnPage() {
             <span className="material-symbols-outlined text-[14px]">grid_view</span>
             Course Progress
           </p>
-          <div className="grid grid-cols-6 sm:grid-cols-10 gap-2">
-            {Array.from({ length: days.length }, (_, i) => i + 1).map((day, idx) => {
-              const conceptId = `day_${String(day).padStart(2, '0')}`
-              const done = isFullyComplete(day, readDays, reviewedDays, days.length, progress?.courseStatus)
-              const readOnly = !done && readDays.includes(conceptId)
-              const locked = day > effUnlocked
-              const isNext = day === nextUnread?.day
-              const isCertified = progress?.courseStatus === 'CERTIFIED'
-              let cls = 'bg-surface-container-low text-on-surface-variant'
-              let icon = String(day)
-              let clickable = false
-              if (done) {
-                cls = 'bg-success/70 text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'
-                icon = '✓'; clickable = true
-              } else if (readOnly) {
-                cls = 'bg-[#00288e] text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'
-                icon = '✓'; clickable = true
-              } else if (locked) { cls = 'bg-outline-variant/30 text-on-surface-variant/40 cursor-default'; icon = '🔒' }
-              else if (isNext) { cls = 'bg-primary text-white ring-2 ring-primary ring-offset-2 cursor-pointer hover:opacity-90 active:scale-[0.92] animate-glow-pulse'; clickable = true }
-              else if (!locked) { cls = 'bg-primary text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'; clickable = true }
-              return clickable ? (
-                <button key={day} onClick={() => handleTileClick(day)}
-                  className={`aspect-square rounded-xl flex items-center justify-center text-xs font-bold ${cls}`} style={{ animationDelay: `${idx * 0.03}s` }}>{icon}</button>
-              ) : (
-                <div key={day} className={`aspect-square rounded-xl flex items-center justify-center text-xs font-bold ${cls}`}>{icon}</div>
-              )
-            })}
+          <div className="space-y-4">
+            {(() => {
+              const modules = []
+              for (const d of days) {
+                const modKey = d.moduleTitle || d.category || 'General'
+                let mod = modules.find((m) => m.key === modKey)
+                if (!mod) { mod = { key: modKey, order: d.moduleOrder || 0, chapters: [] }; modules.push(mod) }
+                const chKey = d.chapterTitle || d.chapterId || null
+                let ch = mod.chapters.find((c) => c.key === chKey)
+                if (!ch) { ch = { key: chKey, order: d.chapterOrder || 0, days: [] }; mod.chapters.push(ch) }
+                ch.days.push(d)
+              }
+              modules.sort((a, b) => a.order - b.order)
+              modules.forEach((m) => m.chapters.sort((a, b) => a.order - b.order || (a.days[0]?.day || 0) - (b.days[0]?.day || 0)))
+              return modules.map((m, mi) => (
+                <div key={`${mi}-${m.key}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-[16px] text-primary">folder</span>
+                    <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">{m.key}</h4>
+                    <span className="text-[10px] text-on-surface-variant ml-auto">{m.chapters.reduce((n, c) => n + c.days.length, 0)} concepts</span>
+                  </div>
+                  {m.chapters.map((c, ci) => (
+                    <div key={`${ci}-${c.key || 'general'}`} className="ml-1 mb-4">
+                      {c.key && (
+                        <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px]">menu_book</span>
+                          {c.key}
+                        </p>
+                      )}
+                      <div className="grid grid-cols-6 sm:grid-cols-10 gap-2">
+                        {c.days.map((d, idx) => {
+                          const conceptId = `day_${String(d.day).padStart(2, '0')}`
+                          const done = isFullyComplete(d.day, readDays, reviewedDays, days.length, progress?.courseStatus)
+                          const readOnly = !done && readDays.includes(conceptId)
+                          const locked = d.day > effUnlocked
+                          const isNext = d.day === nextUnread?.day
+                          let cls = 'bg-surface-container-low text-on-surface-variant'
+                          let icon = String(d.day)
+                          let clickable = false
+                          if (done) {
+                            cls = 'bg-success/70 text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'
+                            icon = '✓'; clickable = true
+                          } else if (readOnly) {
+                            cls = 'bg-[#00288e] text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'
+                            icon = '✓'; clickable = true
+                          } else if (locked) { cls = 'bg-outline-variant/30 text-on-surface-variant/40 cursor-default'; icon = '🔒' }
+                          else if (isNext) { cls = 'bg-primary text-white ring-2 ring-primary ring-offset-2 cursor-pointer hover:opacity-90 active:scale-[0.92] animate-glow-pulse'; clickable = true }
+                          else if (!locked) { cls = 'bg-primary text-white cursor-pointer hover:scale-110 hover:shadow-lg active:scale-[0.92] transition-all duration-200'; clickable = true }
+                          return clickable ? (
+                            <button key={d.day} onClick={() => handleTileClick(d.day)}
+                              className={`aspect-square rounded-xl flex items-center justify-center text-xs font-bold ${cls}`} style={{ animationDelay: `${idx * 0.03}s` }}>{icon}</button>
+                          ) : (
+                            <div key={d.day} className={`aspect-square rounded-xl flex items-center justify-center text-xs font-bold ${cls}`}>{icon}</div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))
+            })()}
           </div>
         </div>
 

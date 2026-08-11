@@ -7,7 +7,12 @@ export async function getCourseDays(courseId) {
   const snap = await getDocs(q)
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => a.day - b.day)
+    .sort((a, b) =>
+      (a.moduleOrder || 0) - (b.moduleOrder || 0) ||
+      (a.chapterOrder || 0) - (b.chapterOrder || 0) ||
+      (a.conceptOrder || 0) - (b.conceptOrder || 0) ||
+      a.day - b.day
+    )
 }
 
 export async function getCertificationQuestions(courseId, courseTitle) {
