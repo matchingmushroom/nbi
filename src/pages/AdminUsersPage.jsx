@@ -230,7 +230,7 @@ export default function AdminUsersPage() {
                 { key: 'chapter', label: 'Chapter Tests' },
                 { key: 'module', label: 'Module Tests' },
                 { key: 'mode', label: 'Mode Tests' },
-                { key: 'final', label: 'Final Mock Test' },
+                { key: 'final', label: 'Mock Pre-Test' },
               ].map((item) => (
                 <div key={item.key}>
                   <label className="block text-xs font-medium text-on-surface-variant mb-1">{item.label}</label>

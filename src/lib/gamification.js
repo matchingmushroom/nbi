@@ -33,10 +33,10 @@ export const BADGES = [
   { id: 'marathon', name: 'Marathon', icon: 'directions_run', desc: 'Complete 10 quizzes' },
   { id: 'bookworm', name: 'Bookworm', icon: 'book', desc: 'Complete 5 Book mode quizzes' },
   { id: 'physical', name: 'Physical Training', icon: 'fitness_center', desc: 'Complete 5 Physical mode quizzes' },
-  { id: 'final_boss', name: 'Final Boss', icon: 'military_tech', desc: 'Complete the Final Mock Test' },
+  { id: 'final_boss', name: 'Final Boss', icon: 'military_tech', desc: 'Complete the Mock Pre-Test' },
   { id: 'streak_7', name: 'Streak Master', icon: 'local_fire_department', desc: 'Maintain a 7-day streak' },
   { id: 'all_rounder', name: 'All-Rounder', icon: 'dashboard', desc: 'Take one quiz of each type' },
-  { id: 'champion', name: 'Champion', icon: 'emoji_events', desc: 'Score 100% on the Final Mock Test' },
+  { id: 'champion', name: 'Champion', icon: 'emoji_events', desc: 'Score 100% on the Mock Pre-Test' },
   { id: 'level_5', name: 'Rising Star', icon: 'trending_up', desc: 'Reach level 5' },
   { id: 'level_10', name: 'Legend', icon: 'verified', desc: 'Reach level 10' },
 ]

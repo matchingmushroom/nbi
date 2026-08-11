@@ -138,7 +138,7 @@ export default function SimpleLearnPage() {
       const daysSince = Math.floor((new Date() - enrolled) / 86400000)
       calendarUnlocked = Math.max(1, daysSince + 1)
     }
-    const effUnlocked = bypassLock ? 999 : Math.min(progress.unlockedDay || 1, calendarUnlocked)
+    const effUnlocked = bypassLock || profile?.role === 'studentx' ? 999 : Math.min(progress.unlockedDay || 1, calendarUnlocked)
     if (day > effUnlocked) return
     const reviews = progress.reviews || {}
     const srs = reviews[conceptId]
@@ -308,7 +308,7 @@ export default function SimpleLearnPage() {
     const daysSince = Math.floor((new Date() - enrolled) / 86400000)
     calendarUnlocked = Math.max(1, daysSince + 1)
   }
-  const effUnlocked = bypassLock || progress?.courseStatus === 'CERTIFIED' ? 999 : Math.min(progress?.unlockedDay || 1, calendarUnlocked)
+  const effUnlocked = bypassLock || progress?.courseStatus === 'CERTIFIED' || profile?.role === 'studentx' ? 999 : Math.min(progress?.unlockedDay || 1, calendarUnlocked)
   const fullyCompleted = days.filter((d) => isFullyComplete(d.day, readDays, reviewedDays, days.length, progress?.courseStatus)).length
 
   const certWindowEnd = progress?.certificationWindowEndsAt ? new Date(progress.certificationWindowEndsAt) : null
@@ -491,7 +491,7 @@ export default function SimpleLearnPage() {
           )
         })()}
 
-        {fullyCompleted === 0 && progress?.courseStatus === 'ENROLLED' && !bypassLock && (
+        {fullyCompleted === 0 && progress?.courseStatus === 'ENROLLED' && !bypassLock && profile?.role !== 'studentx' && (
           <div className="glass-strong rounded-xl p-5 mb-4 animate-fade-scale-in border border-primary/10 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent pointer-events-none" />
             <div className="flex items-start gap-4 relative">
@@ -507,7 +507,7 @@ export default function SimpleLearnPage() {
             </div>
           </div>
         )}
-        {fullyCompleted > 0 && fullyCompleted < days.length && progress?.courseStatus !== 'CERTIFIED' && !bypassLock && (
+        {fullyCompleted > 0 && fullyCompleted < days.length && progress?.courseStatus !== 'CERTIFIED' && !bypassLock && profile?.role !== 'studentx' && (
           <div className="glass-strong rounded-xl p-5 mb-4 animate-fade-scale-in border border-primary/10 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent pointer-events-none" />
             <div className="flex items-start gap-4 relative">

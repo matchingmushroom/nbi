@@ -9,8 +9,7 @@ function getTestTypes(settings) {
   return [
     { key: 'chapter', icon: 'menu_book', label: 'Chapter Based Test', desc: `${settings.chapterQuestionCount} Qs · ${settings.chapterTimerMinutes} min · 10% B / 20% I / 70% E`, color: 'from-blue-600 to-blue-500', linkedCourse: settings.chapterLinkedCourse || '' },
     { key: 'module', icon: 'folder', label: 'Module Based Test', desc: `${settings.moduleQuestionCount} Qs · ${settings.moduleTimerMinutes} min · 10% B / 20% I / 70% E`, color: 'from-emerald-600 to-emerald-500', linkedCourse: settings.moduleLinkedCourse || '' },
-    { key: 'mode', icon: 'school', label: 'Mode Based Test', desc: `${settings.modeQuestionCount} Qs · ${settings.modeTimerMinutes} min · 10% B / 20% I / 70% E`, color: 'from-purple-600 to-purple-500', linkedCourse: settings.modeLinkedCourse || '' },
-    { key: 'final', icon: 'military_tech', label: 'Final Mock Test', desc: `${settings.finalQuestionCount} Qs · ${settings.finalTimerMinutes} min · 60% Book / 40% Physical`, color: 'from-amber-600 to-orange-500', linkedCourse: settings.finalLinkedCourse || '' },
+    { key: 'final', icon: 'military_tech', label: 'Mock Pre-Test', desc: `${settings.finalQuestionCount} Qs · ${settings.finalTimerMinutes} min · All chapters`, color: 'from-amber-600 to-orange-500', linkedCourse: settings.finalLinkedCourse || '' },
   ]
 }
 
@@ -29,7 +28,7 @@ export default function QuizSelectPage() {
     const data = sessionStorage.getItem('nbi_attempt_limit')
     if (data) {
       const parsed = JSON.parse(data)
-      const labels = { chapter: 'Chapter', module: 'Module', mode: 'Mode', final: 'Final Mock' }
+      const labels = { chapter: 'Chapter', module: 'Module', mode: 'Mode', final: 'Mock Pre-Test' }
       setLimitError(`You've reached your attempt limit for ${labels[parsed.quizType] || parsed.quizType} Tests. Contact admin to increase your limit.`)
       sessionStorage.removeItem('nbi_attempt_limit')
     }
@@ -45,7 +44,6 @@ export default function QuizSelectPage() {
 
       const modules = {}
       const chaptersByModule = {}
-      const modes = {}
 
       const hasMockTestAccess = checkQuizAccess(profile, 'mockTest', s)
 
@@ -57,17 +55,15 @@ export default function QuizSelectPage() {
         }
         const mod = q.module || 'General'
         const ch = q.chapter || 'Unknown'
-        const mode = q.mode || 'Unknown'
 
         modules[mod] = (modules[mod] || 0) + 1
-        modes[mode] = (modes[mode] || 0) + 1
         if (q.module === 'Mock Test' || q.mode !== 'Physical') {
           if (!chaptersByModule[mod]) chaptersByModule[mod] = {}
           chaptersByModule[mod][ch] = (chaptersByModule[mod][ch] || 0) + 1
         }
       })
 
-      setItems({ modules, chaptersByModule, modes })
+      setItems({ modules, chaptersByModule })
       setLoading(false)
 
       if (!canAccessPremium(profile) && s.premiumQuizChapters?.length) {
@@ -201,45 +197,6 @@ export default function QuizSelectPage() {
             ))}
           </div>
         )}
-      </div>
-    )
-  }
-
-  if (step === 'list' && selectedType === 'mode') {
-    const { modes } = items
-    return (
-      <div className="h-full overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto">
-        <button onClick={handleBack} className="flex items-center gap-1 text-sm text-primary font-semibold hover:underline mb-4 cursor-pointer">
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-          Back to Test Types
-        </button>
-        <h1 className="font-['Hanken_Grotesk'] text-xl font-bold text-on-surface mb-1">Mode Based Test</h1>
-        <p className="text-sm text-on-surface-variant mb-5">Select a mode to test your knowledge</p>
-        <div className="space-y-2">
-          {Object.entries(modes).sort().map(([mode, count]) => (
-            <button
-              key={mode}
-              onClick={() => navigate(`/quiz/mode/${encodeURIComponent(mode)}`)}
-              className="w-full bg-surface border border-outline-variant p-4 rounded-xl hover:shadow-sm transition-all flex items-center justify-between active:scale-[0.98] cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
-                  <span className="material-symbols-outlined">library_books</span>
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-sm text-on-surface">
-                    {mode === 'Book' ? 'Self-Paced (Book)' : mode === 'Physical' ? 'Instructor-Led (Physical)' : mode}
-                  </h3>
-                  <p className="text-xs text-on-surface-variant">{count} questions available</p>
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
-            </button>
-          ))}
-          {Object.keys(modes).length === 0 && (
-            <p className="text-center py-8 text-on-surface-variant text-sm">No modes available.</p>
-          )}
-        </div>
       </div>
     )
   }

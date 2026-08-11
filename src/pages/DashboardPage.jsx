@@ -113,7 +113,7 @@ export default function DashboardPage() {
       if (r.mode === 'Physical') return 'Instructor-Led (Physical)'
       return r.mode || 'Mode Test'
     }
-    if (qt === 'final') return 'Final Mock Test'
+    if (qt === 'final') return 'Mock Pre-Test'
     return r.chapter || r.module || r.mode || 'Quiz'
   }
 
@@ -365,7 +365,7 @@ export default function DashboardPage() {
         <button onClick={() => navigate('/quiz/select')} className="bg-primary text-on-primary p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm">
           <span className="material-symbols-outlined text-[32px] mb-3">play_arrow</span>
           <h3 className="font-['Hanken_Grotesk'] text-lg font-bold">Take a Quiz</h3>
-          <p className="text-sm text-white/80 mt-1">Chapter, Module, Mode, or Final Mock Test</p>
+          <p className="text-sm text-white/80 mt-1">Chapter, Module, Mode, or Mock Pre-Test</p>
         </button>
         <button onClick={() => navigate('/mylearn')} className="bg-secondary text-white p-6 rounded-xl text-left transition-all active:scale-[0.98] cursor-pointer shadow-sm">
           <span className="material-symbols-outlined text-[32px] mb-3">school</span>

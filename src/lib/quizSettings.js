@@ -121,7 +121,7 @@ export function getConfigTimerLabel(quizType, timerMinutes) {
     chapter: 'Chapter Test',
     module: 'Module Test',
     mode: 'Mode Test',
-    final: 'Final Mock Test',
+    final: 'Mock Pre-Test',
     certification: 'Certification Quiz',
   }
   return `${labels[quizType] || 'Quiz'} · ${timerMinutes} min`

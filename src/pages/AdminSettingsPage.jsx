@@ -7,11 +7,11 @@ const FIELDS = [
   { key: 'chapterQuestionCount', label: 'Chapter Questions', desc: 'Default: 10' },
   { key: 'moduleQuestionCount', label: 'Module Questions', desc: 'Default: 20' },
   { key: 'modeQuestionCount', label: 'Mode Questions', desc: 'Default: 50' },
-  { key: 'finalQuestionCount', label: 'Final Mock Questions', desc: 'Default: 100' },
+  { key: 'finalQuestionCount', label: 'Mock Pre-Test Questions', desc: 'Default: 100' },
   { key: 'chapterTimerMinutes', label: 'Chapter Timer (min)', desc: 'Default: 10' },
   { key: 'moduleTimerMinutes', label: 'Module Timer (min)', desc: 'Default: 30' },
   { key: 'modeTimerMinutes', label: 'Mode Timer (min)', desc: 'Default: 50' },
-  { key: 'finalTimerMinutes', label: 'Final Mock Timer (min)', desc: 'Default: 100' },
+  { key: 'finalTimerMinutes', label: 'Mock Pre-Test Timer (min)', desc: 'Default: 100' },
   { key: 'certificationQuestionCount', label: 'Certification Questions', desc: 'Default: 20' },
   { key: 'certificationTimerMinutes', label: 'Certification Timer (min)', desc: 'Default: 30' },
   { key: 'contestQuestionCount', label: 'Contest Questions', desc: 'Default: 10' },
@@ -22,7 +22,7 @@ const ATTEMPT_FIELDS = [
   { key: 'chapterAttemptLimit', label: 'Chapter Attempt Limit', desc: '0 = unlimited' },
   { key: 'moduleAttemptLimit', label: 'Module Attempt Limit', desc: '0 = unlimited' },
   { key: 'modeAttemptLimit', label: 'Mode Attempt Limit', desc: '0 = unlimited' },
-  { key: 'finalAttemptLimit', label: 'Final Mock Attempt Limit', desc: '0 = unlimited' },
+  { key: 'finalAttemptLimit', label: 'Mock Pre-Test Attempt Limit', desc: '0 = unlimited' },
   { key: 'certificationAttemptLimit', label: 'Certification Attempt Limit', desc: '0 = unlimited' },
 ]
 
@@ -280,7 +280,7 @@ export default function AdminSettingsPage() {
                     { key: 'module', label: 'Module Test' },
                     { key: 'mode', label: 'Mode Test' },
                     { key: 'mockTest', label: 'Mock Test' },
-                    { key: 'final', label: 'Final Mock Test' },
+                    { key: 'final', label: 'Mock Pre-Test' },
                     { key: 'preassessment', label: 'Pre-Assessment' },
                     { key: 'certification', label: 'Course Cert' },
                   ].map((qt) => (

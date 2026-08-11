@@ -178,7 +178,7 @@ export default function LeaderboardPage() {
       return r.mode || 'Mode Test'
     }
     if (qt === 'preassessment') return 'Pre-Assessment Test'
-    return 'Final Mock Test'
+    return 'Mock Pre-Test'
   }
 
   const filtered = filter === 'all' ? results : results.filter((r) => getQuizType(r) === filter)
@@ -292,7 +292,7 @@ export default function LeaderboardPage() {
         {[
           { key: 'results', label: 'My Results', icon: 'insights', badge: results.length + completedCourses.length },
           { key: 'achievement', label: 'My Achievement', icon: 'stars', badge: myRank > 0 ? `#${myRank}` : null },
-          { key: 'leaderboard', label: 'Final Mock', icon: 'leaderboard', badge: `${entries.length} ranked` },
+          { key: 'leaderboard', label: 'Mock Pre-Test', icon: 'leaderboard', badge: `${entries.length} ranked` },
           { key: 'contest', label: 'Contest', icon: 'emoji_events', badge: contestWins.length > 0 ? `${contestWins.length}` : null },
         ].map((t) => (
           <button key={t.key}
