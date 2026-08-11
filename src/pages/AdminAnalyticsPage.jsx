@@ -18,7 +18,7 @@ export default function AdminAnalyticsPage() {
     if (qt === 'chapter') return `Chapter: ${r.chapter || 'Unknown'}`
     if (qt === 'module') return `Module: ${r.module || 'Unknown'}`
     if (qt === 'mode') return `Mode: ${r.mode === 'Book' ? 'Self-Paced' : r.mode === 'Physical' ? 'Instructor-Led' : r.mode || 'Unknown'}`
-    if (qt === 'final') return 'Mock Pre-Test'
+    if (qt === 'final') return 'Final Mock Pre-Test'
     return r.chapter || r.module || r.mode || 'Quiz'
   }
 

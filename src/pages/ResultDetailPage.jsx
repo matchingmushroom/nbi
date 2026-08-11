@@ -32,7 +32,7 @@ export default function ResultDetailPage() {
       if (r.mode === 'Physical') return 'Instructor-Led (Physical)'
       return r.mode || 'Mode Test'
     }
-    return 'Mock Pre-Test'
+    return 'Final Mock Pre-Test'
   }
 
   return (

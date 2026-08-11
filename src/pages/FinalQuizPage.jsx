@@ -33,7 +33,7 @@ export default function FinalQuizPage() {
 
       setQuestions(picked.slice(0, total))
       setConfig({
-        title: 'Mock Pre-Test',
+        title: 'Final Mock Pre-Test',
         subtitle: `${total} Qs · All chapters · ${settings.finalTimerMinutes} min`,
         quizType: 'final',
         timerMinutes: settings.finalTimerMinutes,
@@ -54,7 +54,7 @@ export default function FinalQuizPage() {
     </div>
   )
 
-  if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Preparing Mock Pre-Test...</p></div>
+  if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Preparing Final Mock Pre-Test...</p></div>
 
   return <ProctoredQuizRunner proctored questions={questions} config={config} />
 }

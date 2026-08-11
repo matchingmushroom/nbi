@@ -20,12 +20,12 @@ export default function MockTestQuizPage() {
       const settings = await getQuizSettings()
       if (!checkQuizAccess(profile, 'mockTest', settings)) { navigate('/quiz/select'); return }
       const all = await getAllQuestionsCached()
-      const filtered = all.filter((q) => q.module === 'Mock Test' && !(q.module === 'Course' && q.mode === 'Certification'))
+      const filtered = all.filter((q) => q.module === 'PreTest' && !(q.module === 'Course' && q.mode === 'Certification'))
       if (filtered.length < 1) { navigate('/quiz/select'); return }
       const picked = pickByDifficulty(filtered, SPLIT)
       setQuestions(picked)
       setConfig({
-        title: 'Mock Test',
+        title: 'Quick Mock Pre-Test Revision',
         subtitle: `${picked.length} Qs · ${TIMER_MINUTES} min`,
         quizType: 'mock-test',
         timerMinutes: TIMER_MINUTES,
@@ -34,7 +34,7 @@ export default function MockTestQuizPage() {
     fetch()
   }, [navigate])
 
-  if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading Mock Test...</p></div>
+  if (!questions || !config) return <div className="h-full flex items-center justify-center"><p className="text-on-surface-variant">Loading Quick Mock Pre-Test Revision...</p></div>
 
   return <QuizRunner questions={questions} config={config} />
 }

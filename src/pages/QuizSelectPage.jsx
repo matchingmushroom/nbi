@@ -9,7 +9,7 @@ function getTestTypes(settings) {
   return [
     { key: 'chapter', icon: 'menu_book', label: 'Chapter Based Test', desc: `${settings.chapterQuestionCount} Qs · ${settings.chapterTimerMinutes} min · 10% B / 20% I / 70% E`, color: 'from-blue-600 to-blue-500', linkedCourse: settings.chapterLinkedCourse || '' },
     { key: 'module', icon: 'folder', label: 'Module Based Test', desc: `${settings.moduleQuestionCount} Qs · ${settings.moduleTimerMinutes} min · 10% B / 20% I / 70% E`, color: 'from-emerald-600 to-emerald-500', linkedCourse: settings.moduleLinkedCourse || '' },
-    { key: 'final', icon: 'military_tech', label: 'Mock Pre-Test', desc: `${settings.finalQuestionCount} Qs · ${settings.finalTimerMinutes} min · All chapters`, color: 'from-amber-600 to-orange-500', linkedCourse: settings.finalLinkedCourse || '' },
+    { key: 'final', icon: 'military_tech', label: 'Final Mock Pre-Test', desc: `${settings.finalQuestionCount} Qs · ${settings.finalTimerMinutes} min · All chapters`, color: 'from-amber-600 to-orange-500', linkedCourse: settings.finalLinkedCourse || '' },
   ]
 }
 
@@ -28,7 +28,7 @@ export default function QuizSelectPage() {
     const data = sessionStorage.getItem('nbi_attempt_limit')
     if (data) {
       const parsed = JSON.parse(data)
-      const labels = { chapter: 'Chapter', module: 'Module', mode: 'Mode', final: 'Mock Pre-Test' }
+      const labels = { chapter: 'Chapter', module: 'Module', mode: 'Mode', final: 'Final Mock Pre-Test' }
       setLimitError(`You've reached your attempt limit for ${labels[parsed.quizType] || parsed.quizType} Tests. Contact admin to increase your limit.`)
       sessionStorage.removeItem('nbi_attempt_limit')
     }
@@ -237,6 +237,22 @@ export default function QuizSelectPage() {
             <span className="material-symbols-outlined text-on-surface-variant text-[22px]">chevron_right</span>
           </button>
         ))}
+        {/* Mock Test */}
+        {checkQuizAccess(profile, 'mockTest', settings) && (
+          <button
+            onClick={() => navigate('/quiz/mock-test')}
+            className="w-full glass-strong border border-white/40 p-5 rounded-xl hover:shadow-md transition-all flex items-center gap-4 text-left active:scale-[0.98] cursor-pointer"
+          >
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-500 flex items-center justify-center shrink-0 shadow-sm">
+              <span className="material-symbols-outlined text-white text-[24px]">fact_check</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-['Hanken_Grotesk'] font-bold text-base text-on-surface">Quick Mock Pre-Test Revision</h3>
+              <p className="text-xs text-on-surface-variant mt-0.5">15 Qs · 15 min · 1 Beginner / 2 Intermediate / 12 Expert</p>
+            </div>
+            <span className="material-symbols-outlined text-on-surface-variant text-[22px]">chevron_right</span>
+          </button>
+        )}
         {/* Pre-Assessment Test */}
         {checkQuizAccess(profile, 'preassessment', settings) && (
           <button
